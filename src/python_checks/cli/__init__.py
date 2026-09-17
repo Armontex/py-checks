@@ -5,5 +5,6 @@
 """
 
 from python_checks.cli._app import app, main
+from python_checks.cli._protocols import Registrar
 
-__all__ = ["app", "main"]
+__all__ = ["Registrar", "app", "main"]

@@ -5,10 +5,13 @@
 вызовет `add_typer`, и собирающий код это не заметит.
 """
 
+from typing import Final
+
+from python_checks.cli._protocols import Registrar
 from python_checks.cli.commands._explain import register as register_explain
 from python_checks.cli.commands._list import register as register_list
 from python_checks.cli.commands._run import register as register_run
 
-REGISTRARS = (register_run, register_list, register_explain)
+REGISTRARS: Final[tuple[Registrar, ...]] = (register_run, register_list, register_explain)
 
-__all__ = ["REGISTRARS"]
+__all__ = ["REGISTRARS", "Registrar"]
