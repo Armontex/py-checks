@@ -16,6 +16,7 @@ dependencies = [
 python-checks = "python_checks.cli:main"
 
 [project.entry-points."python_checks.checks"]
+keyword-only-arguments = "python_checks.checks.signatures:KeywordOnlyArguments"
 module-length = "python_checks.checks.signatures:ModuleLength"
 
 [dependency-groups]
@@ -46,9 +47,15 @@ tag_format = "v$version"
 major_version_zero = true
 update_changelog_on_bump = true
 
+[tool.python-checks]
+# примеры для проверок нарушают правила намеренно
+extend-exclude = ["tests/checks/*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py314"
+# примеры для проверок нарушают правила намеренно
+extend-exclude = ["tests/checks"]
 
 [tool.ruff.lint]
 select = [
@@ -87,7 +94,7 @@ runtime-evaluated-base-classes = [
 pythonVersion = "3.14"
 venvPath = "."
 venv = ".venv"
-include = ["src", "tools"]
+include = ["src", "tests"]
 typeCheckingMode = "strict"
 
 [tool.pytest.ini_options]

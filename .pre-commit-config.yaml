@@ -98,3 +98,5 @@ repos:
         entry: uv run python-checks run
         language: system
         types: [python]
+        # правила писались для кода библиотеки; тесты живут по своим
+        files: ^src/.*\.py$

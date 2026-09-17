@@ -145,3 +145,15 @@ def test_config_keeps_nested_check_sections_typed(tmp_path: Path) -> None:
 
     assert section == {"max-lines": 120}
     assert load(root=tmp_path).section(code="missing") == {}
+
+
+def test_extend_exclude_adds_to_the_defaults(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "pyproject.toml",
+        '[tool.python-checks]\nextend-exclude = ["tests/checks/*"]\n',
+    )
+
+    config = load(root=tmp_path)
+
+    assert config.excluded == (*config.exclude, "tests/checks/*")

@@ -29,7 +29,7 @@ def run(  # signature-ok: подпись команды разбирает typer
         paths=paths or [],
         root=root,
         default=root / config.src,
-        exclude=config.exclude,
+        exclude=config.excluded,
     )
     violations = inspect(files=files, checks=checks, config=config)
     raise typer.Exit(report(violations=violations, root=root, checked=len(files)))

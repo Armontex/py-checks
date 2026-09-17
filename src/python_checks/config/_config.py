@@ -22,8 +22,18 @@ class Config(CheckSettings):
 
     src: Path = Path("src")
     exclude: tuple[str, ...] = DEFAULT_EXCLUDE
+    extend_exclude: tuple[str, ...] = ()
     ignore: tuple[str, ...] = ()
     checks: dict[str, TomlTable] = Field(default_factory=dict, exclude=True)
+
+    @property
+    def excluded(self) -> tuple[str, ...]:
+        """Что не проверяем: список по умолчанию плюс добавленный проектом.
+
+        `exclude` задаёт весь список целиком, `extend-exclude` добавляет к нему:
+        так проект добавляет свою папку, не переписывая `.venv` и остальное.
+        """
+        return self.exclude + self.extend_exclude
 
     def section(self, *, code: str) -> TomlTable:
         return self.checks.get(code, {})

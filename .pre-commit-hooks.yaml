@@ -11,3 +11,10 @@
   entry: python-checks run --select module-length
   language: python
   types: [python]
+
+- id: keyword-only-arguments
+  name: сигнатура записана полностью
+  description: аргумент, переданный по позиции, читается только вместе с сигнатурой
+  entry: python-checks run --select keyword-only-arguments
+  language: python
+  types: [python]

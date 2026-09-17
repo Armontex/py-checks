@@ -1,4 +1,13 @@
 # serializer version: 1
+# name: test_check_output_matches_the_snapshot[keyword_only_arguments]
+  list([
+    'bad/positional.py:4:1: keyword-only-arguments: price принимает market, stake по позиции; поставь `*` перед ними',
+    'bad/positional.py:9:5: keyword-only-arguments: Rule.__init__ принимает name по позиции; поставь `*` перед ними',
+    'bad/positional.py:12:5: keyword-only-arguments: Rule.apply принимает rule по позиции; поставь `*` перед ними',
+    'bad/positional.py:16:1: keyword-only-arguments: collect принимает *args, **kwargs; перечисли аргументы по имени',
+    'bad/positional.py:20:1: keyword-only-arguments: spread принимает first, second по позиции; поставь `*` перед ними',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[module_length]
   list([
     'bad/too_long.py:11:1: module-length: 13 строк, предел 10',
