@@ -1,0 +1,13 @@
+- id: python-checks
+  name: проверки соглашений проекта
+  description: все проверки, включённые в [tool.python-checks]
+  entry: python-checks run
+  language: python
+  types: [python]
+
+- id: module-length
+  name: модуль не длиннее лимита
+  description: длинный модуль — это обычно несколько модулей, которые не разъехались вовремя
+  entry: python-checks run --select module-length
+  language: python
+  types: [python]

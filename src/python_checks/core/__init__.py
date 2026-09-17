@@ -12,6 +12,7 @@ from python_checks.core._protocols import FileCheck
 from python_checks.core._registry import available, get
 from python_checks.core._report import report
 from python_checks.core._runner import SYNTAX, inspect
+from python_checks.core._settings import SettingsMismatchError, settings_as
 from python_checks.core._source import ParsedFile
 from python_checks.core._violation import Violation
 
@@ -23,11 +24,13 @@ __all__ = [
     "FileCheck",
     "ParseError",
     "ParsedFile",
+    "SettingsMismatchError",
     "UnknownCheckError",
     "Violation",
     "available",
     "get",
     "inspect",
     "python_files",
+    "settings_as",
     "report",
 ]

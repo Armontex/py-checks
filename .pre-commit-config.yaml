@@ -88,3 +88,13 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-push]
+
+  # Библиотека проверяет сама себя: правило, которое не выдерживает свой же
+  # репозиторий, до чужого доезжать не должно.
+  - repo: local
+    hooks:
+      - id: python-checks
+        name: проверки соглашений проекта
+        entry: uv run python-checks run
+        language: system
+        types: [python]
