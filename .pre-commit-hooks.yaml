@@ -15,6 +15,6 @@
 - id: keyword-only-arguments
   name: сигнатура записана полностью
   description: аргумент, переданный по позиции, читается только вместе с сигнатурой
-  entry: python-checks run --select keyword-only-arguments
+  entry: python-checks run --select keyword-only-arguments --fix
   language: python
   types: [python]

@@ -782,6 +782,7 @@ name = "python-checks"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "libcst" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "rich" },
@@ -807,6 +808,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "libcst", specifier = ">=1.9,<2" },
     { name = "pydantic", specifier = ">=2.13.5" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "rich", specifier = ">=15.0.0,<16.0.0" },

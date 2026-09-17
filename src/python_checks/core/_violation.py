@@ -10,6 +10,8 @@ if TYPE_CHECKING:
     import ast
     from pathlib import Path
 
+    from python_checks.core._edit import Edit
+
 
 @dataclass(frozen=True, slots=True)
 class Violation:
@@ -21,6 +23,10 @@ class Violation:
 
     `end_line` нужен только тем нарушениям, которые занимают несколько строк:
     по нему ядро ищет маркер во всей подписи, а не в одной её первой строке.
+
+    `edit` есть у нарушения, которое правило умеет исправить. Правку несёт само
+    нарушение, а не отдельный проход: тот, кто нашёл место, знает о нём больше
+    всех, и второй раз разбирать файл ради починки незачем.
     """
 
     path: Path
@@ -29,6 +35,7 @@ class Violation:
     code: str
     message: str
     end_line: int | None = None
+    edit: Edit | None = None
 
     @classmethod
     def from_node(
@@ -39,6 +46,7 @@ class Violation:
         code: str,
         message: str,
         end_line: int | None = None,
+        edit: Edit | None = None,
     ) -> Violation:
         line = getattr(node, "lineno", 1)
         column = getattr(node, "col_offset", 0)
@@ -49,6 +57,7 @@ class Violation:
             code=code,
             message=message,
             end_line=end_line,
+            edit=edit,
         )
 
     def render(self, *, root: Path | None = None) -> str:

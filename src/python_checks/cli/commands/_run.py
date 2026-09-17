@@ -8,7 +8,17 @@ from typing import Annotated
 import typer
 
 from python_checks.config import Config, find_root, load
-from python_checks.core import FileCheck, available, get, inspect, python_files, report
+from python_checks.core import (
+    FileCheck,
+    Violation,
+    available,
+    fix,
+    get,
+    inspect,
+    python_files,
+    reformat,
+    report,
+)
 
 
 def run(  # check-ok: keyword-only-arguments: подпись команды разбирает typer
@@ -20,6 +30,10 @@ def run(  # check-ok: keyword-only-arguments: подпись команды ра
         list[str] | None,
         typer.Option("--select", "-s", help="коды проверок; без них — все включённые"),
     ] = None,
+    autofix: Annotated[
+        bool,
+        typer.Option("--fix", help="исправить то, что правится само"),
+    ] = False,
 ) -> None:
     """Проверить файлы и вернуть код выхода: 0 — чисто, 1 — есть нарушения."""
     root = find_root(start=Path.cwd())
@@ -32,7 +46,16 @@ def run(  # check-ok: keyword-only-arguments: подпись команды ра
         exclude=config.excluded,
     )
     violations = inspect(files=files, checks=checks, config=config)
+    if autofix:
+        violations = _fixed(violations=violations)
     raise typer.Exit(report(violations=violations, root=root, checked=len(files)))
+
+
+def _fixed(*, violations: list[Violation]) -> list[Violation]:
+    """Наложить правки и вернуть то, что осталось человеку."""
+    changed, left = fix(violations=violations)
+    reformat(paths=changed)
+    return left
 
 
 def _chosen(*, select: list[str] | None, config: Config) -> list[FileCheck]:

@@ -7,7 +7,10 @@
 
 from python_checks.core._constants import EXIT_OK, EXIT_VIOLATION, GROUP
 from python_checks.core._discovery import python_files
+from python_checks.core._edit import Edit, apply
 from python_checks.core._errors import ParseError, UnknownCheckError
+from python_checks.core._fixer import fix
+from python_checks.core._format import reformat
 from python_checks.core._markers import MARKER, Marker, complaints, read, surviving
 from python_checks.core._protocols import FileCheck
 from python_checks.core._registry import available, get
@@ -23,6 +26,7 @@ __all__ = [
     "GROUP",
     "MARKER",
     "SYNTAX",
+    "Edit",
     "FileCheck",
     "Marker",
     "ParseError",
@@ -30,12 +34,15 @@ __all__ = [
     "SettingsMismatchError",
     "UnknownCheckError",
     "Violation",
+    "apply",
     "available",
     "complaints",
+    "fix",
     "get",
     "inspect",
     "python_files",
     "read",
+    "reformat",
     "surviving",
     "settings_as",
     "report",

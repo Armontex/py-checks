@@ -6,7 +6,7 @@ import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from python_checks.config import CheckSettings
-from python_checks.core import Violation
+from python_checks.core import Edit, Violation
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -34,7 +34,8 @@ class KeywordOnlyArguments:
         def price(*, market: Market, stake: Money) -> Money: ...
 
     `*args` и `**kwargs` запрещены по той же причине: сборщик принимает что
-    угодно, проверять типы там нечего, а место вызова ничего не объясняет.
+    угодно, проверять типы там нечего, а место вызова ничего не объясняет. Их
+    `--fix` не трогает: имена аргументов вместо звёздочек придумывает автор.
 
     Обратный вызов или обёртка, чью подпись диктует библиотека, помечается в
     подписи: `def f(a): ...  # check-ok: keyword-only-arguments: sqlalchemy`.
@@ -64,6 +65,7 @@ def _violations(*, node: Definition, name: str, file: ParsedFile) -> Iterator[Vi
             code=CODE,
             message=f"{name} принимает {', '.join(positional)} по позиции; поставь `*` перед ними",
             end_line=end_line,
+            edit=_star(node=node),
         )
     if collected := _collectors(node=node):
         yield Violation.from_node(
@@ -107,6 +109,22 @@ def _collectors(*, node: Definition) -> tuple[str, ...]:
     """`*args` и `**kwargs` в том виде, в каком их видит вызывающий."""
     stars = ((node.args.vararg, "*"), (node.args.kwarg, "**"))
     return tuple(f"{star}{argument.arg}" for argument, star in stars if argument)
+
+
+def _star(*, node: Definition) -> Edit | None:
+    """Правка: `*` перед первым аргументом, который сейчас идёт по позиции.
+
+    Не для всех случаев. При `*args` вторая звезда в подписи не встанет, а при
+    `/` аргументы позиционны по требованию автора, и снимать его требование
+    автофиксу не по чину.
+    """
+    if node.args.vararg is not None or node.args.posonlyargs:
+        return None
+    first = node.args.args[0]
+    if first.arg in IMPLICIT:
+        first = node.args.args[1]
+    line, column = first.lineno, first.col_offset + 1
+    return Edit(line=line, column=column, end_line=line, end_column=column, text="*, ")
 
 
 def _signature_end(*, node: Definition) -> int:
