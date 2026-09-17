@@ -26,3 +26,15 @@
   language: python
   always_run: true
   pass_filenames: false
+
+- id: import-contracts
+  name: импорты не пересекают границы
+  description: слои и модули знают друг о друге ровно столько, сколько разрешено таблицей слоёв
+  # Граф всего проекта — секунды, поэтому перед пушем, а не на каждый коммит.
+  # `uv run` нужен, чтобы import-linter увидел пакет проекта: он читает импорты
+  # по установленному окружению, а не по файлам в рабочей директории.
+  entry: uv run lint-imports --config .python-checks/importlinter.ini --no-logo
+  language: system
+  pass_filenames: false
+  always_run: true
+  stages: [pre-push]

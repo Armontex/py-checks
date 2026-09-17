@@ -6,6 +6,7 @@ readme = "README.md"
 authors = [{ name = "Armontex", email = "windle1337@gmail.com" }]
 requires-python = ">=3.14"
 dependencies = [
+    "import-linter>=2.15,<3",
     "libcst>=1.9,<2",
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
