@@ -29,8 +29,8 @@ class Violation:
     @classmethod
     def from_node(
         cls,
-        node: ast.AST,
         *,
+        node: ast.AST,
         path: Path,
         code: str,
         message: str,

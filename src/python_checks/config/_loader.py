@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from python_checks.config._toml import TomlTable, TomlValue
 
 
-def find_root(start: Path) -> Path:
+def find_root(*, start: Path) -> Path:
     """Ближайшая папка вверх по дереву, где лежит `pyproject.toml`.
 
     Именно она считается корнем проекта: пути в конфиге и в выводе даются
@@ -30,7 +30,7 @@ def find_root(start: Path) -> Path:
     return start
 
 
-def load(root: Path) -> Config:
+def load(*, root: Path) -> Config:
     """Настройки проекта; если секции нет — значения по умолчанию."""
     pyproject = root / PYPROJECT
     if not pyproject.is_file():
@@ -39,36 +39,36 @@ def load(root: Path) -> Config:
         document: TomlTable = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as error:
         raise ConfigError(f"{pyproject}: {error}") from error
-    return _build(_section(document), source=pyproject)
+    return _build(section=_section(document=document), source=pyproject)
 
 
-def _section(document: TomlTable) -> TomlTable:
+def _section(*, document: TomlTable) -> TomlTable:
     tool = document.get("tool")
     section = tool.get(SECTION) if isinstance(tool, dict) else None
     return section if isinstance(section, dict) else {}
 
 
-def _build(section: TomlTable, *, source: Path) -> Config:
-    own, checks = _split(section)
+def _build(*, section: TomlTable, source: Path) -> Config:
+    own, checks = _split(section=section)
     try:
         return Config.model_validate({**own, "checks": checks})
     except ValidationError as error:
         raise ConfigError(f"{source} [tool.{SECTION}]: {error}") from error
 
 
-def _split(section: TomlTable) -> tuple[TomlTable, dict[str, TomlTable]]:
+def _split(*, section: TomlTable) -> tuple[TomlTable, dict[str, TomlTable]]:
     """Свои ключи отдельно, вложенные таблицы проверок отдельно."""
     own: TomlTable = {}
     checks: dict[str, TomlTable] = {}
     for key, value in section.items():
-        _place(key, value, own=own, checks=checks)
+        _place(key=key, value=value, own=own, checks=checks)
     return own, checks
 
 
 def _place(
+    *,
     key: str,
     value: TomlValue,
-    *,
     own: TomlTable,
     checks: dict[str, TomlTable],
 ) -> None:

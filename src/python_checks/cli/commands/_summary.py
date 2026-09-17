@@ -11,10 +11,10 @@ if TYPE_CHECKING:
 NO_DOC = "нет описания"
 
 
-def docstring(check: FileCheck) -> str:
+def docstring(*, check: FileCheck) -> str:
     return introspect.getdoc(type(check)) or NO_DOC
 
 
-def summary(check: FileCheck) -> str:
+def summary(*, check: FileCheck) -> str:
     """Первая строка докстринга: правило одной фразой."""
-    return docstring(check).splitlines()[0]
+    return docstring(check=check).splitlines()[0]

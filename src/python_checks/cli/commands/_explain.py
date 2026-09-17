@@ -11,18 +11,18 @@ from python_checks.cli.commands._summary import docstring
 from python_checks.core import get
 
 
-def explain(
+def explain(  # signature-ok: подпись команды разбирает typer
     code: Annotated[str, typer.Argument(help="код проверки")],
 ) -> None:
     """Показать, что проверка требует и какие у неё настройки."""
-    check = get(code)
+    check = get(code=code)
     console = Console()
-    console.print(docstring(check), markup=False)
+    console.print(docstring(check=check), markup=False)
     console.print("\nнастройки:", markup=False)
     for name, field in check.Settings.model_fields.items():
         key = field.alias or name
         console.print(f"  {key} = {field.get_default(call_default_factory=True)!r}", markup=False)
 
 
-def register(app: typer.Typer) -> None:
+def register(*, app: typer.Typer) -> None:
     app.command("explain")(explain)

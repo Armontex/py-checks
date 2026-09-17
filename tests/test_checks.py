@@ -22,10 +22,10 @@ def cases() -> list[str]:
 
 def rendered(case: str) -> list[str]:
     root = FIXTURES / case
-    config = load(root)
-    check = get(case.replace("_", "-"))
-    files = python_files([], root=root, default=root / config.src, exclude=config.exclude)
-    violations = inspect(files, checks=[check], config=config)
+    config = load(root=root)
+    check = get(code=case.replace("_", "-"))
+    files = python_files(paths=[], root=root, default=root / config.src, exclude=config.exclude)
+    violations = inspect(files=files, checks=[check], config=config)
     return [violation.render(root=root) for violation in violations]
 
 

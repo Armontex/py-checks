@@ -25,15 +25,15 @@ class Config(CheckSettings):
     ignore: tuple[str, ...] = ()
     checks: dict[str, TomlTable] = Field(default_factory=dict, exclude=True)
 
-    def section(self, code: str) -> TomlTable:
+    def section(self, *, code: str) -> TomlTable:
         return self.checks.get(code, {})
 
-    def settings_for(self, code: str, model: type[CheckSettings]) -> CheckSettings:
+    def settings_for(self, *, code: str, model: type[CheckSettings]) -> CheckSettings:
         """Настройки проверки: её секция, проверенная её же моделью."""
         try:
-            return model.model_validate(self.section(code))
+            return model.model_validate(self.section(code=code))
         except ValidationError as error:
             raise ConfigError(f"[tool.{SECTION}.{code}]: {error}") from error
 
-    def enabled(self, code: str) -> bool:
+    def enabled(self, *, code: str) -> bool:
         return code not in self.ignore

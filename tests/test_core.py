@@ -29,7 +29,7 @@ def test_violation_from_node_shifts_column_to_one_based(tmp_path: Path) -> None:
     file = ParsedFile(path=tmp_path / "a.py", text="x = 1\n")
     node = file.tree.body[0]
 
-    violation = Violation.from_node(node, path=file.path, code="c", message="m")
+    violation = Violation.from_node(node=node, path=file.path, code="c", message="m")
 
     assert (violation.line, violation.column) == (1, 1)
 
@@ -55,7 +55,7 @@ def test_python_files_walks_directories_and_skips_excluded(tmp_path: Path) -> No
     write(tmp_path, ".venv/c.py")
 
     found = python_files(
-        [],
+        paths=[],
         root=tmp_path,
         default=tmp_path,
         exclude=(".venv/*",),
@@ -71,14 +71,14 @@ def test_python_files_takes_explicit_paths(tmp_path: Path) -> None:
     first = write(tmp_path, "src/a.py")
     write(tmp_path, "src/b.py")
 
-    assert python_files([first], root=tmp_path, default=tmp_path) == [first]
+    assert python_files(paths=[first], root=tmp_path, default=tmp_path) == [first]
 
 
 def test_report_exit_codes(tmp_path: Path) -> None:
     violation = Violation(path=tmp_path / "a.py", line=1, column=1, code="c", message="m")
 
-    assert report([], root=tmp_path, checked=1) == 0
-    assert report([violation], root=tmp_path, checked=1) == 1
+    assert report(violations=[], root=tmp_path, checked=1) == 0
+    assert report(violations=[violation], root=tmp_path, checked=1) == 1
 
 
 class Limits(CheckSettings):
@@ -99,20 +99,20 @@ def test_config_reads_own_keys_and_check_sections(tmp_path: Path) -> None:
         """.replace("        ", ""),
     )
 
-    config = load(tmp_path)
+    config = load(root=tmp_path)
 
     assert config.src == Path("app")
-    assert config.enabled("module-length") is False
-    assert config.settings_for("module-length", Limits) == Limits(max_lines=120)
+    assert config.enabled(code="module-length") is False
+    assert config.settings_for(code="module-length", model=Limits) == Limits(max_lines=120)
 
 
 def test_config_defaults_when_section_is_missing(tmp_path: Path) -> None:
     write(tmp_path, "pyproject.toml", "[project]\nname = 'x'\n")
 
-    config = load(tmp_path)
+    config = load(root=tmp_path)
 
     assert config == Config()
-    assert config.settings_for("module-length", Limits) == Limits()
+    assert config.settings_for(code="module-length", model=Limits) == Limits()
 
 
 def test_config_rejects_unknown_key(tmp_path: Path) -> None:
@@ -123,7 +123,7 @@ def test_config_rejects_unknown_key(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ConfigError):
-        load(tmp_path).settings_for("module-length", Limits)
+        load(root=tmp_path).settings_for(code="module-length", model=Limits)
 
 
 def test_find_root_walks_up(tmp_path: Path) -> None:
@@ -131,7 +131,7 @@ def test_find_root_walks_up(tmp_path: Path) -> None:
     nested = tmp_path / "src" / "deep"
     nested.mkdir(parents=True)
 
-    assert find_root(nested) == tmp_path
+    assert find_root(start=nested) == tmp_path
 
 
 def test_config_keeps_nested_check_sections_typed(tmp_path: Path) -> None:
@@ -141,7 +141,7 @@ def test_config_keeps_nested_check_sections_typed(tmp_path: Path) -> None:
         "[tool.python-checks.module-length]\nmax-lines = 120\n",
     )
 
-    section = load(tmp_path).section("module-length")
+    section = load(root=tmp_path).section(code="module-length")
 
     assert section == {"max-lines": 120}
-    assert load(tmp_path).section("missing") == {}
+    assert load(root=tmp_path).section(code="missing") == {}

@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 def report(
-    violations: Sequence[Violation],
     *,
+    violations: Sequence[Violation],
     root: Path,
     checked: int,
     console: Console | None = None,
@@ -28,7 +28,7 @@ def report(
     подсветка не должна мешать разбирать строку. Цвета `rich` отключает сам,
     когда вывод идёт не в терминал, — а под pre-commit это всегда так.
     """
-    console = console or Console(stderr=True)
+    console = console or Console(stderr=True, soft_wrap=True)
     for violation in violations:
         console.print(violation.render(root=root), markup=False, highlight=False)
     if violations:

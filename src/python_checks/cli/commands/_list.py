@@ -18,16 +18,16 @@ if TYPE_CHECKING:
 
 def list_checks() -> None:
     """Показать все проверки: код, состояние и одну строку описания."""
-    config = load(find_root(Path.cwd()))
+    config = load(root=find_root(start=Path.cwd()))
     table = Table(box=None, pad_edge=False)
     table.add_column("код")
     table.add_column("состояние")
     table.add_column("что делает")
     for code, check in sorted(available().items()):
-        state = "вкл" if config.enabled(code) else "выкл"
-        table.add_row(code, state, summary(check))
+        state = "вкл" if config.enabled(code=code) else "выкл"
+        table.add_row(code, state, summary(check=check))
     Console().print(table)
 
 
-def register(app: typer.Typer) -> None:
+def register(*, app: typer.Typer) -> None:
     app.command("list")(list_checks)

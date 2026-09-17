@@ -29,7 +29,7 @@ class ModuleLength:
     code = "module-length"
     Settings = Limits
 
-    def run(self, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
+    def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
         assert isinstance(settings, Limits)
         if len(file.lines) > settings.max_lines:
             yield Violation(
@@ -47,7 +47,7 @@ class NeedsTree:
     code = "needs-tree"
     Settings = CheckSettings
 
-    def run(self, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
+    def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
         _ = settings
         for _node in file.tree.body:
             pass

@@ -19,8 +19,8 @@ SYNTAX: Final = "syntax"
 
 
 def inspect(
-    files: Sequence[Path],
     *,
+    files: Sequence[Path],
     checks: Sequence[FileCheck],
     config: Config,
 ) -> list[Violation]:
@@ -29,30 +29,32 @@ def inspect(
     Внешний цикл по файлам, а не по проверкам: файл читается и разбирается один
     раз, а проверок на него много.
     """
-    settings = {check.code: config.settings_for(check.code, check.Settings) for check in checks}
+    settings = {
+        check.code: config.settings_for(code=check.code, model=check.Settings) for check in checks
+    }
     violations: list[Violation] = []
     for path in files:
-        violations.extend(_inspect_file(path, checks=checks, settings=settings))
+        violations.extend(_inspect_file(path=path, checks=checks, settings=settings))
     return violations
 
 
 def _inspect_file(
-    path: Path,
     *,
+    path: Path,
     checks: Sequence[FileCheck],
     settings: Mapping[str, CheckSettings],
 ) -> list[Violation]:
-    file = ParsedFile.from_path(path)
+    file = ParsedFile.from_path(path=path)
     found: list[Violation] = []
     for check in checks:
         try:
-            found.extend(check.run(file, settings[check.code]))
+            found.extend(check.run(file=file, settings=settings[check.code]))
         except ParseError as error:
-            return [_broken(error)]
+            return [_broken(error=error)]
     return found
 
 
-def _broken(error: ParseError) -> Violation:
+def _broken(*, error: ParseError) -> Violation:
     """Сломанный файл — это одно нарушение, а не падение всего прогона.
 
     Иначе один файл с недописанным синтаксисом прячет нарушения во всех

@@ -28,7 +28,7 @@ class ParsedFile:
         self._lines: tuple[str, ...] | None = None
 
     @classmethod
-    def from_path(cls, path: Path) -> ParsedFile:
+    def from_path(cls, *, path: Path) -> ParsedFile:
         return cls(path=path, text=path.read_text(encoding="utf-8"))
 
     @property
@@ -47,5 +47,5 @@ class ParsedFile:
             try:
                 self._tree = ast.parse(self._text, filename=str(self.path))
             except SyntaxError as error:
-                raise ParseError(self.path, error) from error
+                raise ParseError(path=self.path, error=error) from error
         return self._tree

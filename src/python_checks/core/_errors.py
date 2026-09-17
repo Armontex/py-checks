@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class ParseError(Exception):
     """Файл не разбирается: синтаксис сломан."""
 
-    def __init__(self, path: Path, error: SyntaxError) -> None:
+    def __init__(self, *, path: Path, error: SyntaxError) -> None:
         super().__init__(f"{path}: {error.msg}")
         self.path = path
         self.error = error
@@ -20,6 +20,6 @@ class ParseError(Exception):
 class UnknownCheckError(Exception):
     """Такой проверки нет."""
 
-    def __init__(self, code: str, known: tuple[str, ...]) -> None:
+    def __init__(self, *, code: str, known: tuple[str, ...]) -> None:
         super().__init__(f"неизвестная проверка {code!r}; есть: {', '.join(known)}")
         self.code = code

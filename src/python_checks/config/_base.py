@@ -5,7 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict
 
 
-def _to_kebab(name: str) -> str:
+def _to_kebab(name: str) -> str:  # signature-ok: pydantic зовёт alias_generator по позиции
     return name.replace("_", "-")
 
 

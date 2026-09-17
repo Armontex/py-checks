@@ -13,7 +13,7 @@ app = typer.Typer(
 )
 
 for register in REGISTRARS:
-    register(app)
+    register(app=app)
 
 
 def main() -> None:
