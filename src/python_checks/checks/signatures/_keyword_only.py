@@ -55,7 +55,7 @@ class KeywordOnlyArguments:
 
     Обратный вызов или обёртка, чью подпись диктует библиотека, помечается в
     подписи: `def f(a): ...  # check-ok: keyword-only-arguments: sqlalchemy`.
-    Старое слово `# signature-ok` библиотека тоже понимает.
+    Слово группы `# signature-ok` библиотека тоже понимает.
 
     Настроек нет.
     """
@@ -66,105 +66,114 @@ class KeywordOnlyArguments:
 
     def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
         _ = settings
-        for definition in _definitions(node=file.tree):
-            if _interpreter_dunder(name=definition.name):
+        for definition in self._definitions(node=file.tree):
+            if self._interpreter_dunder(name=definition.name):
                 continue
-            yield from _violations(definition=definition, file=file)
+            yield from self._violations(definition=definition, file=file)
 
+    @classmethod
+    def _violations(cls, *, definition: Definition, file: ParsedFile) -> Iterator[Violation]:
+        node, name = definition.node, definition.name
+        end_line = cls._signature_end(node=node)
+        if positional := cls._positional(definition=definition):
+            yield Violation.from_node(
+                node=node,
+                path=file.path,
+                code=CODE,
+                message=(
+                    f"{name} принимает {', '.join(positional)} по позиции; поставь `*` перед ними"
+                ),
+                end_line=end_line,
+                edit=cls._star(definition=definition),
+            )
+        if collected := cls._collectors(node=node):
+            yield Violation.from_node(
+                node=node,
+                path=file.path,
+                code=CODE,
+                message=f"{name} принимает {', '.join(collected)}; перечисли аргументы по имени",
+                end_line=end_line,
+            )
 
-def _violations(*, definition: Definition, file: ParsedFile) -> Iterator[Violation]:
-    node, name = definition.node, definition.name
-    end_line = _signature_end(node=node)
-    if positional := _positional(definition=definition):
-        yield Violation.from_node(
-            node=node,
-            path=file.path,
-            code=CODE,
-            message=f"{name} принимает {', '.join(positional)} по позиции; поставь `*` перед ними",
-            end_line=end_line,
-            edit=_star(definition=definition),
-        )
-    if collected := _collectors(node=node):
-        yield Violation.from_node(
-            node=node,
-            path=file.path,
-            code=CODE,
-            message=f"{name} принимает {', '.join(collected)}; перечисли аргументы по имени",
-            end_line=end_line,
-        )
+    @classmethod
+    def _definitions(
+        cls,
+        *,
+        node: ast.AST,
+        prefix: str = "",
+        method: bool = False,
+    ) -> Iterator[Definition]:
+        """Все функции дерева под именами вида `Класс.метод` или `внешняя.вложенная`.
 
+        Заодно запоминается, тело какого узла мы разбираем: функция в теле
+        класса — метод, а функция внутри метода — уже нет, и первый аргумент ей
+        никто не передаёт.
+        """
+        for child in ast.iter_child_nodes(node):
+            match child:
+                case ast.ClassDef(name=name):
+                    yield from cls._definitions(node=child, prefix=f"{prefix}{name}.", method=True)
+                case ast.FunctionDef(name=name) | ast.AsyncFunctionDef(name=name):
+                    yield Definition(name=f"{prefix}{name}", node=child, method=method)
+                    yield from cls._definitions(node=child, prefix=f"{prefix}{name}.", method=False)
+                case _:
+                    yield from cls._definitions(node=child, prefix=prefix, method=method)
 
-def _definitions(*, node: ast.AST, prefix: str = "", method: bool = False) -> Iterator[Definition]:
-    """Все функции дерева под именами вида `Класс.метод` или `внешняя.вложенная`.
+    @staticmethod
+    def _interpreter_dunder(*, name: str) -> bool:
+        own = name.rsplit(".", maxsplit=1)[-1]
+        if own in OWN_DUNDERS:
+            return False
+        return own.startswith("__") and own.endswith("__")
 
-    Заодно запоминается, тело какого узла мы разбираем: функция в теле класса —
-    метод, а функция внутри метода — уже нет, и первый аргумент ей никто не
-    передаёт.
-    """
-    for child in ast.iter_child_nodes(node):
-        match child:
-            case ast.ClassDef(name=name):
-                yield from _definitions(node=child, prefix=f"{prefix}{name}.", method=True)
-            case ast.FunctionDef(name=name) | ast.AsyncFunctionDef(name=name):
-                yield Definition(name=f"{prefix}{name}", node=child, method=method)
-                yield from _definitions(node=child, prefix=f"{prefix}{name}.", method=False)
+    @classmethod
+    def _positional(cls, *, definition: Definition) -> tuple[str, ...]:
+        """Аргументы, которые вызывающий может передать по позиции."""
+        skip = cls._receiver(definition=definition)
+        arguments = [*definition.node.args.posonlyargs, *definition.node.args.args]
+        return tuple(argument.arg for argument in arguments[skip:])
+
+    @classmethod
+    def _receiver(cls, *, definition: Definition) -> int:
+        """Сколько первых аргументов передаёт интерпретатор: один у метода, иначе ноль."""
+        if not definition.method or cls._static(node=definition.node):
+            return 0
+        return 1
+
+    @classmethod
+    def _static(cls, *, node: Function) -> bool:
+        return STATIC in tuple(cls._decorator(node=item) for item in node.decorator_list)
+
+    @staticmethod
+    def _decorator(*, node: ast.expr) -> str:
+        match node:
+            case ast.Name(id=name) | ast.Attribute(attr=name):
+                return name
             case _:
-                yield from _definitions(node=child, prefix=prefix, method=method)
+                return ""
 
+    @staticmethod
+    def _collectors(*, node: Function) -> tuple[str, ...]:
+        """`*args` и `**kwargs` в том виде, в каком их видит вызывающий."""
+        stars = ((node.args.vararg, "*"), (node.args.kwarg, "**"))
+        return tuple(f"{star}{argument.arg}" for argument, star in stars if argument)
 
-def _interpreter_dunder(*, name: str) -> bool:
-    own = name.rsplit(".", maxsplit=1)[-1]
-    if own in OWN_DUNDERS:
-        return False
-    return own.startswith("__") and own.endswith("__")
+    @classmethod
+    def _star(cls, *, definition: Definition) -> Edit | None:
+        """Правка: `*` перед первым аргументом, который сейчас идёт по позиции.
 
+        Не для всех случаев. При `*args` вторая звезда в подписи не встанет, а
+        при `/` аргументы позиционны по требованию автора, и снимать его
+        требование автофиксу не по чину.
+        """
+        node = definition.node
+        if node.args.vararg is not None or node.args.posonlyargs:
+            return None
+        first = node.args.args[cls._receiver(definition=definition)]
+        line, column = first.lineno, first.col_offset + 1
+        return Edit(line=line, column=column, end_line=line, end_column=column, text="*, ")
 
-def _positional(*, definition: Definition) -> tuple[str, ...]:
-    """Аргументы, которые вызывающий может передать по позиции."""
-    arguments = [*definition.node.args.posonlyargs, *definition.node.args.args]
-    return tuple(argument.arg for argument in arguments[_receiver(definition=definition) :])
-
-
-def _receiver(*, definition: Definition) -> int:
-    """Сколько первых аргументов передаёт интерпретатор: один у метода, иначе ноль."""
-    if not definition.method or _static(node=definition.node):
-        return 0
-    return 1
-
-
-def _static(*, node: Function) -> bool:
-    return STATIC in tuple(_decorator(node=item) for item in node.decorator_list)
-
-
-def _decorator(*, node: ast.expr) -> str:
-    match node:
-        case ast.Name(id=name) | ast.Attribute(attr=name):
-            return name
-        case _:
-            return ""
-
-
-def _collectors(*, node: Function) -> tuple[str, ...]:
-    """`*args` и `**kwargs` в том виде, в каком их видит вызывающий."""
-    stars = ((node.args.vararg, "*"), (node.args.kwarg, "**"))
-    return tuple(f"{star}{argument.arg}" for argument, star in stars if argument)
-
-
-def _star(*, definition: Definition) -> Edit | None:
-    """Правка: `*` перед первым аргументом, который сейчас идёт по позиции.
-
-    Не для всех случаев. При `*args` вторая звезда в подписи не встанет, а при
-    `/` аргументы позиционны по требованию автора, и снимать его требование
-    автофиксу не по чину.
-    """
-    node = definition.node
-    if node.args.vararg is not None or node.args.posonlyargs:
-        return None
-    first = node.args.args[_receiver(definition=definition)]
-    line, column = first.lineno, first.col_offset + 1
-    return Edit(line=line, column=column, end_line=line, end_column=column, text="*, ")
-
-
-def _signature_end(*, node: Function) -> int:
-    """Последняя строка подписи: на ней стоит маркер, если подпись в столбик."""
-    return max(node.body[0].lineno - 1, node.lineno)
+    @staticmethod
+    def _signature_end(*, node: Function) -> int:
+        """Последняя строка подписи: на ней стоит маркер, если подпись в столбик."""
+        return max(node.body[0].lineno - 1, node.lineno)
