@@ -132,3 +132,16 @@ def test_find_root_walks_up(tmp_path: Path) -> None:
     nested.mkdir(parents=True)
 
     assert find_root(nested) == tmp_path
+
+
+def test_config_keeps_nested_check_sections_typed(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "pyproject.toml",
+        "[tool.python-checks.module-length]\nmax-lines = 120\n",
+    )
+
+    section = load(tmp_path).section("module-length")
+
+    assert section == {"max-lines": 120}
+    assert load(tmp_path).section("missing") == {}

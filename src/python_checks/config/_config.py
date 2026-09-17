@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from pydantic import Field, ValidationError
 
 from python_checks.config._base import CheckSettings
 from python_checks.config._constants import DEFAULT_EXCLUDE, SECTION
 from python_checks.config._errors import ConfigError
+from python_checks.config._toml import TomlTable
 
 
 class Config(CheckSettings):
@@ -23,9 +23,9 @@ class Config(CheckSettings):
     src: Path = Path("src")
     exclude: tuple[str, ...] = DEFAULT_EXCLUDE
     ignore: tuple[str, ...] = ()
-    checks: dict[str, dict[str, Any]] = Field(default_factory=dict, exclude=True)
+    checks: dict[str, TomlTable] = Field(default_factory=dict, exclude=True)
 
-    def section(self, code: str) -> dict[str, Any]:
+    def section(self, code: str) -> TomlTable:
         return self.checks.get(code, {})
 
     def settings_for(self, code: str, model: type[CheckSettings]) -> CheckSettings:

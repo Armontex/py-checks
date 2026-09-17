@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import tomllib
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
 
 from python_checks.config._config import Config
-from python_checks.config._constants import SECTION
+from python_checks.config._constants import PYPROJECT, SECTION
 from python_checks.config._errors import ConfigError
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from python_checks.config._toml import TomlTable, TomlValue
 
 
 def find_root(start: Path) -> Path:
@@ -23,25 +25,30 @@ def find_root(start: Path) -> Path:
     запустили проверку.
     """
     for directory in (start, *start.parents):
-        if (directory / "pyproject.toml").is_file():
+        if (directory / PYPROJECT).is_file():
             return directory
     return start
 
 
 def load(root: Path) -> Config:
     """Настройки проекта; если секции нет — значения по умолчанию."""
-    pyproject = root / "pyproject.toml"
+    pyproject = root / PYPROJECT
     if not pyproject.is_file():
         return Config()
     try:
-        document = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        document: TomlTable = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as error:
         raise ConfigError(f"{pyproject}: {error}") from error
-    section = document.get("tool", {}).get(SECTION, {})
-    return _build(section, source=pyproject)
+    return _build(_section(document), source=pyproject)
 
 
-def _build(section: dict[str, Any], *, source: Path) -> Config:
+def _section(document: TomlTable) -> TomlTable:
+    tool = document.get("tool")
+    section = tool.get(SECTION) if isinstance(tool, dict) else None
+    return section if isinstance(section, dict) else {}
+
+
+def _build(section: TomlTable, *, source: Path) -> Config:
     own, checks = _split(section)
     try:
         return Config.model_validate({**own, "checks": checks})
@@ -49,13 +56,23 @@ def _build(section: dict[str, Any], *, source: Path) -> Config:
         raise ConfigError(f"{source} [tool.{SECTION}]: {error}") from error
 
 
-def _split(section: dict[str, Any]) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+def _split(section: TomlTable) -> tuple[TomlTable, dict[str, TomlTable]]:
     """Свои ключи отдельно, вложенные таблицы проверок отдельно."""
-    own: dict[str, Any] = {}
-    checks: dict[str, dict[str, Any]] = {}
+    own: TomlTable = {}
+    checks: dict[str, TomlTable] = {}
     for key, value in section.items():
-        if isinstance(value, dict):
-            checks[key] = value  # pyright: ignore[reportUnknownArgumentType]
-        else:
-            own[key] = value
+        _place(key, value, own=own, checks=checks)
     return own, checks
+
+
+def _place(
+    key: str,
+    value: TomlValue,
+    *,
+    own: TomlTable,
+    checks: dict[str, TomlTable],
+) -> None:
+    if isinstance(value, dict):
+        checks[key] = value
+    else:
+        own[key] = value

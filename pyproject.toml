@@ -68,7 +68,11 @@ ignore = ["B008"]
 
 [tool.ruff.lint.flake8-type-checking]
 # pydantic reads annotations at run time, so its models keep real imports
-runtime-evaluated-base-classes = ["pydantic.BaseModel", "python_checks.config.CheckSettings"]
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "python_checks.config.CheckSettings",
+    "python_checks.config._base.CheckSettings",
+]
 
 [tool.pyright]
 pythonVersion = "3.14"

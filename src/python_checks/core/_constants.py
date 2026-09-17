@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Final
+
 # Группа entry points, в которой объявляются проверки: своя проверка живёт в
 # отдельном пакете и не требует форка библиотеки.
-GROUP = "python_checks.checks"
+GROUP: Final = "python_checks.checks"
 
 # Что видит оболочка. Голая единица была бы кодом, смысл которого знает только
 # вызывающий; pre-commit по ней останавливает коммит.
-EXIT_OK = 0
-EXIT_VIOLATION = 1
+EXIT_OK: Final = 0
+EXIT_VIOLATION: Final = 1

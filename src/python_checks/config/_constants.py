@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-SECTION = "python-checks"
+from typing import Final
 
-DEFAULT_EXCLUDE: tuple[str, ...] = (
+PYPROJECT: Final = "pyproject.toml"
+
+SECTION: Final = "python-checks"
+
+DEFAULT_EXCLUDE: Final[tuple[str, ...]] = (
     ".venv/*",
     "build/*",
     "dist/*",
