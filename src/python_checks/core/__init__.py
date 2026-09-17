@@ -5,10 +5,13 @@
 отсюда.
 """
 
+from python_checks.core._constants import EXIT_OK, EXIT_VIOLATION, GROUP
 from python_checks.core._discovery import python_files
-from python_checks.core._registry import GROUP, FileCheck, UnknownCheckError, available, get
-from python_checks.core._report import EXIT_OK, EXIT_VIOLATION, report
-from python_checks.core._source import ParsedFile, ParseError
+from python_checks.core._errors import ParseError, UnknownCheckError
+from python_checks.core._protocols import FileCheck
+from python_checks.core._registry import available, get
+from python_checks.core._report import report
+from python_checks.core._source import ParsedFile
 from python_checks.core._violation import Violation
 
 __all__ = [

@@ -6,14 +6,13 @@ from typing import TYPE_CHECKING
 
 from rich.console import Console
 
+from python_checks.core._constants import EXIT_OK, EXIT_VIOLATION
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
 
     from python_checks.core._violation import Violation
-
-EXIT_OK = 0
-EXIT_VIOLATION = 1
 
 
 def report(

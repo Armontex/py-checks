@@ -5,17 +5,10 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING
 
+from python_checks.core._errors import ParseError
+
 if TYPE_CHECKING:
     from pathlib import Path
-
-
-class ParseError(Exception):
-    """Файл не разбирается: синтаксис сломан."""
-
-    def __init__(self, path: Path, error: SyntaxError) -> None:
-        super().__init__(f"{path}: {error.msg}")
-        self.path = path
-        self.error = error
 
 
 class ParsedFile:
