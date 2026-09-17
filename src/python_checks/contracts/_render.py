@@ -40,7 +40,7 @@ def render(*, root: Path, config: Config) -> str | None:
 
 def _roots(*, root: Path, package: str) -> str:
     packages = [package, MIGRATIONS] if migrations(root=root) else [package]
-    return _block(head="[importlinter]", keys={"root_packages": packages})
+    return _block(head="[importlinter]", scalars={}, lists={"root_packages": packages})
 
 
 def _contracts(*, root: Path, config: Config, package: str) -> list[str]:
@@ -83,17 +83,16 @@ def _layer(
         return None
     return _block(
         head=f"[importlinter:contract:layer-{layer}]",
-        keys={
-            "name": [f"{layer} не импортирует чужое"],
-            "type": ["forbidden"],
+        scalars={
+            "name": f"{layer} не импортирует чужое",
+            "type": "forbidden",
             # Только прямые импорты. Непрямую цепочку тут проверять нечего:
             # `presentation` зовёт `application`, а `application` знает
             # `domain` — по таблице это и есть правильная работа, и запрет
             # непрямых связей запретил бы её же.
-            "allow_indirect_imports": ["True"],
-            "source_modules": list(sources),
-            "forbidden_modules": targets,
+            "allow_indirect_imports": "True",
         },
+        lists={"source_modules": list(sources), "forbidden_modules": targets},
     )
 
 
@@ -104,11 +103,8 @@ def _independence(*, root: Path, config: Config, package: str) -> list[str]:
     return [
         _block(
             head="[importlinter:contract:modules]",
-            keys={
-                "name": ["модули независимы"],
-                "type": ["independence"],
-                "modules": [f"{package}.{MODULES}.*"],
-            },
+            scalars={"name": "модули независимы", "type": "independence"},
+            lists={"modules": [f"{package}.{MODULES}.*"]},
         ),
     ]
 
@@ -124,9 +120,8 @@ def _migrations(*, root: Path, package: str) -> list[str]:
     return [
         _block(
             head=f"[importlinter:contract:{MIGRATIONS}]",
-            keys={
-                "name": ["миграции не знают приложение"],
-                "type": ["forbidden"],
+            scalars={"name": "миграции не знают приложение", "type": "forbidden"},
+            lists={
                 "source_modules": [f"{MIGRATIONS}.{VERSIONS}"],
                 "forbidden_modules": [package],
             },
@@ -134,12 +129,19 @@ def _migrations(*, root: Path, package: str) -> list[str]:
     ]
 
 
-def _block(*, head: str, keys: Mapping[str, Sequence[str]]) -> str:
-    lines = [head]
-    for key, values in keys.items():
-        if len(values) == 1:
-            lines.append(f"{key} = {values[0]}")
-            continue
+def _block(
+    *,
+    head: str,
+    scalars: Mapping[str, str],
+    lists: Mapping[str, Sequence[str]],
+) -> str:
+    """Один раздел ini.
+
+    Списки пишутся в столбик даже из одного значения: import-linter разбирает
+    поле-список, написанное в строку, посимвольно — и ищет пакет `p`.
+    """
+    lines = [head, *(f"{key} = {value}" for key, value in scalars.items())]
+    for key, values in lists.items():
         lines.append(f"{key} =")
         lines.extend(f"    {value}" for value in values)
     return "\n".join(lines) + "\n"

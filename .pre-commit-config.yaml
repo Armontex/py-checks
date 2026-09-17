@@ -107,3 +107,11 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
+
+      - id: import-contracts
+        name: импорты не пересекают границы
+        entry: uv run lint-imports --config .python-checks/importlinter.ini --no-logo
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-push]

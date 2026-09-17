@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
-from python_checks.config import Config, ConfigError
+from python_checks.config import Config, ConfigError, load
 from python_checks.contracts import BASE, layers, render
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def layout(root: Path, *paths: str) -> Path:
@@ -76,7 +73,16 @@ def test_only_the_history_of_migrations_is_checked(tmp_path: Path) -> None:
 
     text = render(root=tmp_path, config=Config()) or ""
 
-    assert "source_modules = migrations.versions" in text
+    assert "source_modules =\n    migrations.versions" in text
+
+
+def test_a_single_value_still_stands_in_a_column(tmp_path: Path) -> None:
+    """import-linter разбирает поле-список, написанное в строку, посимвольно."""
+    layout(tmp_path, "src/app/infra", "src/app/shared")
+
+    text = render(root=tmp_path, config=Config()) or ""
+
+    assert "root_packages =\n    app\n" in text
 
 
 def test_a_layout_without_layers_gets_no_contracts(tmp_path: Path) -> None:
@@ -89,3 +95,13 @@ def test_two_packages_in_src_are_not_guessed_at(tmp_path: Path) -> None:
     layout(tmp_path, "src/app/domain", "src/other/domain")
 
     assert render(root=tmp_path, config=Config()) is None
+
+
+def test_the_library_checks_its_own_layers() -> None:
+    """Секция в pyproject этого репозитория — тот самый случай переопределения."""
+    root = Path(__file__).resolve().parent.parent
+
+    text = render(root=root, config=load(root=root)) or ""
+
+    assert "[importlinter:contract:layer-core]" in text
+    assert "python_checks.cli" in text
