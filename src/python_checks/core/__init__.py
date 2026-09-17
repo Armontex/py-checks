@@ -11,6 +11,7 @@ from python_checks.core._errors import ParseError, UnknownCheckError
 from python_checks.core._protocols import FileCheck
 from python_checks.core._registry import available, get
 from python_checks.core._report import report
+from python_checks.core._runner import SYNTAX, inspect
 from python_checks.core._source import ParsedFile
 from python_checks.core._violation import Violation
 
@@ -18,6 +19,7 @@ __all__ = [
     "EXIT_OK",
     "EXIT_VIOLATION",
     "GROUP",
+    "SYNTAX",
     "FileCheck",
     "ParseError",
     "ParsedFile",
@@ -25,6 +27,7 @@ __all__ = [
     "Violation",
     "available",
     "get",
+    "inspect",
     "python_files",
     "report",
 ]
