@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import typer
 
-from python_checks.cli.commands import explain, list_checks, run
+from python_checks.cli.commands import REGISTRARS
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -12,9 +12,8 @@ app = typer.Typer(
     help="Проверки архитектурных соглашений проекта.",
 )
 
-app.command("run")(run)
-app.command("list")(list_checks)
-app.command("explain")(explain)
+for register in REGISTRARS:
+    register(app)
 
 
 def main() -> None:

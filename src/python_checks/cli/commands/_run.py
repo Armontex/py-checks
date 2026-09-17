@@ -44,3 +44,7 @@ def _chosen(select: list[str] | None, *, config: Config) -> list[FileCheck]:
     if select:
         return [get(code) for code in select]
     return [check for code, check in sorted(available().items()) if config.enabled(code)]
+
+
+def register(app: typer.Typer) -> None:
+    app.command("run")(run)

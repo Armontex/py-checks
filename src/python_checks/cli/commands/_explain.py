@@ -22,3 +22,7 @@ def explain(
     for name, field in check.Settings.model_fields.items():
         key = field.alias or name
         console.print(f"  {key} = {field.get_default(call_default_factory=True)!r}", markup=False)
+
+
+def register(app: typer.Typer) -> None:
+    app.command("explain")(explain)
