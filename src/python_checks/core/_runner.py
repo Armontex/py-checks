@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
+from python_checks.core import _registry
 from python_checks.core._errors import ParseError
+from python_checks.core._markers import complaints, surviving
 from python_checks.core._source import ParsedFile
 from python_checks.core._violation import Violation
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Collection, Mapping, Sequence
     from pathlib import Path
 
     from python_checks.config import CheckSettings, Config
@@ -32,9 +34,19 @@ def inspect(
     settings = {
         check.code: config.settings_for(code=check.code, model=check.Settings) for check in checks
     }
+    registered = _registry.available()
+    aliases = {check.marker: code for code, check in registered.items() if check.marker}
     violations: list[Violation] = []
     for path in files:
-        violations.extend(_inspect_file(path=path, checks=checks, settings=settings))
+        violations.extend(
+            _inspect_file(
+                path=path,
+                checks=checks,
+                settings=settings,
+                aliases=aliases,
+                known=frozenset(registered),
+            )
+        )
     return violations
 
 
@@ -43,6 +55,8 @@ def _inspect_file(
     path: Path,
     checks: Sequence[FileCheck],
     settings: Mapping[str, CheckSettings],
+    aliases: Mapping[str, str],
+    known: Collection[str],
 ) -> list[Violation]:
     file = ParsedFile.from_path(path=path)
     found: list[Violation] = []
@@ -51,7 +65,8 @@ def _inspect_file(
             found.extend(check.run(file=file, settings=settings[check.code]))
         except ParseError as error:
             return [_broken(error=error)]
-    return found
+    kept = surviving(violations=found, file=file, aliases=aliases)
+    return [*kept, *complaints(file=file, aliases=aliases, known=known)]
 
 
 def _broken(*, error: ParseError) -> Violation:

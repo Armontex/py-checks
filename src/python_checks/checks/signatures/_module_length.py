@@ -34,6 +34,7 @@ class ModuleLength:
 
     code: ClassVar[str] = CODE
     Settings: ClassVar[type[CheckSettings]] = ModuleLengthSettings
+    marker: ClassVar[str | None] = None
 
     def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
         limits = settings_as(settings=settings, model=ModuleLengthSettings, code=CODE)

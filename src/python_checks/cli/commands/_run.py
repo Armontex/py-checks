@@ -11,7 +11,7 @@ from python_checks.config import Config, find_root, load
 from python_checks.core import FileCheck, available, get, inspect, python_files, report
 
 
-def run(  # signature-ok: подпись команды разбирает typer
+def run(  # check-ok: keyword-only-arguments: подпись команды разбирает typer
     paths: Annotated[
         list[Path] | None,
         typer.Argument(help="файлы или папки; без них — весь `src` проекта"),

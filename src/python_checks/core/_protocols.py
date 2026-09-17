@@ -24,4 +24,8 @@ class FileCheck(Protocol):
     code: str
     Settings: type[CheckSettings]
 
+    # Слово, которым это правило снимали до переезда в библиотеку: `None`, если
+    # такого не было. Канонический `# check-ok:` работает у всех и без него.
+    marker: str | None
+
     def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]: ...

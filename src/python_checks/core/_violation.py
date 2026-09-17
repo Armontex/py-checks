@@ -18,6 +18,9 @@ class Violation:
     Строка и колонка нумеруются с единицы, как их показывает редактор. У `ast`
     колонка начинается с нуля, поэтому узлы дерева превращаются в нарушение
     через `from_node`, а не вручную.
+
+    `end_line` нужен только тем нарушениям, которые занимают несколько строк:
+    по нему ядро ищет маркер во всей подписи, а не в одной её первой строке.
     """
 
     path: Path
@@ -25,6 +28,7 @@ class Violation:
     column: int
     code: str
     message: str
+    end_line: int | None = None
 
     @classmethod
     def from_node(
@@ -34,10 +38,18 @@ class Violation:
         path: Path,
         code: str,
         message: str,
+        end_line: int | None = None,
     ) -> Violation:
         line = getattr(node, "lineno", 1)
         column = getattr(node, "col_offset", 0)
-        return cls(path=path, line=line, column=column + 1, code=code, message=message)
+        return cls(
+            path=path,
+            line=line,
+            column=column + 1,
+            code=code,
+            message=message,
+            end_line=end_line,
+        )
 
     def render(self, *, root: Path | None = None) -> str:
         """`путь:строка:колонка: код: сообщение`.

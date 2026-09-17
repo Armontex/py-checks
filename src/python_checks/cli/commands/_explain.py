@@ -11,7 +11,7 @@ from python_checks.cli.commands._summary import docstring
 from python_checks.core import get
 
 
-def explain(  # signature-ok: подпись команды разбирает typer
+def explain(  # check-ok: keyword-only-arguments: подпись команды разбирает typer
     code: Annotated[str, typer.Argument(help="код проверки")],
 ) -> None:
     """Показать, что проверка требует и какие у неё настройки."""

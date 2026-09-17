@@ -6,11 +6,10 @@ import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from python_checks.config import CheckSettings
-from python_checks.core import Violation, settings_as
+from python_checks.core import Violation
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from pathlib import Path
 
     from python_checks.core import ParsedFile
 
@@ -26,10 +25,6 @@ IMPLICIT: Final[frozenset[str]] = frozenset({"self", "cls"})
 OWN_DUNDERS: Final[frozenset[str]] = frozenset({"__init__", "__new__", "__call__"})
 
 
-class KeywordOnlySettings(CheckSettings):
-    marker: str = "# signature-ok"
-
-
 class KeywordOnlyArguments:
     """Падает, если подпись записана не полностью.
 
@@ -42,36 +37,41 @@ class KeywordOnlyArguments:
     угодно, проверять типы там нечего, а место вызова ничего не объясняет.
 
     Обратный вызов или обёртка, чью подпись диктует библиотека, помечается в
-    строке подписи: `def f(a): ...  # signature-ok: sqlalchemy`.
+    подписи: `def f(a): ...  # check-ok: keyword-only-arguments: sqlalchemy`.
+    Старое слово `# signature-ok` библиотека тоже понимает.
 
-    Настройка: `marker`.
+    Настроек нет.
     """
 
     code: ClassVar[str] = CODE
-    Settings: ClassVar[type[CheckSettings]] = KeywordOnlySettings
+    Settings: ClassVar[type[CheckSettings]] = CheckSettings
+    marker: ClassVar[str | None] = "# signature-ok"
 
     def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
-        marker = settings_as(settings=settings, model=KeywordOnlySettings, code=CODE).marker
+        _ = settings
         for name, node in _definitions(node=file.tree):
-            if _interpreter_dunder(name=name) or _exempted(node=node, file=file, marker=marker):
+            if _interpreter_dunder(name=name):
                 continue
-            yield from _violations(node=node, name=name, path=file.path)
+            yield from _violations(node=node, name=name, file=file)
 
 
-def _violations(*, node: Definition, name: str, path: Path) -> Iterator[Violation]:
+def _violations(*, node: Definition, name: str, file: ParsedFile) -> Iterator[Violation]:
+    end_line = _signature_end(node=node)
     if positional := _positional(node=node):
         yield Violation.from_node(
             node=node,
-            path=path,
+            path=file.path,
             code=CODE,
             message=f"{name} принимает {', '.join(positional)} по позиции; поставь `*` перед ними",
+            end_line=end_line,
         )
     if collected := _collectors(node=node):
         yield Violation.from_node(
             node=node,
-            path=path,
+            path=file.path,
             code=CODE,
             message=f"{name} принимает {', '.join(collected)}; перечисли аргументы по имени",
+            end_line=end_line,
         )
 
 
@@ -109,14 +109,6 @@ def _collectors(*, node: Definition) -> tuple[str, ...]:
     return tuple(f"{star}{argument.arg}" for argument, star in stars if argument)
 
 
-def _exempted(*, node: Definition, file: ParsedFile, marker: str) -> bool:
-    """Пометка где угодно в подписи, не только в строке `def`.
-
-    Подпись, растянутая в столбик, несёт пометку на той строке, которой
-    заканчивается.
-    """
-    return any(marker in line for line in _signature_lines(node=node, file=file))
-
-
-def _signature_lines(*, node: Definition, file: ParsedFile) -> tuple[str, ...]:
-    return file.lines[node.lineno - 1 : node.body[0].lineno - 1]
+def _signature_end(*, node: Definition) -> int:
+    """Последняя строка подписи: на ней стоит маркер, если подпись в столбик."""
+    return max(node.body[0].lineno - 1, node.lineno)
