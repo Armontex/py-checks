@@ -34,3 +34,16 @@ def column(
     second: str,
 ) -> None:  # check-ok: keyword-only-arguments: маркер на конце подписи в столбик
     return None
+
+
+class Static:
+    @staticmethod
+    def build(*, value: str) -> str:
+        return value
+
+    @classmethod
+    def make(cls, *, value: str) -> str:
+        return value
+
+    def rename(instance, *, value: str) -> str:  # первый аргумент передаёт интерпретатор
+        return f"{instance}{value}"

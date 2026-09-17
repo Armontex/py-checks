@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, ClassVar, Final
 
 from pydantic import Field
 
+from python_checks.checks.signatures._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Violation, settings_as
 
@@ -34,7 +35,7 @@ class ModuleLength:
 
     code: ClassVar[str] = CODE
     Settings: ClassVar[type[CheckSettings]] = ModuleLengthSettings
-    marker: ClassVar[str | None] = None
+    marker: ClassVar[str] = MARKER
 
     def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
         limits = settings_as(settings=settings, model=ModuleLengthSettings, code=CODE)

@@ -6,6 +6,9 @@
     'bad/positional.py:12:5: keyword-only-arguments: Rule.apply принимает rule по позиции; поставь `*` перед ними',
     'bad/positional.py:16:1: keyword-only-arguments: collect принимает *args, **kwargs; перечисли аргументы по имени',
     'bad/positional.py:20:1: keyword-only-arguments: spread принимает first, second по позиции; поставь `*` перед ними',
+    'bad/positional.py:29:5: keyword-only-arguments: Static.parse принимает self по позиции; поставь `*` перед ними',
+    'bad/positional.py:33:1: keyword-only-arguments: handler принимает self по позиции; поставь `*` перед ними',
+    'bad/positional.py:39:9: keyword-only-arguments: Outer.method.inner принимает self по позиции; поставь `*` перед ними',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[module_length]

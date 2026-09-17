@@ -2,7 +2,7 @@ from pathlib import Path
 
 from python_checks.core import MARKER, ParsedFile, Violation, complaints, read, surviving
 
-ALIASES = {"# signature-ok": "keyword-only-arguments"}
+ALIASES = {"# signature-ok": frozenset({"keyword-only-arguments", "module-length"})}
 
 
 def parsed(text: str) -> ParsedFile:
@@ -28,11 +28,11 @@ def test_marker_reads_codes_and_reason() -> None:
     assert marker.reason == "так зовёт библиотека"
 
 
-def test_old_word_of_a_check_still_works() -> None:
+def test_the_word_of_a_group_covers_every_check_in_it() -> None:
     marker = read(line="def f(a): ...  # signature-ok: sqlalchemy", aliases=ALIASES)
 
     assert marker is not None
-    assert marker.codes == {"keyword-only-arguments"}
+    assert marker.codes == {"keyword-only-arguments", "module-length"}
     assert marker.reason == "sqlalchemy"
 
 

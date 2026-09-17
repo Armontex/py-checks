@@ -28,7 +28,7 @@ class ModuleLength:
 
     code = "module-length"
     Settings = Limits
-    marker = None
+    marker = "# signature-ok"
 
     def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
         assert isinstance(settings, Limits)
@@ -47,7 +47,7 @@ class NeedsTree:
 
     code = "needs-tree"
     Settings = CheckSettings
-    marker = None
+    marker = "# tree-ok"
 
     def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
         _ = settings

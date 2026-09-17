@@ -8,9 +8,10 @@
 обязательна по той же причине, по которой её требует `# noqa` в ревью: через
 полгода никто не помнит, чья это библиотека диктует подпись.
 
-Проверка, приехавшая из проекта, где у неё было своё слово (`# signature-ok`),
-объявляет его в `marker`: старые комментарии продолжают работать, новые пишутся
-канонической формой.
+У группы правил есть своё короткое слово — `# signature-ok` на весь пакет
+`signatures`. Оно снимает любую проверку группы: человек помнит группу («это
+про подписи»), а не сорок кодов. Канонический `# check-ok: <код>` снимает ровно
+одно правило и работает всегда.
 """
 
 from __future__ import annotations
@@ -48,7 +49,7 @@ class Marker:
     column: int
 
 
-def read(*, line: str, aliases: Mapping[str, str]) -> Marker | None:
+def read(*, line: str, aliases: Mapping[str, frozenset[str]]) -> Marker | None:
     """Маркер из строки, если он там есть.
 
     Разбор нарочно не падает на кривой записи: маркер без кода или без причины
@@ -63,10 +64,10 @@ def read(*, line: str, aliases: Mapping[str, str]) -> Marker | None:
             reason=reason.strip(),
             column=line.index(MARKER) + 1,
         )
-    for text, code in aliases.items():
+    for text, codes in aliases.items():
         if text in line:
             return Marker(
-                codes=frozenset({code}),
+                codes=codes,
                 reason=line.split(text, maxsplit=1)[1].removeprefix(":").strip(),
                 column=line.index(text) + 1,
             )
@@ -77,7 +78,7 @@ def surviving(
     *,
     violations: Sequence[Violation],
     file: ParsedFile,
-    aliases: Mapping[str, str],
+    aliases: Mapping[str, frozenset[str]],
 ) -> list[Violation]:
     """Нарушения, которые никто не снял маркером."""
     return [
@@ -90,7 +91,7 @@ def surviving(
 def complaints(
     *,
     file: ParsedFile,
-    aliases: Mapping[str, str],
+    aliases: Mapping[str, frozenset[str]],
     known: Collection[str],
 ) -> Iterator[Violation]:
     """Маркер, который ничего не снимает, — молча неработающий маркер.
@@ -123,7 +124,12 @@ def _codes(*, text: str) -> Iterator[str]:
             yield stripped
 
 
-def _covered(*, violation: Violation, file: ParsedFile, aliases: Mapping[str, str]) -> bool:
+def _covered(
+    *,
+    violation: Violation,
+    file: ParsedFile,
+    aliases: Mapping[str, frozenset[str]],
+) -> bool:
     for line in _span(violation=violation, file=file):
         marker = read(line=line, aliases=aliases)
         if marker is not None and violation.code in marker.codes:

@@ -24,8 +24,10 @@ class FileCheck(Protocol):
     code: str
     Settings: type[CheckSettings]
 
-    # Слово, которым это правило снимали до переезда в библиотеку: `None`, если
-    # такого не было. Канонический `# check-ok:` работает у всех и без него.
-    marker: str | None
+    # Слово группы, к которой правило принадлежит: `# signature-ok` снимает
+    # любую проверку из `signatures`. Пишется один раз на пакет, потому что
+    # человек помнит группу («это про подписи»), а не сорок кодов. Канонический
+    # `# check-ok: <код>` работает всегда и снимает ровно одно правило.
+    marker: str
 
     def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]: ...

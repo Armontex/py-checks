@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import TYPE_CHECKING, Final
 
 from python_checks.core import _registry
@@ -35,7 +36,7 @@ def inspect(
         check.code: config.settings_for(code=check.code, model=check.Settings) for check in checks
     }
     registered = _registry.available()
-    aliases = {check.marker: code for code, check in registered.items() if check.marker}
+    aliases = _aliases(registered=registered)
     violations: list[Violation] = []
     for path in files:
         violations.extend(
@@ -50,12 +51,25 @@ def inspect(
     return violations
 
 
+def _aliases(*, registered: Mapping[str, FileCheck]) -> dict[str, frozenset[str]]:
+    """Слово группы и все правила, которые оно снимает.
+
+    Слово у группы одно на всех, поэтому `# signature-ok` снимает любую
+    проверку из `signatures`: человек помнит группу, а не сорок кодов. Когда
+    нужно снять ровно одно правило, для этого есть `# check-ok: <код>`.
+    """
+    groups: dict[str, set[str]] = defaultdict(set)
+    for code, check in registered.items():
+        groups[check.marker].add(code)
+    return {marker: frozenset(codes) for marker, codes in groups.items()}
+
+
 def _inspect_file(
     *,
     path: Path,
     checks: Sequence[FileCheck],
     settings: Mapping[str, CheckSettings],
-    aliases: Mapping[str, str],
+    aliases: Mapping[str, frozenset[str]],
     known: Collection[str],
 ) -> list[Violation]:
     file = ParsedFile.from_path(path=path)
