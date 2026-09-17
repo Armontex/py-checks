@@ -1,0 +1,17 @@
+extend = ".python-checks/ruff.toml"
+
+# Примеры для проверок нарушают правила намеренно, а в `configs` лежит эталон
+# для чужих проектов: ruff принял бы его за свой конфиг и завёл там кэш.
+extend-exclude = ["tests/checks", "src/python_checks/configs"]
+
+[lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[lint.flake8-type-checking]
+# pydantic читает аннотации во время работы, значит его моделям нужны
+# настоящие импорты, а не блок под TYPE_CHECKING.
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "python_checks.config.CheckSettings",
+    "python_checks.config._base.CheckSettings",
+]

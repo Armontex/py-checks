@@ -100,3 +100,10 @@ repos:
         types: [python]
         # правила писались для кода библиотеки; тесты живут по своим
         files: ^src/.*\.py$
+
+      - id: python-checks-sync
+        name: общие конфиги совпадают с библиотекой
+        entry: uv run python-checks sync --check
+        language: system
+        always_run: true
+        pass_filenames: false

@@ -52,54 +52,6 @@ update_changelog_on_bump = true
 # примеры для проверок нарушают правила намеренно
 extend-exclude = ["tests/checks/*"]
 
-[tool.ruff]
-line-length = 100
-target-version = "py314"
-# примеры для проверок нарушают правила намеренно
-extend-exclude = ["tests/checks"]
-
-[tool.ruff.lint]
-select = [
-    "E",
-    "F",
-    "I",
-    "UP",
-    "B",
-    "S",       # bandit: assert, weak randomness, injection
-    "ASYNC",   # blocking calls inside async def
-    "DTZ",     # naive datetime
-    "N",       # pep8 naming
-    "ARG",     # unused arguments
-    "TC",      # runtime imports that only annotations need
-    "ERA",     # commented-out code
-    "T20",     # print left behind
-    "PLR0912", # too many branches
-    "PLR0915", # too many statements
-    "PLR2004", # magic value in a comparison
-    "PGH",     # a blanket ignore hides every future error, name the code
-]
-ignore = ["B008"]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101"]
-
-[tool.ruff.lint.flake8-type-checking]
-# pydantic reads annotations at run time, so its models keep real imports
-runtime-evaluated-base-classes = [
-    "pydantic.BaseModel",
-    "python_checks.config.CheckSettings",
-    "python_checks.config._base.CheckSettings",
-]
-
-[tool.pyright]
-pythonVersion = "3.14"
-venvPath = "."
-venv = ".venv"
-include = ["src", "tests"]
-# примеры для проверок нарушают правила намеренно
-exclude = ["tests/checks"]
-typeCheckingMode = "strict"
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = [

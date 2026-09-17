@@ -18,3 +18,11 @@
   entry: python-checks run --select keyword-only-arguments --fix
   language: python
   types: [python]
+
+- id: python-checks-sync
+  name: общие конфиги совпадают с библиотекой
+  description: эталонный ruff и pyright не расходятся молча — обновилась библиотека, обнови копию
+  entry: python-checks sync --check
+  language: python
+  always_run: true
+  pass_filenames: false
