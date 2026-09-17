@@ -1,0 +1,109 @@
+[project]
+name = "python-checks"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [{ name = "Armontex", email = "windle1337@gmail.com" }]
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
+    "rich>=15.0.0,<16.0.0",
+    "typer>=0.27.2,<0.28",
+]
+
+[dependency-groups]
+dev = [
+    "bandit>=1.9.4,<2",
+    "commitizen>=4.10,<5",
+    "pre-commit>=4.6.2,<5",
+    "pyright>=1.1.414,<2",
+    "pytest>=9.1.1,<10",
+    "pytest-cov>=7.1.0,<8",
+    "pytest-mock>=3.15.1,<4",
+    "pytest-randomly>=5.0.0,<6",
+    "pytest-timeout>=2.4.0,<3",
+    "ruff>=0.16.7,<0.17",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "uv"
+tag_format = "v$version"
+major_version_zero = true
+update_changelog_on_bump = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "S",       # bandit: assert, weak randomness, injection
+    "ASYNC",   # blocking calls inside async def
+    "DTZ",     # naive datetime
+    "N",       # pep8 naming
+    "ARG",     # unused arguments
+    "TC",      # runtime imports that only annotations need
+    "ERA",     # commented-out code
+    "T20",     # print left behind
+    "PLR0912", # too many branches
+    "PLR0915", # too many statements
+    "PLR2004", # magic value in a comparison
+    "PGH",     # a blanket ignore hides every future error, name the code
+]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.ruff.lint.flake8-type-checking]
+# pydantic reads annotations at run time, so its models keep real imports
+runtime-evaluated-base-classes = ["pydantic.BaseModel", "python_checks.config.CheckSettings"]
+
+[tool.pyright]
+pythonVersion = "3.14"
+venvPath = "."
+venv = ".venv"
+include = ["src", "tools"]
+typeCheckingMode = "strict"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [
+    "tests/unit",
+    "tests/integrations",
+    "tests/harness",
+    "tests/golden",
+    "tests/perf",
+    "tests/chaos",
+    "tests/e2e"
+]
+python_files = ["*_test.py", "test_*.py"]
+addopts = "--tb=short --strict-markers"
+timeout = 60
+asyncio_mode = "auto"
+markers = [
+    "integration: touches the database on disk",
+    "chaos: needs the disposable LLM fault-injection stand",
+    "harness: exercises several real components through an outside boundary",
+    "perf: performance tests",
+    "end_two_end: e2d tests"
+]
+
+[tool.coverage.run]
+source = ["src/assistant"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+exclude_also = ["if TYPE_CHECKING:", "\\.\\.\\.$"]
