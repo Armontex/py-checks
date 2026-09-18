@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, NamedTuple
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,7 +23,8 @@ INIT: Final = "__init__"
 INSIDE: Final = 2
 
 
-class Place(NamedTuple):
+@dataclass(frozen=True, slots=True)
+class Place:
     """Корневой пакет файла и его адрес внутри этого пакета."""
 
     package: str
