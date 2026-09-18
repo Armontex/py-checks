@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 
 INIT: Final = "__init__"
 
+SEPARATOR: Final = "/"
+
 # Пакет и хотя бы один шаг внутри него: файл, лежащий прямо в корне исходников,
 # ни в каком пакете не находится, и говорить о его месте нечего.
 INSIDE: Final = 2
@@ -38,8 +40,27 @@ class Place:
         """Лежит ли файл под этим путём; пустой путь не разрешает ничего."""
         if not prefix:
             return False
-        wanted = tuple(prefix.split("/"))
+        wanted = tuple(prefix.split(SEPARATOR))
         return self.parts[: len(wanted)] == wanted
+
+    def holds(self, *, path: str) -> bool:
+        """Идут ли эти куски адреса подряд где угодно внутри него.
+
+        Адрес включает имя модуля, поэтому `exceptions` подходит и как
+        директория, и как файл `exceptions.py`: для словаря отказов это одно и
+        то же место.
+        """
+        return _run(parts=self.parts, wanted=path) is not None
+
+    def within(self, *, directory: str) -> int | None:
+        """Где кончается самое глубокое вхождение этих директорий, или `None`.
+
+        Имя файла в счёт не идёт: речь о директории, а не о модуле. Конец, а не
+        начало, потому что сравнивать вложенность двух ключей разной длины
+        можно только по тому, где они кончаются, — глубже тот, кто кончается
+        позже.
+        """
+        return _run(parts=self.parts[:-1], wanted=directory)
 
 
 def place(*, file: ParsedFile) -> Place | None:
@@ -61,3 +82,15 @@ def _relative(*, path: Path, source: Path) -> tuple[str, ...] | None:
     except ValueError:
         return None
     return inside.with_suffix("").parts
+
+
+def _run(*, parts: tuple[str, ...], wanted: str) -> int | None:
+    """Конец последнего вхождения подряд идущих кусков пути."""
+    needle = tuple(wanted.split(SEPARATOR))
+    span = len(needle)
+    ends = [
+        start + span
+        for start in range(len(parts) - span + 1)
+        if parts[start : start + span] == needle
+    ]
+    return max(ends) if ends else None

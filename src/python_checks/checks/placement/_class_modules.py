@@ -18,8 +18,6 @@ if TYPE_CHECKING:
 
 CODE: Final = "class-modules"
 
-SEPARATOR: Final = "/"
-
 
 class ClassModulesSettings(CheckSettings):
     policies: dict[str, tuple[Kind, ...]] = {}
@@ -79,25 +77,18 @@ class ClassModules:
         where: Place,
         policies: dict[str, tuple[Kind, ...]],
     ) -> tuple[str, tuple[Kind, ...]] | None:
-        """Политика самого длинного совпавшего пути.
+        """Политика самой внутренней из совпавших директорий.
 
-        `application/services` важнее, чем `services`: чем длиннее путь, тем
-        точнее сказано, о какой директории речь.
+        Побеждает самая глубокая: `modules/betslip/application/services`
+        важнее, чем `application`. При равной глубине — более длинный ключ:
+        путь говорит о месте больше, чем одно имя.
         """
         matched = [
-            (directory, allowed)
+            (depth, directory, allowed)
             for directory, allowed in policies.items()
-            if cls._inside(where=where, directory=directory)
+            if (depth := where.within(directory=directory)) is not None
         ]
         if not matched:
             return None
-        return max(matched, key=lambda policy: len(policy[0].split(SEPARATOR)))
-
-    @staticmethod
-    def _inside(*, where: Place, directory: str) -> bool:
-        """Идут ли эти директории подряд в пути файла."""
-        wanted = tuple(directory.split(SEPARATOR))
-        # Последний кусок адреса — имя самого файла, директорией он не является.
-        parts = where.parts[:-1]
-        span = len(wanted)
-        return any(parts[start : start + span] == wanted for start in range(len(parts) - span + 1))
+        deepest = max(matched, key=lambda policy: (policy[0], len(policy[1])))
+        return deepest[1], deepest[2]

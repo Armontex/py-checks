@@ -21,8 +21,6 @@ if TYPE_CHECKING:
 
 CODE: Final = "class-placement"
 
-SEPARATOR: Final = "/"
-
 
 class Rule(CheckSettings):
     """Кому куда: вид объявления или суффикс имени — и где ему место.
@@ -110,22 +108,9 @@ class ClassPlacement:
         for rule in rules:
             if not rule.about(declared=declared):
                 continue
-            if rule.area is not None and not _inside(where=where, wanted=rule.area):
+            if rule.area is not None and not where.holds(path=rule.area):
                 continue
-            if any(_inside(where=where, wanted=address) for address in rule.inside):
+            if any(where.holds(path=address) for address in rule.inside):
                 return None
             return rule
         return None
-
-
-def _inside(*, where: Place, wanted: str) -> bool:
-    """Идут ли эти куски адреса подряд.
-
-    Адрес включает имя модуля, поэтому `exceptions` подходит и как директория,
-    и как файл `exceptions.py` — для словаря отказов это одно и то же.
-    """
-    parts = tuple(wanted.split(SEPARATOR))
-    span = len(parts)
-    return any(
-        where.parts[start : start + span] == parts for start in range(len(where.parts) - span + 1)
-    )

@@ -43,6 +43,14 @@
     'bad/too_long.py:11:1: module-length: 13 строк, предел 10',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[required_class]
+  list([
+    'bad/config/kafka.py:4:1: required-class: Topics объявлен выше ...Settings, ради которого существует модуль; хелперам место ниже',
+    'bad/repositories/order.py:4:1: required-class: _rows объявлен выше ...Repository, ради которого существует модуль; хелперам место ниже',
+    'bad/use_cases/bets.py:8:1: required-class: в модуле PlaceBetUseCase, CancelBetUseCase — один ...UseCase на модуль, и модуль назван его именем',
+    'bad/use_cases/pricing.py:4:1: required-class: модуль объявляет PricingHelper, а в этой директории объявляют класс ...UseCase',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[sealed_imports]
   list([
     'bad/modules/chat/application/service.py:4:1: sealed-imports: fastapi в modules/chat/application/service: запечатанная зона знает только стандартную библиотеку и код сервиса',
