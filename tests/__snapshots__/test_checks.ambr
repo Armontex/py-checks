@@ -3,6 +3,8 @@
   list([
     'bad/application/services/pricing.py:9:1: class-modules: helper — функция; в application/services держат класс',
     'bad/dto/orders.py:7:1: class-modules: Status — перечисление; в dto держат dataclass, алиас',
+    'bad/dto/orders.py:16:1: class-modules: OrderMissing — исключение; в dto держат dataclass, алиас',
+    'bad/errors/orders.py:8:1: class-modules: refused — функция; в errors держат исключение',
     'bad/ports/bets.py:14:1: class-modules: SecondWriter — класс; в ports держат алиас, порт',
     'bad/use_cases/resolve.py:4:1: class-modules: rounded — функция; в use_cases держат класс',
   ])

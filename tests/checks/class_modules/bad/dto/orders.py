@@ -11,3 +11,7 @@ class Status(StrEnum):
 @dataclass(frozen=True, slots=True)
 class PlaceOrder:
     stake: int
+
+
+class OrderMissing(Exception):
+    """Отказу место в errors, а не рядом с данными."""

@@ -95,6 +95,7 @@ tools = ["class", "port"]
 ports = ["port", "alias"]
 dto = ["dataclass", "alias"]
 schemas = ["model", "alias"]
+errors = ["error", "alias"]
 ```
 
 Ключ — путь, а не имя: `application/services` держит класс-оркестратор, а
@@ -102,8 +103,13 @@ schemas = ["model", "alias"]
 запретило бы всю доменную категорию целиком.
 
 Виды: `class`, `port` (Protocol, ABC), `dataclass`, `model` (pydantic), `alias`,
-`enum`, `function`. Импорты, константы, `if TYPE_CHECKING` и докстринг
+`enum`, `error`, `function`. Импорты, константы, `if TYPE_CHECKING` и докстринг
 разрешены везде.
+
+Исключение узнаётся и по базе `Exception`, и по имени базы: `class
+NotFound(OrderError)` наследуется от своего же корня, а не от `Exception`, но
+имя корня кончается так же. Поэтому весь словарь отказов пакета собирается в
+`errors/` или `exceptions.py`, и читатель находит его в одном месте.
 
 ## ruff
 

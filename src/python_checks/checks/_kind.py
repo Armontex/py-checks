@@ -22,6 +22,13 @@ ENUMS: Final[frozenset[str]] = frozenset(
     {"Enum", "StrEnum", "IntEnum", "Flag", "IntFlag", "ReprEnum"}
 )
 
+ERROR_BASES: Final[frozenset[str]] = frozenset({"Exception", "BaseException"})
+
+# Исключение проекта наследуется от своего же корня (`class NotFound(DomainError)`),
+# а не от `Exception`, — но имя корня кончается так же, и по нему вид узнаётся,
+# не читая чужой модуль.
+ERROR_SUFFIXES: Final[tuple[str, ...]] = ("Error", "Exception")
+
 # Присваивание, которым объявляют имя для типа, а не значение.
 ALIAS_ANNOTATION: Final = "TypeAlias"
 ALIAS_FACTORIES: Final[frozenset[str]] = frozenset(
@@ -52,6 +59,7 @@ class Kind(StrEnum):
     MODEL = "model"
     ALIAS = "alias"
     ENUM = "enum"
+    ERROR = "error"
     FUNCTION = "function"
 
     @property
@@ -67,6 +75,7 @@ NAMES: Final[dict[Kind, str]] = {
     Kind.MODEL: "модель",
     Kind.ALIAS: "алиас",
     Kind.ENUM: "перечисление",
+    Kind.ERROR: "исключение",
     Kind.FUNCTION: "функция",
 }
 
@@ -108,9 +117,15 @@ def _class(*, node: ast.ClassDef) -> Kind | None:
         return Kind.ENUM
     if DATACLASS in frozenset(_names(nodes=node.decorator_list)):
         return Kind.DATACLASS
+    if _error(bases=bases):
+        return Kind.ERROR
     if bases:
         return None
     return Kind.CLASS
+
+
+def _error(*, bases: frozenset[str]) -> bool:
+    return bool(bases & ERROR_BASES) or any(base.endswith(ERROR_SUFFIXES) for base in bases)
 
 
 def _metaclass(*, node: ast.ClassDef) -> bool:
