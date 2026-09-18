@@ -1,0 +1,5 @@
+[tool.python-checks]
+src = "."
+
+[tool.python-checks.function-length]
+max-lines = 12

@@ -24,6 +24,7 @@ operation-shape = "python_checks.checks.placement:OperationShape"
 required-class = "python_checks.checks.placement:RequiredClass"
 confined-imports = "python_checks.checks.imports:ConfinedImports"
 keyword-only-arguments = "python_checks.checks.signatures:KeywordOnlyArguments"
+function-length = "python_checks.checks.signatures:FunctionLength"
 module-length = "python_checks.checks.signatures:ModuleLength"
 sealed-imports = "python_checks.checks.imports:SealedImports"
 
