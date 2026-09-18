@@ -5,3 +5,6 @@ src = "."
 [tool.python-checks.confined-imports.packages]
 maxapi = ["presentation"]
 agents = []
+sqlalchemy = ["infra/database", "ioc"]
+fastapi = ["presentation", "bootstrap"]
+dishka = ["ioc", "bootstrap", "presentation"]

@@ -15,4 +15,4 @@ MIGRATIONS: Final = "migrations"
 # код, и метаданные моделей он импортирует по своей работе.
 VERSIONS: Final = "versions"
 
-SECTION: Final = "layers"
+SECTION: Final = "contracts"

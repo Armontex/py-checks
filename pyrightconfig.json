@@ -1,5 +1,7 @@
 {
   "extends": ".python-checks/pyrightconfig.json",
   "include": ["src", "tests"],
-  "exclude": ["tests/checks"]
+  "exclude": ["tests/checks"],
+  "venvPath": ".",
+  "venv": ".venv"
 }

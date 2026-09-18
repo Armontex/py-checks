@@ -55,15 +55,13 @@ update_changelog_on_bump = true
 # примеры для проверок нарушают правила намеренно
 extend-exclude = ["tests/checks/*"]
 
-# Слои этой библиотеки. Имён из базовой таблицы (`domain`, `presentation`)
-# здесь нет — это не сервис, — поэтому слои названы своими и перечислены
-# целиком: `config` не знает никого, `core` стоит на нём, правила и контракты
-# стоят на ядре, а `cli` собирает всё вместе и потому видит всех.
 # Библиотека — не сервис: точек входа у неё нет, командная строка и есть край.
 [tool.python-checks.confined-imports.packages]
 typer = ["cli"]
 
-[tool.python-checks.layers]
+# Слои этой библиотеки: `config` не знает никого, `core` стоит на нём, правила
+# и контракты стоят на ядре, а `cli` собирает всё вместе и потому видит всех.
+[tool.python-checks.contracts.layers]
 config = ["config"]
 core = ["core", "config"]
 checks = ["checks", "core", "config"]

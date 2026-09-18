@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
-from python_checks.contracts._base import COMPOSITION_ROOT
 from python_checks.contracts._constants import MIGRATIONS, MODULES, VERSIONS
 from python_checks.contracts._layout import expressions, migrations, modules, package
-from python_checks.contracts._settings import layers
+from python_checks.contracts._settings import contracts
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -16,18 +15,17 @@ if TYPE_CHECKING:
     from python_checks.config import Config
 
 HEADER: Final = """\
-# Контракты импортов. Файл собирает `python-checks sync` из таблицы слоёв
-# библиотеки и секции [tool.python-checks.layers] проекта — править его нечего,
-# следующий sync перезапишет.
+# Контракты импортов. Файл собирает `python-checks sync` из секции
+# [tool.python-checks.contracts] проекта — править его нечего, следующий sync
+# перезапишет.
 """
 
 
 def render(*, root: Path, config: Config) -> str | None:
-    """Файл контрактов; `None`, если в проекте нечего проверять.
+    """Файл контрактов; `None`, если проверять нечего.
 
-    Нечего — это раскладка, в которой ни один слой не найден: у библиотеки или
-    у скрипта нет ни `domain`, ни `presentation`, и контракты про них были бы
-    правилами ни о чём.
+    Нечего — это либо проект, который не объявил ни одного слоя, либо
+    раскладка, в которой объявленных слоёв нет на диске.
     """
     name = package(root=root, src=config.src)
     if name is None:
@@ -44,8 +42,9 @@ def _roots(*, root: Path, package: str) -> str:
 
 
 def _contracts(*, root: Path, config: Config, package: str) -> list[str]:
-    table = layers(config=config)
-    known = frozenset(table) | COMPOSITION_ROOT
+    declared = contracts(config=config)
+    table = declared.layers
+    known = frozenset(table) | frozenset(declared.composition_root)
     blocks = [
         block
         for layer in sorted(table)
@@ -55,7 +54,7 @@ def _contracts(*, root: Path, config: Config, package: str) -> list[str]:
                 config=config,
                 package=package,
                 layer=layer,
-                forbidden=known - table[layer],
+                forbidden=known - frozenset(table[layer]),
             )
         )
     ]

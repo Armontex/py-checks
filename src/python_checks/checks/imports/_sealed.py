@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, Final
 
-from python_checks.checks.imports._base import ALLOW, ZONES
 from python_checks.checks.imports._location import place
 from python_checks.checks.imports._marker import MARKER
 from python_checks.checks.imports._statements import imports
@@ -21,8 +20,8 @@ CODE: Final = "sealed-imports"
 
 
 class SealedSettings(CheckSettings):
-    zones: tuple[str, ...] = ZONES
-    allow: dict[str, tuple[str, ...]] = dict(ALLOW)
+    zones: tuple[str, ...] = ()
+    allow: dict[str, tuple[str, ...]] = {}
 
 
 class SealedImports:
@@ -33,9 +32,12 @@ class SealedImports:
     фреймворка. Список разрешённого белый, а не чёрный, потому что каждый новый
     фреймворк иначе попадает внутрь молча.
 
-    Разрешения задаются по слою, а не на всю зону: `application` руководит и
-    потому имеет право сказать, что произошло, а `domain` держит правила,
-    верные независимо от того, слушает ли их кто-нибудь.
+    Разрешения задаются по слою, а не на всю зону: слой, который руководит,
+    обычно имеет право сказать, что произошло, а слой с правилами не знает
+    ничего.
+
+    Какие зоны запечатаны, знает проект: библиотека не догадывается, что у него
+    называется `modules`. Без `zones` правило молчит.
 
     Настройки: `zones`, `allow`.
     """

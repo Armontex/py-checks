@@ -7,18 +7,17 @@
 
 `confined-imports` смотрит со стороны пакета: где ему можно.
 `sealed-imports` — со стороны места: что можно здесь.
+
+Обе таблицы — проектные: имена слоёв и список фреймворков библиотека знать не
+может. Без настроек оба правила молчат.
 """
 
-from python_checks.checks.imports._base import ALLOW, CONFINED, ZONES
 from python_checks.checks.imports._confined import ConfinedImports, ConfinedSettings
 from python_checks.checks.imports._marker import MARKER
 from python_checks.checks.imports._sealed import SealedImports, SealedSettings
 
 __all__ = [
-    "ALLOW",
-    "CONFINED",
     "MARKER",
-    "ZONES",
     "ConfinedImports",
     "ConfinedSettings",
     "SealedImports",

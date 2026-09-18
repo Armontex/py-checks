@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, Final
 
-from python_checks.checks.imports._base import CONFINED
 from python_checks.checks.imports._location import place
 from python_checks.checks.imports._marker import MARKER
 from python_checks.checks.imports._statements import imports
@@ -33,11 +32,11 @@ class ConfinedImports:
     заменить: замена превращается в правку всего сервиса. Пока ORM живёт в
     `infra/database`, а веб-стек на краю, каждый из них меняется в одном месте.
 
-    Список приезжает из библиотеки; проект дописывает свой стек в
-    `[tool.python-checks.confined-imports.packages]`. Пакет, названный там,
-    переписывается целиком — половинчатое «добавь ещё один путь» пришлось бы
-    читать вместе с базой, чтобы понять правило. Пустой список значит «нигде»:
-    так держат убранную библиотеку, чтобы она не вернулась.
+    Где чьё место, знает проект: у сервиса это `infra/database`, у утилиты
+    такого слоя нет вовсе. Список пишется в
+    `[tool.python-checks.confined-imports.packages]`; пустой список значит
+    «нигде» — так держат убранную библиотеку, чтобы она не вернулась. Пакета,
+    которого в списке нет, правило не касается.
 
     Настройка: `packages`.
     """
@@ -48,8 +47,7 @@ class ConfinedImports:
 
     @classmethod
     def run(cls, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
-        own = settings_as(settings=settings, model=ConfinedSettings, code=CODE)
-        table = {**CONFINED, **own.packages}
+        table = settings_as(settings=settings, model=ConfinedSettings, code=CODE).packages
         where = place(file=file)
         if where is None:
             return

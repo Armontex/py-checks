@@ -43,7 +43,9 @@ PYRIGHT: Final = Managed(
     stub=f"""\
 {{
   "extends": "{DIRECTORY}/pyrightconfig.json",
-  "include": ["src", "tests"]
+  "include": ["src", "tests"],
+  "venvPath": ".",
+  "venv": ".venv"
 }}
 """,
 )
