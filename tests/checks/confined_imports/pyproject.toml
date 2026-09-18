@@ -1,0 +1,7 @@
+[tool.python-checks]
+src = "."
+
+# Свой стек проекта дописывается к базе библиотеки; пустой список — «нигде».
+[tool.python-checks.confined-imports.packages]
+maxapi = ["presentation"]
+agents = []

@@ -26,6 +26,7 @@ def inspect(
     files: Sequence[Path],
     checks: Sequence[FileCheck],
     config: Config,
+    root: Path | None = None,
 ) -> list[Violation]:
     """Все нарушения по всем файлам.
 
@@ -37,6 +38,7 @@ def inspect(
     }
     registered = _registry.available()
     aliases = _aliases(registered=registered)
+    source = root / config.src if root is not None else None
     violations: list[Violation] = []
     for path in files:
         violations.extend(
@@ -44,6 +46,7 @@ def inspect(
                 path=path,
                 checks=checks,
                 settings=settings,
+                source=source,
                 aliases=aliases,
                 known=frozenset(registered),
             )
@@ -69,10 +72,11 @@ def _inspect_file(
     path: Path,
     checks: Sequence[FileCheck],
     settings: Mapping[str, CheckSettings],
+    source: Path | None,
     aliases: Mapping[str, frozenset[str]],
     known: Collection[str],
 ) -> list[Violation]:
-    file = ParsedFile.from_path(path=path)
+    file = ParsedFile.from_path(path=path, source=source)
     found: list[Violation] = []
     for check in checks:
         try:

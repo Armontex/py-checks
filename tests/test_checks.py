@@ -25,7 +25,7 @@ def rendered(case: str) -> list[str]:
     config = load(root=root)
     check = get(code=case.replace("_", "-"))
     files = python_files(paths=[], root=root, default=root / config.src, exclude=config.exclude)
-    violations = inspect(files=files, checks=[check], config=config)
+    violations = inspect(files=files, checks=[check], config=config, root=root)
     return [violation.render(root=root) for violation in violations]
 
 

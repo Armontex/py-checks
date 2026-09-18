@@ -27,18 +27,22 @@ class ParsedFile:
     и за второй разбор платит только оно.
     """
 
-    __slots__ = ("_lines", "_module", "_text", "_tree", "path")
+    __slots__ = ("_lines", "_module", "_text", "_tree", "path", "source")
 
-    def __init__(self, *, path: Path, text: str) -> None:
+    def __init__(self, *, path: Path, text: str, source: Path | None = None) -> None:
         self.path = path
+        # Корень исходников проекта: по нему правила, которые говорят о месте
+        # («ORM живёт в `infra/database`»), считают адрес файла. Угадывать его
+        # по `__init__.py` нельзя — папка без него встречается и внутри пакета.
+        self.source = source
         self._text = text
         self._tree: ast.Module | None = None
         self._module: libcst.Module | None = None
         self._lines: tuple[str, ...] | None = None
 
     @classmethod
-    def from_path(cls, *, path: Path) -> ParsedFile:
-        return cls(path=path, text=path.read_text(encoding="utf-8"))
+    def from_path(cls, *, path: Path, source: Path | None = None) -> ParsedFile:
+        return cls(path=path, text=path.read_text(encoding="utf-8"), source=source)
 
     @property
     def text(self) -> str:

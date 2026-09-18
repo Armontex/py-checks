@@ -45,7 +45,7 @@ def run(  # check-ok: keyword-only-arguments: подпись команды ра
         default=root / config.src,
         exclude=config.excluded,
     )
-    violations = inspect(files=files, checks=checks, config=config)
+    violations = inspect(files=files, checks=checks, config=config, root=root)
     if autofix:
         violations = _fixed(violations=violations)
     raise typer.Exit(report(violations=violations, root=root, checked=len(files)))
