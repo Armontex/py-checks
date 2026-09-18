@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 HEADER: Final = """\
 # Контракты импортов. Файл собирает `python-checks sync` из секции
-# [tool.python-checks.contracts] проекта — править его нечего, следующий sync
-# перезапишет.
+# [tool.python-checks.contracts] и того, какие слои есть на диске — править его
+# нечего, следующий sync перезапишет. Менять нужно секцию.
 """
 
 

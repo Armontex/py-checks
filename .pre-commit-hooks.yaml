@@ -20,8 +20,8 @@
   types: [python]
 
 - id: python-checks-sync
-  name: общие конфиги совпадают с библиотекой
-  description: эталонный ruff и pyright не расходятся молча — обновилась библиотека, обнови копию
+  name: контракты импортов собраны заново
+  description: файл контрактов отстаёт от объявленных слоёв или от того, что лежит на диске
   entry: python-checks sync --check
   language: python
   always_run: true
@@ -33,7 +33,7 @@
   # Граф всего проекта — секунды, поэтому перед пушем, а не на каждый коммит.
   # `uv run` нужен, чтобы import-linter увидел пакет проекта: он читает импорты
   # по установленному окружению, а не по файлам в рабочей директории.
-  entry: uv run lint-imports --config .python-checks/importlinter.ini --no-logo
+  entry: uv run lint-imports --no-logo
   language: system
   pass_filenames: false
   always_run: true

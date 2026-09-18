@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Final
 
-FILE: Final = "importlinter.ini"
+FILE: Final = ".importlinter"
 
 # Пакет с модулями приложения: слои живут и в нём, и рядом с ним.
 MODULES: Final = "modules"

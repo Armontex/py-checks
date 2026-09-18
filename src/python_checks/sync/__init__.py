@@ -1,27 +1,14 @@
-"""Эталонные конфиги в проекте.
+"""Файлы, которые библиотека собирает для проекта.
 
-Общая часть настроек ruff и pyright живёт в библиотеке, а `sync` кладёт её
-копию в `.python-checks/` проекта. Конфиг проекта подключает копию (`extend`,
-`extends`) и держит рядом только своё.
+Сегодня это один файл — контракты импортов для import-linter. Настройки ruff,
+pyright и остальных инструментов библиотека не трогает: их приносит шаблон, и
+дальше они принадлежат проекту, который правит их как считает нужным.
 
-Копия лежит в репозитории, а не читается из окружения: ruff и pyright — чужие
-программы, путь внутрь `site-packages` на каждой машине свой, а конфиг нужен и
-в CI, и у того, кто библиотеку ещё не поставил.
+Контракты собираются потому, что их нельзя написать один раз: слой, которого
+нет на диске, ломает весь прогон import-linter, а раскладка за жизнь проекта
+меняется.
 """
 
-from python_checks.sync._canonical import canonical
-from python_checks.sync._constants import DIRECTORY, PACKAGE
-from python_checks.sync._leftovers import leftovers
-from python_checks.sync._managed import MANAGED, Managed
-from python_checks.sync._sync import stale, write
+from python_checks.sync._sync import planned, stale, write
 
-__all__ = [
-    "DIRECTORY",
-    "MANAGED",
-    "PACKAGE",
-    "Managed",
-    "canonical",
-    "leftovers",
-    "stale",
-    "write",
-]
+__all__ = ["planned", "stale", "write"]

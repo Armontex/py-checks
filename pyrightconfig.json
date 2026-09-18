@@ -1,7 +1,8 @@
 {
-  "extends": ".python-checks/pyrightconfig.json",
-  "include": ["src", "tests"],
-  "exclude": ["tests/checks"],
+  "pythonVersion": "3.14",
+  "typeCheckingMode": "strict",
   "venvPath": ".",
-  "venv": ".venv"
+  "venv": ".venv",
+  "include": ["src", "tests"],
+  "exclude": ["tests/checks"]
 }
