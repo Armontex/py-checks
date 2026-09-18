@@ -10,6 +10,18 @@
 """
 
 from python_checks.checks.placement._class_modules import ClassModules, ClassModulesSettings
+from python_checks.checks.placement._class_placement import (
+    ClassPlacement,
+    ClassPlacementSettings,
+    Rule,
+)
 from python_checks.checks.placement._marker import MARKER
 
-__all__ = ["MARKER", "ClassModules", "ClassModulesSettings"]
+__all__ = [
+    "MARKER",
+    "ClassModules",
+    "ClassModulesSettings",
+    "ClassPlacement",
+    "ClassPlacementSettings",
+    "Rule",
+]

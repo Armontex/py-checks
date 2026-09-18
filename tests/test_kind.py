@@ -6,7 +6,11 @@ from python_checks.checks._kind import Kind, declarations
 
 
 def kinds(source: str) -> dict[str, Kind]:
-    return {name: kind for name, kind, _ in declarations(tree=ast.parse(source))}
+    return {
+        declared.name: declared.kind
+        for declared in declarations(tree=ast.parse(source))
+        if declared.kind is not None
+    }
 
 
 def test_a_protocol_and_an_abstract_base_are_ports() -> None:

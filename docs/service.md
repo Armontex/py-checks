@@ -111,6 +111,57 @@ NotFound(OrderError)` наследуется от своего же корня, 
 имя корня кончается так же. Поэтому весь словарь отказов пакета собирается в
 `errors/` или `exceptions.py`, и читатель находит его в одном месте.
 
+## Где место классу
+
+Обратная таблица: `class-modules` говорит, что можно держать в директории,
+`class-placement` — куда обязан лечь класс, откуда бы его ни начали писать.
+
+```toml
+[[tool.python-checks.class-placement.rules]]
+kind = "error"
+inside = ["errors", "exceptions"]
+
+[[tool.python-checks.class-placement.rules]]
+kind = "port"
+inside = ["ports"]
+area = "application"
+
+[[tool.python-checks.class-placement.rules]]
+suffix = "Repository"
+inside = ["infra/database/repositories", "ports"]
+
+[[tool.python-checks.class-placement.rules]]
+kind = "dataclass"
+inside = ["dto"]
+area = "application"
+
+[[tool.python-checks.class-placement.rules]]
+suffix = "UseCase"
+inside = ["use_cases"]
+area = "application"
+
+[[tool.python-checks.class-placement.rules]]
+suffix = "Service"
+inside = ["application/services"]
+area = "application"
+```
+
+Правило говорит о виде (`kind`) или о суффиксе имени (`suffix`) — ровно об
+одном из двух. Порядок значим: отвечает первое подошедшее правило, поэтому
+исключение остаётся исключением, даже если его имя кончается на `Service`.
+
+`area` сужает правило до части дерева и держит на себе половину смысла.
+`dataclass` обязан лежать в `dto/` только внутри `application`: доменный value
+object — тоже dataclass, и живёт он в домене. Область ищется подряд идущими
+кусками адреса, поэтому `application` находится и в модульном сервисе, где путь
+начинается с `modules/<имя>/`.
+
+`inside` перечисляет равноправные адреса, и адрес включает имя модуля: `errors`
+подходит и как директория, и как файл `exceptions.py`. У trading порт репозитория
+называется `IOutboxRepository` и лежит в `shared/ports`, поэтому в его таблице
+`ports` стоит рядом с `infra/database/repositories` — реализация и интерфейс
+одного суффикса законно лежат в двух местах.
+
 ## ruff
 
 `ruff.toml` в корне; `pyproject.toml` секцию `[tool.ruff]` при этом не держит —

@@ -19,6 +19,7 @@ python-checks = "python_checks.cli:main"
 
 [project.entry-points."python_checks.checks"]
 class-modules = "python_checks.checks.placement:ClassModules"
+class-placement = "python_checks.checks.placement:ClassPlacement"
 confined-imports = "python_checks.checks.imports:ConfinedImports"
 keyword-only-arguments = "python_checks.checks.signatures:KeywordOnlyArguments"
 module-length = "python_checks.checks.signatures:ModuleLength"

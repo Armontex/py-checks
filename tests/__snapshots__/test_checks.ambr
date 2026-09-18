@@ -9,6 +9,16 @@
     'bad/use_cases/resolve.py:4:1: class-modules: rounded — функция; в use_cases держат класс',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[class_placement]
+  list([
+    'bad/application/handlers/work.py:7:1: class-placement: BetWriter — порт; ему место в ports',
+    'bad/application/handlers/work.py:12:1: class-placement: PlaceOrder — dataclass; ему место в dto',
+    'bad/application/handlers/work.py:16:1: class-placement: PlaceBetUseCase кончается на UseCase; ему место в use_cases',
+    'bad/application/handlers/work.py:21:1: class-placement: PricingService кончается на Service; ему место в application/services',
+    'bad/application/handlers/work.py:26:1: class-placement: OrderRepository кончается на Repository; ему место в infra/database/repositories',
+    'bad/domain/rules.py:11:1: class-placement: MoneyError — исключение; ему место в errors, exceptions',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[confined_imports]
   list([
     'bad/application/service.py:4:1: confined-imports: fastapi в application/service; ему место в presentation, bootstrap',

@@ -1,0 +1,31 @@
+[tool.python-checks]
+src = "."
+
+# Порядок важен: первое подошедшее правило отвечает за объявление.
+[[tool.python-checks.class-placement.rules]]
+kind = "error"
+inside = ["errors", "exceptions"]
+
+[[tool.python-checks.class-placement.rules]]
+kind = "port"
+inside = ["ports"]
+area = "application"
+
+[[tool.python-checks.class-placement.rules]]
+suffix = "Repository"
+inside = ["infra/database/repositories"]
+
+[[tool.python-checks.class-placement.rules]]
+kind = "dataclass"
+inside = ["dto"]
+area = "application"
+
+[[tool.python-checks.class-placement.rules]]
+suffix = "UseCase"
+inside = ["use_cases"]
+area = "application"
+
+[[tool.python-checks.class-placement.rules]]
+suffix = "Service"
+inside = ["application/services"]
+area = "application"

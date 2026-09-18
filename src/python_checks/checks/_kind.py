@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final
 
@@ -80,22 +81,35 @@ NAMES: Final[dict[Kind, str]] = {
 }
 
 
-def declarations(*, tree: ast.Module) -> Iterator[tuple[str, Kind, ast.stmt]]:
-    """Объявления верхнего уровня: имя, вид и узел.
+@dataclass(frozen=True, slots=True)
+class Declaration:
+    """Объявление верхнего уровня: имя, вид и узел.
+
+    `kind` пуст, когда вид по одному файлу не виден: класс с базой из другого
+    модуля. Имя у такого всё равно есть, и правило, которое смотрит на суффикс,
+    им пользуется.
+    """
+
+    name: str
+    kind: Kind | None
+    node: ast.stmt
+
+
+def declarations(*, tree: ast.Module) -> Iterator[Declaration]:
+    """Всё, что модуль объявляет.
 
     Импорты, константы, блоки `if TYPE_CHECKING` и докстринг сюда не попадают:
-    они разрешены везде, и правилу размещения о них говорить нечего.
+    они разрешены везде, и правилам размещения о них говорить нечего.
     """
     for node in tree.body:
         match node:
             case ast.ClassDef(name=name):
-                if (kind := _class(node=node)) is not None:
-                    yield name, kind, node
+                yield Declaration(name=name, kind=_class(node=node), node=node)
             case ast.FunctionDef(name=name) | ast.AsyncFunctionDef(name=name):
-                yield name, Kind.FUNCTION, node
+                yield Declaration(name=name, kind=Kind.FUNCTION, node=node)
             case ast.AnnAssign(target=ast.Name(id=name)) | ast.Assign(targets=[ast.Name(id=name)]):
                 if _alias(node=node):
-                    yield name, Kind.ALIAS, node
+                    yield Declaration(name=name, kind=Kind.ALIAS, node=node)
             case _:
                 continue
 

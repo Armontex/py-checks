@@ -58,15 +58,16 @@ class ClassModules:
         if policy is None:
             return
         directory, allowed = policy
-        for name, kind, node in declarations(tree=file.tree):
-            if kind in allowed:
+        for declared in declarations(tree=file.tree):
+            # Вид не виден — судить не о чем: это класс с базой из другого модуля.
+            if declared.kind is None or declared.kind in allowed:
                 continue
             yield Violation.from_node(
-                node=node,
+                node=declared.node,
                 path=file.path,
                 code=CODE,
                 message=(
-                    f"{name} — {kind.said}; в {directory} держат "
+                    f"{declared.name} — {declared.kind.said}; в {directory} держат "
                     f"{', '.join(sorted(one.said for one in allowed))}"
                 ),
             )
