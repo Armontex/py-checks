@@ -144,6 +144,11 @@ area = "application"
 suffix = "Service"
 inside = ["application/services"]
 area = "application"
+
+[[tool.python-checks.class-placement.rules]]
+kind = "model"
+inside = ["schemas/requests", "schemas/responses"]
+area = "presentation"
 ```
 
 Правило говорит о виде (`kind`) или о суффиксе имени (`suffix`) — ровно об
@@ -155,6 +160,13 @@ area = "application"
 object — тоже dataclass, и живёт он в домене. Область ищется подряд идущими
 кусками адреса, поэтому `application` находится и в модульном сервисе, где путь
 начинается с `modules/<имя>/`.
+
+Последняя строка — вход HTTP: схема, объявленная рядом с маршрутом, случайно
+оказывается общей, поэтому запрос и ответ живут в `schemas`. Две половины, а не
+одна: модель прямо в `schemas` — это модель, направление которой читатель
+угадывает по имени, а один класс на оба конца — запрос, отрастивший поле,
+которого не хотел ответ. В beauty и trading половин нет, там адреса —
+`requests` и `schemas`.
 
 `inside` перечисляет равноправные адреса, и адрес включает имя модуля: `errors`
 подходит и как директория, и как файл `exceptions.py`. У trading порт репозитория
