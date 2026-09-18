@@ -16,6 +16,11 @@ from python_checks.checks.placement._class_placement import (
     Rule,
 )
 from python_checks.checks.placement._marker import MARKER
+from python_checks.checks.placement._operation_shape import (
+    Operation,
+    OperationShape,
+    OperationShapeSettings,
+)
 from python_checks.checks.placement._required_class import RequiredClass, RequiredClassSettings
 
 __all__ = [
@@ -24,6 +29,9 @@ __all__ = [
     "ClassModulesSettings",
     "ClassPlacement",
     "ClassPlacementSettings",
+    "Operation",
+    "OperationShape",
+    "OperationShapeSettings",
     "RequiredClass",
     "RequiredClassSettings",
     "Rule",
