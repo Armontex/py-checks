@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, Final
 
-from python_checks.checks.imports._location import place
+from python_checks.checks._location import place
 from python_checks.checks.imports._marker import MARKER
 from python_checks.checks.imports._statements import imports
 from python_checks.config import CheckSettings
@@ -13,7 +13,7 @@ from python_checks.core import Violation, settings_as
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from python_checks.checks.imports._location import Place
+    from python_checks.checks._location import Place
     from python_checks.core import ParsedFile
 
 CODE: Final = "sealed-imports"

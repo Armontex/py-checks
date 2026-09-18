@@ -1,4 +1,12 @@
 # serializer version: 1
+# name: test_check_output_matches_the_snapshot[class_modules]
+  list([
+    'bad/application/services/pricing.py:9:1: class-modules: helper — функция; в application/services держат класс',
+    'bad/dto/orders.py:7:1: class-modules: Status — перечисление; в dto держат dataclass, алиас',
+    'bad/ports/bets.py:14:1: class-modules: SecondWriter — класс; в ports держат алиас, порт',
+    'bad/use_cases/resolve.py:4:1: class-modules: rounded — функция; в use_cases держат класс',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[confined_imports]
   list([
     'bad/application/service.py:4:1: confined-imports: fastapi в application/service; ему место в presentation, bootstrap',

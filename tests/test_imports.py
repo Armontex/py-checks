@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from python_checks.checks.imports._location import place
+from python_checks.checks._location import place
 from python_checks.core import ParsedFile
 
 

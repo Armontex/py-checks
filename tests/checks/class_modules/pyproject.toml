@@ -1,0 +1,8 @@
+[tool.python-checks]
+src = "."
+
+[tool.python-checks.class-modules.policies]
+use_cases = ["class"]
+"application/services" = ["class"]
+ports = ["port", "alias"]
+dto = ["dataclass", "alias"]

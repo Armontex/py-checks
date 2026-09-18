@@ -84,6 +84,27 @@ application = ["structlog"]
 В `beauty` в `shared` живёт валидатор адреса, поэтому там запечатан только
 `modules`.
 
+## Что лежит в директории
+
+```toml
+[tool.python-checks.class-modules.policies]
+use_cases = ["class"]
+"application/services" = ["class"]
+repositories = ["class"]
+tools = ["class", "port"]
+ports = ["port", "alias"]
+dto = ["dataclass", "alias"]
+schemas = ["model", "alias"]
+```
+
+Ключ — путь, а не имя: `application/services` держит класс-оркестратор, а
+`domain/services` — функции, правила, сравнивающие два факта. Правило по имени
+запретило бы всю доменную категорию целиком.
+
+Виды: `class`, `port` (Protocol, ABC), `dataclass`, `model` (pydantic), `alias`,
+`enum`, `function`. Импорты, константы, `if TYPE_CHECKING` и докстринг
+разрешены везде.
+
 ## ruff
 
 `ruff.toml` в корне; `pyproject.toml` секцию `[tool.ruff]` при этом не держит —

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, Final
 
-from python_checks.checks.imports._location import place
+from python_checks.checks._location import place
 from python_checks.checks.imports._marker import MARKER
 from python_checks.checks.imports._statements import imports
 from python_checks.config import CheckSettings
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
-    from python_checks.checks.imports._location import Place
+    from python_checks.checks._location import Place
     from python_checks.checks.imports._statements import Imported
     from python_checks.core import ParsedFile
 
