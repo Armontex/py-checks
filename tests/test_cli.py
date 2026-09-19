@@ -15,6 +15,10 @@ if TYPE_CHECKING:
 
 runner = CliRunner()
 
+# Код выхода click, когда аргумент не разобрался: не «есть нарушения», а
+# «команду позвали неправильно».
+BAD_ARGUMENT = 2
+
 
 class Limits(CheckSettings):
     max_lines: int = 2
@@ -176,8 +180,31 @@ def test_a_rule_that_needs_the_environment_stays_out_of_the_usual_run(
 def test_unknown_check_is_named_with_the_known_ones() -> None:
     result = runner.invoke(app, ["run", "--select", "nope"])
 
-    assert result.exit_code != 0
-    assert "module-length" in str(result.exception)
+    assert result.exit_code == BAD_ARGUMENT
+    assert "module-length" in result.output
+
+
+def test_select_takes_a_list_in_one_flag(
+    project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checks = Checks(
+        files={ModuleLength.code: ModuleLength(), NeedsTree.code: NeedsTree()},
+        project={},
+    )
+    monkeypatch.setattr("py_checks.cli.commands._run.available", lambda: checks)
+    monkeypatch.setattr("py_checks.core._registry.available", lambda: checks)
+    (project / "pyproject.toml").write_text(
+        "[tool.py-checks]\nignore = ['module-length']\n",
+        encoding="utf-8",
+    )
+    (project / "src" / "long.py").write_text("x = 1\n" * 5, encoding="utf-8")
+
+    listed = runner.invoke(app, ["run", "--select", "needs-tree, module-length"])
+    repeated = runner.invoke(app, ["run", "-s", "needs-tree", "-s", "module-length"])
+
+    assert listed.exit_code == 1
+    assert repeated.output == listed.output
 
 
 @pytest.mark.usefixtures("project")

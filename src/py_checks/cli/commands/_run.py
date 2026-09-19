@@ -11,6 +11,7 @@ from py_checks.config import Config, find_root, load
 from py_checks.core import (
     Checks,
     Scope,
+    UnknownCheckError,
     Violation,
     available,
     fix,
@@ -22,6 +23,8 @@ from py_checks.core import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from py_checks.core import Check
 
 
@@ -32,7 +35,11 @@ def run(  # check-ok: keyword-only-arguments: подпись команды ра
     ] = None,
     select: Annotated[
         list[str] | None,
-        typer.Option("--select", "-s", help="коды проверок; без них — все включённые"),
+        typer.Option(
+            "--select",
+            "-s",
+            help="коды проверок через запятую; без них — все включённые",
+        ),
     ] = None,
     autofix: Annotated[
         bool,
@@ -103,7 +110,7 @@ def _chosen(
     """
     listed = available()
     if select:
-        return listed.only(codes={get(code=code).code for code in select})
+        return listed.only(codes=_codes(select=select))
     return listed.only(
         codes={
             code
@@ -116,6 +123,24 @@ def _chosen(
             )
         }
     )
+
+
+def _codes(*, select: Sequence[str]) -> set[str]:
+    """Коды из `--select`: и повторённый флаг, и список через запятую.
+
+    Набор правил пишут в одну строку — `-s raw-sql,statement-keys`, — потому
+    что так его и держат в голове: не по одному флагу на правило, а списком.
+    Повторённый флаг остаётся рабочим, оба способа дают одно и то же.
+
+    Опечатка в коде — ошибка разбора аргумента, а не падение: имя проверки
+    приходит из командной строки, и отвечать на него следом трассировкой
+    значит показывать внутренности там, где ошибся человек.
+    """
+    named = (code.strip() for value in select for code in value.split(","))
+    try:
+        return {get(code=code).code for code in named if code}
+    except UnknownCheckError as error:
+        raise typer.BadParameter(str(error), param_hint="--select") from error
 
 
 def _wanted(
