@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, ClassVar, Final
 
 from pydantic import Field
 
-from py_checks.checks.signatures._functions import definitions
+from py_checks.checks.signatures._functions import definitions, signature_end
 from py_checks.checks.signatures._marker import MARKER
 from py_checks.config import CheckSettings
 from py_checks.core import Scope, Violation, settings_as
@@ -66,6 +66,10 @@ class FunctionLength:
                 node=definition.node,
                 path=file.path,
                 code=CODE,
+                # Пометке место в конце подписи: на строке `def` она не всегда
+                # помещается, а подпись, разложенная по столбцу, кончается
+                # совсем не там, куда указывает нарушение.
+                end_line=signature_end(node=definition.node),
                 message=(
                     f"{definition.name}: строк {length}, предел {limits.max_lines}; "
                     "вынеси часть в отдельную функцию"
