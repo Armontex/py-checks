@@ -1,0 +1,157 @@
+from __future__ import annotations
+
+import sys
+from textwrap import dedent
+from typing import TYPE_CHECKING
+
+import pytest
+
+from py_checks.config import ConfigError, load
+from py_checks.environment import FILE, render
+from py_checks.sync import stale, write
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+SETTINGS = '''\
+from pydantic import Field, SecretStr
+from pydantic_settings import BaseSettings
+
+
+class DatabaseSettings(BaseSettings):
+    """Где лежит база и насколько
+    она разговорчива.
+
+    Второй абзац в файл не едет.
+    """
+
+    path: str = Field(
+        default="app.db",
+        validation_alias="DATABASE_PATH",
+        description="Файл рядом с проектом; в контейнере — том.",
+    )
+    echo: bool = Field(default=False, validation_alias="DATABASE_ECHO")
+    password: SecretStr = Field(default=SecretStr(""), validation_alias="DATABASE_PASSWORD")
+
+
+class Settings(BaseSettings):
+    database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+'''
+
+
+def project(root: Path, section: str = "") -> Path:
+    (root / "pyproject.toml").write_text(f"[project]\nname = 'demo'\n{section}", encoding="utf-8")
+    package = root / "src" / "app"
+    package.mkdir(parents=True, exist_ok=True)
+    (package / "__init__.py").touch()
+    (package / "config.py").write_text(SETTINGS, encoding="utf-8")
+    return root
+
+
+SECTION = """
+[tool.py-checks.env-example]
+settings = ["app.config:DatabaseSettings"]
+"""
+
+
+@pytest.fixture(autouse=True)
+def _importable() -> Iterator[None]:
+    """Пакет фикстуры каждый раз новый: держать его в кэше импорта нельзя."""
+    path = list(sys.path)
+    yield
+    for name in [name for name in sys.modules if name == "app" or name.startswith("app.")]:
+        del sys.modules[name]
+    sys.path[:] = path
+
+
+def test_every_variable_of_the_class_is_listed(tmp_path: Path) -> None:
+    root = project(tmp_path, SECTION)
+
+    built = render(root=root, config=load(root=root))
+
+    assert built is not None
+    path, text = built
+    assert path == root / FILE
+    assert "DATABASE_PATH=app.db" in text
+    assert "DATABASE_ECHO=false" in text
+
+
+def test_the_class_says_what_the_section_is_about(tmp_path: Path) -> None:
+    root = project(tmp_path, SECTION)
+
+    built = render(root=root, config=load(root=root))
+
+    assert built is not None
+    # Первый абзац целиком, собранный из перенесённых строк, и только он.
+    assert "# Где лежит база и насколько она разговорчива." in built[1]
+    assert "Второй абзац" not in built[1]
+
+
+def test_what_a_field_says_about_itself_stands_above_it(tmp_path: Path) -> None:
+    root = project(tmp_path, SECTION)
+
+    built = render(root=root, config=load(root=root))
+
+    assert built is not None
+    assert "# Файл рядом с проектом; в контейнере — том.\nDATABASE_PATH=app.db" in built[1]
+
+
+def test_a_secret_is_written_as_the_value_and_not_as_stars(tmp_path: Path) -> None:
+    root = project(tmp_path, SECTION)
+
+    built = render(root=root, config=load(root=root))
+
+    assert built is not None
+    assert "DATABASE_PASSWORD=\n" in built[1]
+
+
+def test_a_section_assembled_by_a_factory_is_not_a_variable(tmp_path: Path) -> None:
+    root = project(
+        tmp_path,
+        '\n[tool.py-checks.env-example]\nsettings = ["app.config:Settings"]\n',
+    )
+
+    built = render(root=root, config=load(root=root))
+
+    assert built is not None
+    assert "database" not in built[1]
+
+
+def test_a_project_that_declared_nothing_gets_no_file(tmp_path: Path) -> None:
+    root = project(tmp_path)
+
+    assert render(root=root, config=load(root=root)) is None
+
+
+def test_sync_writes_it_and_notices_when_it_falls_behind(tmp_path: Path) -> None:
+    root = project(tmp_path, SECTION)
+
+    assert root / FILE in write(root=root)
+    assert stale(root=root) == []
+
+    (root / FILE).write_text("DATABASE_PATH=app.db\n", encoding="utf-8")
+    assert stale(root=root) == [root / FILE]
+
+
+def test_a_name_that_does_not_import_says_so(tmp_path: Path) -> None:
+    root = project(
+        tmp_path,
+        '\n[tool.py-checks.env-example]\nsettings = ["app.config:Nothing"]\n',
+    )
+
+    with pytest.raises(ConfigError, match="не импортируется"):
+        render(root=root, config=load(root=root))
+
+
+def test_a_name_without_the_class_says_what_the_record_looks_like(tmp_path: Path) -> None:
+    root = project(
+        tmp_path,
+        dedent("""
+            [tool.py-checks.env-example]
+            settings = ["app.config"]
+        """),
+    )
+
+    with pytest.raises(ConfigError, match="модуль:Класс"):
+        render(root=root, config=load(root=root))

@@ -22,7 +22,7 @@ def sync(  # check-ok: keyword-only-arguments: подпись команды р�
         typer.Option("--check", help="ничего не писать, только сказать, что устарело"),
     ] = False,
 ) -> None:
-    """Собрать контракты импортов из слоёв, объявленных проектом."""
+    """Собрать файлы, которые выводятся из кода: контракты импортов и `.env.example`."""
     root = find_root(start=Path.cwd())
     console = Console(
         stderr=True,
@@ -57,7 +57,7 @@ def _report(
     if stale:
         return EXIT_VIOLATION
     _say(
-        text="ok: контракты совпадают с настройками",
+        text="ok: собранные файлы совпадают с кодом и настройками",
         console=console,
     )
     return EXIT_OK
