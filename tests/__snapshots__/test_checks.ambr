@@ -1,4 +1,11 @@
 # serializer version: 1
+# name: test_check_output_matches_the_snapshot[annotation_shapes]
+  list([
+    'bad/loose.py:4:16: annotation-shapes: dict[str, object] читается как набор именованных полей; какие именно — скажет TypedDict или dataclass',
+    'bad/loose.py:8:20: annotation-shapes: tuple[str, int] называет поля позициями; имена даст dataclass, а NamedTuple — если это обязано остаться кортежем',
+    'bad/loose.py:12:29: annotation-shapes: dict[str, str] читается как набор именованных полей; какие именно — скажет TypedDict или dataclass',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[class_modules]
   list([
     'bad/application/services/pricing.py:9:1: class-modules: helper — функция; в application/services держат класс',
@@ -40,6 +47,14 @@
     'bad/modules/betslip/domain/selection.py:9:5: confined-types: Selection.odds объявлено через float; здесь тип называет, что значение может держать',
     'bad/modules/betslip/domain/selection.py:10:5: confined-types: Selection.version объявлено через int; здесь тип называет, что значение может держать',
     'bad/modules/betslip/domain/selection.py:11:5: confined-types: Selection.tags объявлено через str; здесь тип называет, что значение может держать',
+  ])
+# ---
+# name: test_check_output_matches_the_snapshot[constant_annotations]
+  list([
+    'bad/promise.py:5:1: constant-annotations: LIMIT названо константой, но не объявлено через Final',
+    'bad/promise.py:6:1: constant-annotations: TOPICS названо константой, но не объявлено через Final',
+    'bad/promise.py:10:5: constant-annotations: BOUND названо константой, но не объявлено через ClassVar',
+    'bad/promise.py:11:5: constant-annotations: SCALE названо константой, но не объявлено через ClassVar',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[frozen_dataclasses]

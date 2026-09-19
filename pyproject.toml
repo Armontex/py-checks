@@ -19,8 +19,10 @@ python-checks = "python_checks.cli:main"
 
 [project.entry-points."python_checks.checks"]
 class-modules = "python_checks.checks.placement:ClassModules"
+annotation-shapes = "python_checks.checks.types:AnnotationShapes"
 config-fields = "python_checks.checks.types:ConfigFields"
 confined-types = "python_checks.checks.types:ConfinedTypes"
+constant-annotations = "python_checks.checks.types:ConstantAnnotations"
 frozen-dataclasses = "python_checks.checks.types:FrozenDataclasses"
 class-placement = "python_checks.checks.placement:ClassPlacement"
 operation-shape = "python_checks.checks.placement:OperationShape"
@@ -61,6 +63,11 @@ major_version_zero = true
 update_changelog_on_bump = true
 
 [tool.python-checks]
+# Таблицы настроек библиотеки — это `dict[str, ...]`, у которых ключ приходит
+# из TOML проекта: путь, имя пакета, код проверки. Ключи здесь и есть данные,
+# то есть ровно тот случай, ради которого у правила существует пометка, — а
+# ставить её тридцать три раза значит написать «это не поля» в каждом файле.
+ignore = ["annotation-shapes"]
 # примеры для проверок нарушают правила намеренно
 extend-exclude = ["tests/checks/*"]
 

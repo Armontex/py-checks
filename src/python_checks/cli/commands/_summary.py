@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import inspect as introspect
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
     from python_checks.core import FileCheck
 
-NO_DOC = "нет описания"
+NO_DOC: Final = "нет описания"
 
 
 def docstring(*, check: FileCheck) -> str:
