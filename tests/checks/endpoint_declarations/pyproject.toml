@@ -1,7 +1,7 @@
-[tool.python-checks]
+[tool.py-checks]
 src = "."
 
-[tool.python-checks.endpoint-declarations]
+[tool.py-checks.endpoint-declarations]
 methods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"]
 required = ["path", "status_code", "summary", "responses"]
 body = "response_model"

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 
-from python_checks.checks._kind import Kind, declarations
+from py_checks.checks._kind import Kind, declarations
 
 
 def kinds(source: str) -> dict[str, Kind]:

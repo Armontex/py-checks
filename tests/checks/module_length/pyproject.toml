@@ -1,5 +1,5 @@
-[tool.python-checks]
+[tool.py-checks]
 src = "."
 
-[tool.python-checks.module-length]
+[tool.py-checks.module-length]
 max-lines = 10

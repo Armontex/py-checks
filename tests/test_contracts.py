@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from python_checks.config import Config, ConfigError, TomlTable, load
-from python_checks.contracts import contracts, render
+from py_checks.config import Config, ConfigError, TomlTable, load
+from py_checks.contracts import contracts, render
 
 SERVICE: dict[str, TomlTable] = {
     "contracts": {
@@ -119,4 +119,4 @@ def test_the_library_checks_its_own_layers() -> None:
     text = render(root=root, config=load(root=root)) or ""
 
     assert "[importlinter:contract:layer-core]" in text
-    assert "python_checks.cli" in text
+    assert "py_checks.cli" in text

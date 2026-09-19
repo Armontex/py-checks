@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from python_checks.checks._location import place
-from python_checks.core import ParsedFile
+from py_checks.checks._location import place
+from py_checks.core import ParsedFile
 
 
 def parsed(path: str, source: Path | None) -> ParsedFile:

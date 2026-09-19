@@ -1,7 +1,7 @@
-[tool.python-checks]
+[tool.py-checks]
 src = "."
 
-[[tool.python-checks.operation-shape.operations]]
+[[tool.py-checks.operation-shape.operations]]
 inside = "use_cases"
 suffix = "UseCase"
 method = "execute"
@@ -10,7 +10,7 @@ forbids = ["UnitOfWork"]
 
 # У сервиса дверей столько, сколько переходов у его сущности: одна на переход,
 # потому что вызывающий, которому пришлось бы сделать три вызова, сделает два.
-[[tool.python-checks.operation-shape.operations]]
+[[tool.py-checks.operation-shape.operations]]
 inside = "application/services"
 suffix = "Service"
 forbids = ["UnitOfWork"]

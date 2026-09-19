@@ -13,11 +13,11 @@ import pkgutil
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
 
-import python_checks.checks
-from python_checks.core import GROUP, FileCheck, ProjectCheck, available
+import py_checks.checks
+from py_checks.core import GROUP, FileCheck, ProjectCheck, available
 
 if TYPE_CHECKING:
-    from python_checks.core import Check
+    from py_checks.core import Check
 
 
 def a_check(*, candidate: object) -> bool:
@@ -32,8 +32,8 @@ def a_check(*, candidate: object) -> bool:
 def declared() -> set[str]:
     """Коды правил, выставленных наружу пакетами групп."""
     found: set[str] = set()
-    for module in pkgutil.iter_modules(python_checks.checks.__path__):
-        group: dict[str, Any] = vars(importlib.import_module(f"python_checks.checks.{module.name}"))
+    for module in pkgutil.iter_modules(py_checks.checks.__path__):
+        group: dict[str, Any] = vars(importlib.import_module(f"py_checks.checks.{module.name}"))
         found.update(
             group[name].code for name in group.get("__all__", ()) if a_check(candidate=group[name])
         )

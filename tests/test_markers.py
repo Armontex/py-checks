@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from python_checks.core import MARKER, ParsedFile, Violation, complaints, read, surviving
+from py_checks.core import MARKER, ParsedFile, Violation, complaints, read, surviving
 
 ALIASES = {"# signature-ok": frozenset({"keyword-only-arguments", "module-length"})}
 

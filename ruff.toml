@@ -35,6 +35,6 @@ ignore = ["B008"]
 # настоящие импорты, а не блок под TYPE_CHECKING.
 runtime-evaluated-base-classes = [
     "pydantic.BaseModel",
-    "python_checks.config.CheckSettings",
-    "python_checks.config._base.CheckSettings",
+    "py_checks.config.CheckSettings",
+    "py_checks.config._base.CheckSettings",
 ]

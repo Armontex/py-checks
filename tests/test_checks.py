@@ -16,8 +16,8 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 
-from python_checks.config import load
-from python_checks.core import available, python_files, survey
+from py_checks.config import load
+from py_checks.core import available, python_files, survey
 
 if TYPE_CHECKING:
     from syrupy.assertion import SnapshotAssertion

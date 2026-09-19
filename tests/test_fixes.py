@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from python_checks.core import Edit, ParsedFile, ParseError, Violation, apply, fix
+from py_checks.core import Edit, ParsedFile, ParseError, Violation, apply, fix
 
 
 def edit(*, line: int, column: int, text: str, end_column: int | None = None) -> Edit:

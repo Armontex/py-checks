@@ -1,8 +1,8 @@
-[tool.python-checks]
+[tool.py-checks]
 src = "."
 
 # Свой стек проекта дописывается к базе библиотеки; пустой список — «нигде».
-[tool.python-checks.confined-imports.packages]
+[tool.py-checks.confined-imports.packages]
 maxapi = ["presentation"]
 agents = []
 sqlalchemy = ["infra/database", "ioc"]

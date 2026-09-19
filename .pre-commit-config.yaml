@@ -67,10 +67,10 @@ repos:
       # Библиотека проверяет сама себя: правило, которое не выдерживает свой же
       # репозиторий, до чужого доезжать не должно. Правила писались для кода
       # библиотеки, поэтому только `src`: тесты живут по своим.
-      - id: python-checks
+      - id: py-checks
         name: проверки соглашений проекта
         description: код следует соглашениям, записанным в pychecks.toml
-        entry: uv run python-checks run
+        entry: uv run py-checks run
         language: system
         types: [python]
         files: ^src/.*\.py$
@@ -78,10 +78,10 @@ repos:
       # Контракты собираются из таблицы слоёв и из того, что лежит на диске,
       # поэтому отстать они могут и без правки самого файла — отсюда
       # `always_run`.
-      - id: python-checks-sync
+      - id: py-checks-sync
         name: контракты импортов собраны заново
         description: файл контрактов отстаёт от объявленных слоёв или от того, что лежит на диске
-        entry: uv run python-checks sync --check
+        entry: uv run py-checks sync --check
         language: system
         always_run: true
         pass_filenames: false

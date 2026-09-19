@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from python_checks.config import CheckSettings, Config, ConfigError, find_root, load
-from python_checks.core import ParsedFile, ParseError, Violation, python_files, report
+from py_checks.config import CheckSettings, Config, ConfigError, find_root, load
+from py_checks.core import ParsedFile, ParseError, Violation, python_files, report
 
 
 def write(root: Path, name: str, text: str = "") -> Path:
@@ -90,11 +90,11 @@ def test_config_reads_own_keys_and_check_sections(tmp_path: Path) -> None:
         tmp_path,
         "pyproject.toml",
         """
-        [tool.python-checks]
+        [tool.py-checks]
         src = "app"
         ignore = ["module-length"]
 
-        [tool.python-checks.module-length]
+        [tool.py-checks.module-length]
         max-lines = 120
         """.replace("        ", ""),
     )
@@ -119,7 +119,7 @@ def test_config_rejects_unknown_key(tmp_path: Path) -> None:
     write(
         tmp_path,
         "pyproject.toml",
-        "[tool.python-checks.module-length]\nmax-linez = 10\n",
+        "[tool.py-checks.module-length]\nmax-linez = 10\n",
     )
 
     with pytest.raises(ConfigError):
@@ -140,7 +140,7 @@ def test_config_is_read_from_a_file_of_its_own(tmp_path: Path) -> None:
 
 
 def test_a_file_of_its_own_names_the_root(tmp_path: Path) -> None:
-    write(tmp_path, ".python-checks.toml", "")
+    write(tmp_path, ".py-checks.toml", "")
     nested = tmp_path / "src" / "deep"
     nested.mkdir(parents=True)
 
@@ -155,7 +155,7 @@ def test_a_pyproject_without_the_section_is_not_a_second_place(tmp_path: Path) -
 
 
 def test_settings_in_two_places_are_an_error(tmp_path: Path) -> None:
-    write(tmp_path, "pyproject.toml", '[tool.python-checks]\nsrc = "app"\n')
+    write(tmp_path, "pyproject.toml", '[tool.py-checks]\nsrc = "app"\n')
     write(tmp_path, "pychecks.toml", 'src = "lib"\n')
 
     with pytest.raises(ConfigError, match="нескольких местах"):
@@ -181,7 +181,7 @@ def test_config_keeps_nested_check_sections_typed(tmp_path: Path) -> None:
     write(
         tmp_path,
         "pyproject.toml",
-        "[tool.python-checks.module-length]\nmax-lines = 120\n",
+        "[tool.py-checks.module-length]\nmax-lines = 120\n",
     )
 
     section = load(root=tmp_path).section(code="module-length")
@@ -194,7 +194,7 @@ def test_extend_exclude_adds_to_the_defaults(tmp_path: Path) -> None:
     write(
         tmp_path,
         "pyproject.toml",
-        '[tool.python-checks]\nextend-exclude = ["tests/checks/*"]\n',
+        '[tool.py-checks]\nextend-exclude = ["tests/checks/*"]\n',
     )
 
     config = load(root=tmp_path)

@@ -13,8 +13,8 @@
 
 ## Где они лежат
 
-Дальше всё написано секциями `[tool.python-checks.<код>]` — это вид для
-`pyproject.toml`. У настроек есть и свой файл: `python-checks.toml` или
+Дальше всё написано секциями `[tool.py-checks.<код>]` — это вид для
+`pyproject.toml`. У настроек есть и свой файл: `py-checks.toml` или
 `pychecks.toml`, с точкой в начале или без. В нём приставки нет — весь файл и
 есть эта секция:
 
@@ -39,12 +39,12 @@ max-lines = 300
 Библиотека публикует только свои:
 
 ```yaml
-- repo: https://github.com/<owner>/python-checks
+- repo: https://github.com/<owner>/py-checks
   rev: v0.1.0
   hooks:
-    - id: python-checks
+    - id: py-checks
       args: [--fix]          # починить то, что чинится само
-    - id: python-checks-sync
+    - id: py-checks-sync
 ```
 
 Хук один, а не по хуку на правило: что включено, решает конфиг проекта, и
@@ -60,7 +60,7 @@ max-lines = 300
 Остальное проект объявляет сам — ruff, pyright, import-linter, commitizen.
 У каждого из них есть свой хук, написанный его же авторами, и знают они о себе
 больше, чем знали бы мы. Собрать за них конфиг — другое дело: `.importlinter`
-отстаёт от раскладки на диске, поэтому его собирает `python-checks sync`, а
+отстаёт от раскладки на диске, поэтому его собирает `py-checks sync`, а
 гоняет по нему граф хук самого import-linter:
 
 ```yaml
@@ -77,7 +77,7 @@ max-lines = 300
 ## Слои
 
 ```toml
-[tool.python-checks.contracts]
+[tool.py-checks.contracts]
 # Связывать слои между собой — вся их работа, поэтому им можно всё.
 composition-root = ["ioc", "bootstrap", "entrypoints"]
 
@@ -86,7 +86,7 @@ composition-root = ["ioc", "bootstrap", "entrypoints"]
 # него. `presentation` намеренно не видит `domain`: край переводит свои типы в
 # DTO приложения и обратно, и роутер, читающий доменный объект, связал форму
 # внешнего мира с формой правил.
-[tool.python-checks.contracts.layers]
+[tool.py-checks.contracts.layers]
 domain = ["domain", "shared"]
 application = ["domain", "application", "shared"]
 infra = ["domain", "application", "infra", "shared", "config"]
@@ -107,7 +107,7 @@ presentation = ["application", "workflows", "presentation", "shared", "config"]
 ## Где чей фреймворк
 
 ```toml
-[tool.python-checks.confined-imports.packages]
+[tool.py-checks.confined-imports.packages]
 sqlalchemy = ["infra/database", "ioc"]
 asyncpg = ["infra/database", "ioc"]
 aiosqlite = ["infra/database"]
@@ -131,14 +131,14 @@ betting и trading. Пустой список значит «нигде» — т
 ## Что запечатано
 
 ```toml
-[tool.python-checks.sealed-imports]
+[tool.py-checks.sealed-imports]
 # `modules` держит правила и интерфейсы вокруг них: DTO здесь — dataclass, а не
 # модель фреймворка. `shared` печатают bot и betting: его импортирует домен
 # каждого модуля, поэтому фреймворк, добравшийся туда, оказывается в каждом
 # запечатанном слое сразу.
 zones = ["modules", "shared"]
 
-[tool.python-checks.sealed-imports.allow]
+[tool.py-checks.sealed-imports.allow]
 # Сценарий руководит и потому имеет право сказать, что произошло; правила верны
 # независимо от того, слушает ли их кто-нибудь.
 application = ["structlog"]
@@ -150,7 +150,7 @@ application = ["structlog"]
 ## Что лежит в директории
 
 ```toml
-[tool.python-checks.class-modules.policies]
+[tool.py-checks.class-modules.policies]
 use_cases = ["class"]
 "application/services" = ["class"]
 repositories = ["class"]
@@ -180,35 +180,35 @@ NotFound(OrderError)` наследуется от своего же корня, 
 `class-placement` — куда обязан лечь класс, откуда бы его ни начали писать.
 
 ```toml
-[[tool.python-checks.class-placement.rules]]
+[[tool.py-checks.class-placement.rules]]
 kind = "error"
 inside = ["errors", "exceptions"]
 
-[[tool.python-checks.class-placement.rules]]
+[[tool.py-checks.class-placement.rules]]
 kind = "port"
 inside = ["ports"]
 area = "application"
 
-[[tool.python-checks.class-placement.rules]]
+[[tool.py-checks.class-placement.rules]]
 suffix = "Repository"
 inside = ["infra/database/repositories", "ports"]
 
-[[tool.python-checks.class-placement.rules]]
+[[tool.py-checks.class-placement.rules]]
 kind = "dataclass"
 inside = ["dto"]
 area = "application"
 
-[[tool.python-checks.class-placement.rules]]
+[[tool.py-checks.class-placement.rules]]
 suffix = "UseCase"
 inside = ["use_cases"]
 area = "application"
 
-[[tool.python-checks.class-placement.rules]]
+[[tool.py-checks.class-placement.rules]]
 suffix = "Service"
 inside = ["application/services"]
 area = "application"
 
-[[tool.python-checks.class-placement.rules]]
+[[tool.py-checks.class-placement.rules]]
 kind = "model"
 inside = ["schemas/requests", "schemas/responses"]
 area = "presentation"
@@ -240,7 +240,7 @@ object — тоже dataclass, и живёт он в домене. Област�
 ## Что модуль обязан объявить
 
 ```toml
-[tool.python-checks.required-class.suffixes]
+[tool.py-checks.required-class.suffixes]
 use_cases = "UseCase"
 "application/services" = "Service"
 repositories = "Repository"
@@ -273,7 +273,7 @@ tools = "Tool"
 ## Как устроена операция
 
 ```toml
-[[tool.python-checks.operation-shape.operations]]
+[[tool.py-checks.operation-shape.operations]]
 inside = "use_cases"
 suffix = "UseCase"
 method = "execute"
@@ -282,7 +282,7 @@ max-arguments = 3
 # Дверей у сервиса столько, сколько переходов у его сущности: `IBetWriter`
 # держит шесть, по одной на переход, потому что переход — это один вызов, и
 # вызывающий, которому пришлось бы сделать три, сделает два.
-[[tool.python-checks.operation-shape.operations]]
+[[tool.py-checks.operation-shape.operations]]
 inside = "application/services"
 suffix = "Service"
 forbids = ["UnitOfWork"]
@@ -323,7 +323,7 @@ forbids = ["UnitOfWork"]
 ## Значения неизменяемы
 
 ```toml
-[tool.python-checks.frozen-dataclasses]
+[tool.py-checks.frozen-dataclasses]
 zones = ["modules"]
 # options по умолчанию ["frozen", "slots", "kw_only"]
 ```
@@ -345,7 +345,7 @@ zones = ["modules"]
 ## Модель не покидает слой базы
 
 ```toml
-[tool.python-checks.model-boundary]
+[tool.py-checks.model-boundary]
 declared = ["infra/database/models"]
 built = ["infra/database/repositories"]
 # base по умолчанию "Base"
@@ -382,7 +382,7 @@ built = ["infra/database/repositories"]
 ## Из чего собрана колонка
 
 ```toml
-[tool.python-checks.model-columns]
+[tool.py-checks.model-columns]
 zones = ["infra/database/models"]
 defaults = [
     "default",
@@ -395,13 +395,13 @@ defaults = [
 unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
-[tool.python-checks.model-columns.types]
+[tool.py-checks.model-columns.types]
 Enum = "голый Enum — нативный тип Postgres; используй stored_enum()"
 Float = "Float дрейфует; состояние точно, используй Numeric"
 JSONB = "голый JSONB — форма, которую никто не объявил; заверни в TypeDecorator"
 JSON = "голый JSON — форма, которую никто не объявил; заверни в TypeDecorator"
 
-[tool.python-checks.model-columns.homes]
+[tool.py-checks.model-columns.homes]
 # Модуль, где живёт обёртка над материалом: там его называть можно.
 # В bot и betting он `_enum_column`, в beauty и trading — `enum_column`.
 Enum = "_enum_column"
@@ -431,7 +431,7 @@ pyright рассуждает по одной, а база держит друг�
 ## Граница колонки повторена в базе
 
 ```toml
-[tool.python-checks.bound-checks]
+[tool.py-checks.bound-checks]
 zones = ["infra/database/models"]
 primitives = [
     "PositiveDecimal",
@@ -466,7 +466,7 @@ primitives = [
 ## SQL строкой там, где хватило бы выражения
 
 ```toml
-[tool.python-checks.raw-sql]
+[tool.py-checks.raw-sql]
 # calls по умолчанию: CheckConstraint, text, literal_column, column
 ```
 
@@ -496,7 +496,7 @@ WHOLE))` — оно состоит из атрибута, который pyright
 ## Запрос называет колонку атрибутом
 
 ```toml
-[tool.python-checks.statement-keys]
+[tool.py-checks.statement-keys]
 zones = ["infra/database/repositories"]
 # lists по умолчанию ["index_elements"], mappings — ["set_"],
 # calls — ["from_select"], loops — ["execute"]
@@ -523,7 +523,7 @@ zones = ["infra/database/repositories"]
 ## Кто владеет границей транзакции
 
 ```toml
-[[tool.python-checks.confined-calls.rules]]
+[[tool.py-checks.confined-calls.rules]]
 methods = ["commit", "rollback", "begin", "begin_nested"]
 zones = ["modules", "presentation", "infra/database"]
 # Край брокера: `commit()` у консьюмера подтверждает смещение, а не транзакцию.
@@ -549,10 +549,10 @@ bot и betting судят все четыре имени, beauty и trading — 
 ## Форма называет свои поля
 
 ```toml
-[tool.python-checks.annotation-shapes]
+[tool.py-checks.annotation-shapes]
 # keys по умолчанию ["str"], tuples по умолчанию true
 
-[tool.python-checks.constant-annotations]
+[tool.py-checks.constant-annotations]
 # module по умолчанию "Final", inside-class — "ClassVar"
 ```
 
@@ -579,7 +579,7 @@ HTTP, носитель контекста трассировки — помеч�
 ## Чему не место в этой части дерева
 
 ```toml
-[tool.python-checks.confined-types.zones]
+[tool.py-checks.confined-types.zones]
 # Двоичная плавающая точка не держит цену, а ошибка округления в хранимом
 # состоянии — это деньги, которые перестают сходиться. В приложении число на
 # пути в отчёт — арифметика, и там `float` законен.
@@ -610,11 +610,11 @@ shared = ["str", "int", "float", "Decimal"]
 ## Поле настроек названо целиком
 
 ```toml
-[tool.python-checks.config-fields]
+[tool.py-checks.config-fields]
 zones = ["config"]
 # factory по умолчанию "Field"
 
-[tool.python-checks.config-fields.bounds]
+[tool.py-checks.config-fields.bounds]
 int = ["ge", "gt", "le", "lt"]
 float = ["ge", "gt", "le", "lt"]
 str = ["min_length", "pattern"]
@@ -644,16 +644,16 @@ str = ["min_length", "pattern"]
 ## Пределы длины и вложенности
 
 ```toml
-[tool.python-checks.module-length]
+[tool.py-checks.module-length]
 max-lines = 600
 
 # `with` в таблице нет намеренно: вложенный `with` ловит ruff `SIM117`, с
 # автофиксом и с готовым ответом — «сделай один `with a, b:`».
-[tool.python-checks.nesting.limits]
+[tool.py-checks.nesting.limits]
 try = 1
 if = 2
 
-[tool.python-checks.signature-layout]
+[tool.py-checks.signature-layout]
 # Половину про вызовы выключают на время переезда: в сервисе, который писали
 # без неё, она трогает почти каждый файл — в beauty это 693 места, в trading 860.
 calls = true
@@ -820,10 +820,10 @@ Strict везде, а не по директориям: неаннотирова
 ## Часы, случайность и новый идентификатор — из порта
 
 ```toml
-[tool.python-checks.determinism]
+[tool.py-checks.determinism]
 zones = ["modules", "repositories"]
 
-[tool.python-checks.determinism.sources]
+[tool.py-checks.determinism.sources]
 "datetime.now" = "возьми порт Clock и позови его"
 "datetime.utcnow" = "возьми порт Clock и позови его"
 "date.today" = "возьми порт Clock и позови его"
@@ -879,7 +879,7 @@ Ruff `TID251` закрывает половину и стоит дороже, ч
 ## Событие в логе названо перечислением
 
 ```toml
-[tool.python-checks.log-events]
+[tool.py-checks.log-events]
 enum = "LogEvent"
 # levels по умолчанию debug, info, warning, warn, error, exception, critical
 # receiver по умолчанию "(^|_)log(ger)?$" — `logger`, `log`, `self._logger`
@@ -913,7 +913,7 @@ logger.info(LogEvent.CONSUMER_STARTED, topics=...)  # требуется
 ## Маршрут объявляет, чем отвечает
 
 ```toml
-[tool.python-checks.endpoint-declarations]
+[tool.py-checks.endpoint-declarations]
 methods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"]
 required = ["path", "status_code", "summary", "responses"]
 body = "response_model"
@@ -958,10 +958,10 @@ Schemathesis решает соседнюю задачу, а не эту: он б
 ## У функции есть список мест, откуда её зовут
 
 ```toml
-[tool.python-checks.confined-functions]
+[tool.py-checks.confined-functions]
 home = "shared/money"
 
-[tool.python-checks.confined-functions.calls]
+[tool.py-checks.confined-functions.calls]
 to_eur = [
     "modules/acceptance/application/use_cases/convert_stake",
     "modules/cashout/application",
@@ -1000,7 +1000,7 @@ in_cents = [
 ## У зависимости есть потолок
 
 ```toml
-[tool.python-checks.dependency-bounds]
+[tool.py-checks.dependency-bounds]
 # ceilings по умолчанию ==, <=, <, ~=, ===
 # pins по умолчанию rev, tag
 ```
@@ -1026,7 +1026,7 @@ in_cents = [
 `[tool.uv.sources]` с `rev` или `tag`.
 
 Это правило судит не файл исходника, а проект: вместо разобранного файла ему
-дают корень, и зовут один раз за прогон, вместе с остальными — `python-checks
+дают корень, и зовут один раз за прогон, вместе с остальными — `py-checks
 run`. Что ему дают, правило говорит само, полем `scope`.
 
 ## `.env.example` не проверяется, а собирается
@@ -1062,7 +1062,7 @@ Windows и некоторые редакторы.
 ## Схема миграций и схема моделей — одна схема
 
 ```toml
-[tool.python-checks.schema-drift]
+[tool.py-checks.schema-drift]
 # versions по умолчанию "migrations/versions",
 # models — "src/*/infra/database/models", variable — "DATABASE_URL",
 # url — "sqlite+aiosqlite:///{path}", alembic — ["alembic"]
@@ -1080,8 +1080,8 @@ Windows и некоторые редакторы.
 входит, его зовут по имени или целиком:
 
 ```bash
-python-checks run --select schema-drift
-python-checks run --all
+py-checks run --select schema-drift
+py-checks run --all
 ```
 
 Базу оно приносит своё — пустой файл во временной директории, накатанный от

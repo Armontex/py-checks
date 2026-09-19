@@ -22,5 +22,5 @@ build-backend = "hatchling.build"
 [tool.uv.sources]
 sportsbook-contracts = { git = "ssh://git@github.com/example/contracts", rev = "8dca828" }
 
-[tool.python-checks]
+[tool.py-checks]
 src = "src"

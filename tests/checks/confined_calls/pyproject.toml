@@ -1,7 +1,7 @@
-[tool.python-checks]
+[tool.py-checks]
 src = "."
 
-[[tool.python-checks.confined-calls.rules]]
+[[tool.py-checks.confined-calls.rules]]
 methods = ["commit", "rollback", "begin", "begin_nested"]
 zones = ["modules", "presentation", "infra/database"]
 # Край брокера: `commit()` у консьюмера подтверждает смещение, а не транзакцию.

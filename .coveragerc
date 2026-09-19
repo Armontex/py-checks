@@ -1,5 +1,5 @@
 [run]
-source = src/python_checks
+source = src/py_checks
 branch = True
 
 [report]

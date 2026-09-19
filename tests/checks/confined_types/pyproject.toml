@@ -1,5 +1,5 @@
-[tool.python-checks]
+[tool.py-checks]
 src = "."
 
-[tool.python-checks.confined-types.zones]
+[tool.py-checks.confined-types.zones]
 "modules/*/domain" = ["float", "str", "int", "Decimal"]

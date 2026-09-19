@@ -1,7 +1,7 @@
-[tool.python-checks]
+[tool.py-checks]
 src = "."
 
-[tool.python-checks.required-class.suffixes]
+[tool.py-checks.required-class.suffixes]
 use_cases = "UseCase"
 repositories = "Repository"
 config = "Settings"

@@ -1,10 +1,10 @@
-[tool.python-checks]
+[tool.py-checks]
 src = "."
 
-[tool.python-checks.determinism]
+[tool.py-checks.determinism]
 zones = ["modules", "repositories"]
 
-[tool.python-checks.determinism.sources]
+[tool.py-checks.determinism.sources]
 "datetime.now" = "возьми порт Clock и позови его"
 "datetime.utcnow" = "возьми порт Clock и позови его"
 "date.today" = "возьми порт Clock и позови его"

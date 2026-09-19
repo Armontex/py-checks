@@ -1,5 +1,5 @@
-[tool.python-checks]
+[tool.py-checks]
 src = "."
 
-[tool.python-checks.statement-keys]
+[tool.py-checks.statement-keys]
 zones = ["infra/database/repositories"]

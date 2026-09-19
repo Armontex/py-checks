@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from python_checks.contracts import FILE
-from python_checks.sync import planned, stale, write
+from py_checks.contracts import FILE
+from py_checks.sync import planned, stale, write
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -21,7 +21,7 @@ def project(root: Path, section: str = "") -> Path:
 
 
 SECTION = """
-[tool.python-checks.contracts.layers]
+[tool.py-checks.contracts.layers]
 domain = ["domain", "shared"]
 shared = ["shared"]
 """

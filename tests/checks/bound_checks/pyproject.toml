@@ -1,6 +1,6 @@
-[tool.python-checks]
+[tool.py-checks]
 src = "."
 
-[tool.python-checks.bound-checks]
+[tool.py-checks.bound-checks]
 zones = ["infra/database/models"]
 primitives = ["PositiveDecimal", "NonEmptyString"]

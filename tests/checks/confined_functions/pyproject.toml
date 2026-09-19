@@ -1,9 +1,9 @@
-[tool.python-checks]
+[tool.py-checks]
 src = "."
 
-[tool.python-checks.confined-functions]
+[tool.py-checks.confined-functions]
 home = "shared/money"
 
-[tool.python-checks.confined-functions.calls]
+[tool.py-checks.confined-functions.calls]
 to_eur = ["modules/cashout/application"]
 from_eur = ["modules/cashout/application"]

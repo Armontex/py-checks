@@ -1,75 +1,75 @@
-# Контракты импортов. Файл собирает `python-checks sync` из того, какие слои
+# Контракты импортов. Файл собирает `py-checks sync` из того, какие слои
 # есть на диске, и из секции [contracts] — править его нечего, следующий sync
 # перезапишет. Менять нужно секцию.
 
 [importlinter]
 root_packages =
-    python_checks
+    py_checks
 
 [importlinter:contract:layer-checks]
 name = checks не импортирует чужое
 type = forbidden
 allow_indirect_imports = True
 source_modules =
-    python_checks.checks
+    py_checks.checks
 forbidden_modules =
-    python_checks.cli
-    python_checks.contracts
-    python_checks.sync
+    py_checks.cli
+    py_checks.contracts
+    py_checks.sync
 
 [importlinter:contract:layer-cli]
 name = cli не импортирует чужое
 type = forbidden
 allow_indirect_imports = True
 source_modules =
-    python_checks.cli
+    py_checks.cli
 forbidden_modules =
-    python_checks.checks
+    py_checks.checks
 
 [importlinter:contract:layer-config]
 name = config не импортирует чужое
 type = forbidden
 allow_indirect_imports = True
 source_modules =
-    python_checks.config
+    py_checks.config
 forbidden_modules =
-    python_checks.checks
-    python_checks.cli
-    python_checks.contracts
-    python_checks.core
-    python_checks.sync
+    py_checks.checks
+    py_checks.cli
+    py_checks.contracts
+    py_checks.core
+    py_checks.sync
 
 [importlinter:contract:layer-contracts]
 name = contracts не импортирует чужое
 type = forbidden
 allow_indirect_imports = True
 source_modules =
-    python_checks.contracts
+    py_checks.contracts
 forbidden_modules =
-    python_checks.checks
-    python_checks.cli
-    python_checks.core
-    python_checks.sync
+    py_checks.checks
+    py_checks.cli
+    py_checks.core
+    py_checks.sync
 
 [importlinter:contract:layer-core]
 name = core не импортирует чужое
 type = forbidden
 allow_indirect_imports = True
 source_modules =
-    python_checks.core
+    py_checks.core
 forbidden_modules =
-    python_checks.checks
-    python_checks.cli
-    python_checks.contracts
-    python_checks.sync
+    py_checks.checks
+    py_checks.cli
+    py_checks.contracts
+    py_checks.sync
 
 [importlinter:contract:layer-sync]
 name = sync не импортирует чужое
 type = forbidden
 allow_indirect_imports = True
 source_modules =
-    python_checks.sync
+    py_checks.sync
 forbidden_modules =
-    python_checks.checks
-    python_checks.cli
-    python_checks.core
+    py_checks.checks
+    py_checks.cli
+    py_checks.core

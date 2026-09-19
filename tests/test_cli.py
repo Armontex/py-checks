@@ -3,15 +3,15 @@ from typing import TYPE_CHECKING, ClassVar
 import pytest
 from typer.testing import CliRunner
 
-from python_checks.cli import app
-from python_checks.config import CheckSettings
-from python_checks.core import Checks, Scope, Violation
+from py_checks.cli import app
+from py_checks.config import CheckSettings
+from py_checks.core import Checks, Scope, Violation
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
-    from python_checks.core import ParsedFile
+    from py_checks.core import ParsedFile
 
 runner = CliRunner()
 
@@ -84,8 +84,8 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def registry(monkeypatch: pytest.MonkeyPatch) -> None:
     checks = Checks(files={ModuleLength.code: ModuleLength()}, project={})
     for module in ("_run", "_list"):
-        monkeypatch.setattr(f"python_checks.cli.commands.{module}.available", lambda: checks)
-    monkeypatch.setattr("python_checks.core._registry.available", lambda: checks)
+        monkeypatch.setattr(f"py_checks.cli.commands.{module}.available", lambda: checks)
+    monkeypatch.setattr("py_checks.core._registry.available", lambda: checks)
 
 
 def test_run_is_clean_when_nothing_is_wrong(project: Path) -> None:
@@ -107,7 +107,7 @@ def test_run_reports_the_violation_and_fails(project: Path) -> None:
 
 def test_run_takes_settings_from_pyproject(project: Path) -> None:
     (project / "pyproject.toml").write_text(
-        "[tool.python-checks.module-length]\nmax-lines = 10\n",
+        "[tool.py-checks.module-length]\nmax-lines = 10\n",
         encoding="utf-8",
     )
     (project / "src" / "long.py").write_text("x = 1\n" * 5, encoding="utf-8")
@@ -117,7 +117,7 @@ def test_run_takes_settings_from_pyproject(project: Path) -> None:
 
 def test_run_skips_a_check_the_config_ignores(project: Path) -> None:
     (project / "pyproject.toml").write_text(
-        "[tool.python-checks]\nignore = ['module-length']\n",
+        "[tool.py-checks]\nignore = ['module-length']\n",
         encoding="utf-8",
     )
     (project / "src" / "long.py").write_text("x = 1\n" * 5, encoding="utf-8")
@@ -127,7 +127,7 @@ def test_run_skips_a_check_the_config_ignores(project: Path) -> None:
 
 def test_select_wins_over_ignore(project: Path) -> None:
     (project / "pyproject.toml").write_text(
-        "[tool.python-checks]\nignore = ['module-length']\n",
+        "[tool.py-checks]\nignore = ['module-length']\n",
         encoding="utf-8",
     )
     (project / "src" / "long.py").write_text("x = 1\n" * 5, encoding="utf-8")
@@ -148,7 +148,7 @@ def test_broken_syntax_is_one_violation_not_a_crash(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "python_checks.cli.commands._run.available",
+        "py_checks.cli.commands._run.available",
         lambda: Checks(files={NeedsTree.code: NeedsTree()}, project={}),
     )
     (project / "src" / "broken.py").write_text("def (:\n", encoding="utf-8")
@@ -164,7 +164,7 @@ def test_a_rule_that_needs_the_environment_stays_out_of_the_usual_run(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "python_checks.cli.commands._run.available",
+        "py_checks.cli.commands._run.available",
         lambda: Checks(files={}, project={NeedsDatabase.code: NeedsDatabase()}),
     )
 
