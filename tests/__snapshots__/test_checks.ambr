@@ -69,6 +69,15 @@
     'bad/promise.py:11:5: constant-annotations: SCALE названо константой, но не объявлено через ClassVar',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[determinism]
+  list([
+    'bad/infra/database/repositories/orders.py:9:48: determinism: func.gen_random_uuid() не детерминирован; идентификатор строки выдаёт тот, кто её собрал',
+    'bad/infra/database/repositories/orders.py:9:82: determinism: func.now() не детерминирован; время строки — из порта Clock, а не из базы',
+    'bad/modules/orders/application/place.py:8:20: determinism: uuid4() не детерминирован; выдай идентификатор из IdGenerator и передай его',
+    'bad/modules/orders/application/place.py:12:23: determinism: datetime.now() не детерминирован; возьми порт Clock и позови его',
+    'bad/modules/orders/application/place.py:13:20: determinism: random.choice() не детерминирован; прими значение аргументом',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[frozen_dataclasses]
   list([
     'bad/modules/betslip/domain/selection.py:7:1: frozen-dataclasses: dataclass Selection объявлен без frozen=True, slots=True, kw_only=True',

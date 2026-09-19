@@ -1,0 +1,17 @@
+[tool.python-checks]
+src = "."
+
+[tool.python-checks.determinism]
+zones = ["modules", "repositories"]
+
+[tool.python-checks.determinism.sources]
+"datetime.now" = "возьми порт Clock и позови его"
+"datetime.utcnow" = "возьми порт Clock и позови его"
+"date.today" = "возьми порт Clock и позови его"
+"time.monotonic" = "возьми порт Clock и позови его"
+"uuid4" = "выдай идентификатор из IdGenerator и передай его"
+"uuid7" = "выдай идентификатор из IdGenerator и передай его"
+"random.*" = "прими значение аргументом"
+"secrets.*" = "прими значение аргументом"
+"func.now" = "время строки — из порта Clock, а не из базы"
+"func.gen_random_uuid" = "идентификатор строки выдаёт тот, кто её собрал"
