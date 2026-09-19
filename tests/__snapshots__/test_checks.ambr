@@ -46,6 +46,12 @@
     'bad/infra/database/orders.py:18:15: confined-calls: self._session.commit: границей транзакции владеет unit_of_work',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[confined_functions]
+  list([
+    'bad/modules/pricing/domain/ladder.py:9:16: confined-functions: to_eur() зовут не отсюда; её места — modules/cashout/application',
+    'bad/modules/pricing/domain/ladder.py:9:50: confined-functions: money.from_eur() зовут не отсюда; её места — modules/cashout/application',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[confined_imports]
   list([
     'bad/application/service.py:4:1: confined-imports: fastapi в application/service; ему место в presentation, bootstrap',

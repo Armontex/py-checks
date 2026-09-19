@@ -6,6 +6,7 @@ import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from python_checks.checks._location import place
+from python_checks.checks._names import matches
 from python_checks.checks.effects._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Violation, settings_as
@@ -16,9 +17,6 @@ if TYPE_CHECKING:
     from python_checks.core import ParsedFile
 
 CODE: Final = "determinism"
-
-DOT: Final = "."
-ANY: Final = "*"
 
 
 class DeterminismSettings(CheckSettings):
@@ -86,31 +84,21 @@ class Determinism:
                 message=f"{called}() не детерминирован; {said}",
             )
 
-    @classmethod
+    @staticmethod
     def _source(
-        cls,
         *,
         called: str,
         sources: dict[str, str],
     ) -> str | None:
         """Причина, по которой такой вызов запрещён, если он в таблице."""
-        parts = called.split(DOT)
-        for pattern, said in sources.items():
-            if cls._matches(
-                parts=parts,
-                pattern=pattern.split(DOT),
-            ):
-                return said
-        return None
-
-    @staticmethod
-    def _matches(
-        *,
-        parts: list[str],
-        pattern: list[str],
-    ) -> bool:
-        """Хвост имени: `datetime.now` — это и `datetime.datetime.now`."""
-        if pattern[-1] == ANY:
-            head = pattern[:-1]
-            return len(parts) > len(head) and parts[-len(head) - 1 : -1] == head
-        return len(parts) >= len(pattern) and parts[-len(pattern) :] == pattern
+        return next(
+            (
+                said
+                for pattern, said in sources.items()
+                if matches(
+                    called=called,
+                    pattern=pattern,
+                )
+            ),
+            None,
+        )
