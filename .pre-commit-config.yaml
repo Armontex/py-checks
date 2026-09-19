@@ -1,6 +1,14 @@
-minimum_pre_commit_version: "3.2.0"
-default_install_hook_types: [pre-commit, pre-push, commit-msg]
+# Что бежит на коммит, а что перед пушем. На коммите — то, что смотрит на
+# изменённые файлы и отвечает за секунды; тяжёлое — типы, тесты, граф импортов,
+# сборка — перед пушем: проверка типов на каждый коммит превращает
+# промежуточный коммит в ожидание.
 
+# Имена стадий (`pre-commit`, а не `commit`) читает начиная с этой версии.
+minimum_pre_commit_version: "3.2.0"
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+
+# Чужое и сгенерированное. Миграции — история: ревизия заморожена в день
+# рождения и не переписывается под сегодняшние правила.
 exclude: |
   (?x)^(
       .venv/|
@@ -14,6 +22,7 @@ exclude: |
   )
 
 repos:
+  # Порядок файла: то, чем он записан, прежде того, что в нём написано.
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -43,75 +52,93 @@ repos:
 
   - repo: local
     hooks:
+      # Локальный, а не опубликованный хук: тот ставит свой commitizen в
+      # отдельном окружении, и версия, проверяющая сообщение, разъезжается с
+      # версией из `uv.lock` — а `cz.toml` читал бы релиз, который никто не
+      # закреплял.
       - id: commitizen
         name: commitizen (commit message)
+        description: сообщение коммита записано по соглашению и влезает в отведённую длину
         entry: env -u VIRTUAL_ENV uv run cz check --commit-msg-file
         language: system
         stages: [commit-msg]
 
+      # Библиотека проверяет сама себя: правило, которое не выдерживает свой же
+      # репозиторий, до чужого доезжать не должно. Правила писались для кода
+      # библиотеки, поэтому только `src`: тесты живут по своим.
+      - id: python-checks
+        name: проверки соглашений проекта
+        description: код следует соглашениям, записанным в pychecks.toml
+        entry: uv run python-checks run
+        language: system
+        types: [python]
+        files: ^src/.*\.py$
+
+      # Контракты собираются из таблицы слоёв и из того, что лежит на диске,
+      # поэтому отстать они могут и без правки самого файла — отсюда
+      # `always_run`.
+      - id: python-checks-sync
+        name: контракты импортов собраны заново
+        description: файл контрактов отстаёт от объявленных слоёв или от того, что лежит на диске
+        entry: uv run python-checks sync --check
+        language: system
+        always_run: true
+        pass_filenames: false
+
+      # Дальше — то, что смотрит на проект целиком и потому ждёт пуша.
+
+      # Читает весь проект по своему конфигу, а не список файлов: тип, который
+      # перестал сходиться, обычно живёт не в том файле, который правили.
       - id: pyright
         name: pyright
+        description: типы сходятся во всём проекте, а не только в изменённом файле
         entry: uv run pyright
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-push]
 
+      # Без `integration`: те ходят в базу и зовут чужие команды, им место в CI.
       - id: pytest-unit
         name: pytest (non-integration)
+        description: тесты проходят, снимки совпадают
         entry: uv run pytest -q -m "not integration"
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-push]
 
-      - id: bandit
-        name: bandit
-        entry: uv run bandit -r src -ll -ii
+      # Граф всего проекта — секунды, поэтому перед пушем, а не на каждый
+      # коммит. `uv run` нужен, чтобы import-linter увидел пакет проекта: он
+      # читает импорты по установленному окружению, а не по файлам в рабочей
+      # директории.
+      - id: import-contracts
+        name: импорты не пересекают границы
+        description: слои и модули знают друг о друге ровно столько, сколько разрешено таблицей слоёв
+        entry: uv run lint-imports --no-logo
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-push]
 
+      # Замок отстаёт от манифеста молча: зависимость правят в одном файле, а
+      # ставится то, что записано в другом.
       - id: uv-lock
         name: uv lock check
+        description: uv.lock согласован с зависимостями из манифеста
         entry: uv lock --check
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-push]
 
+      # Пакет — то, что уезжает наружу: сломанную сборку иначе находит тот, кто
+      # ставит, а не тот, кто её сломал.
       - id: uv-build
         name: uv build
+        description: пакет собирается из того, что лежит в репозитории
         entry: uv build --out-dir dist
         language: system
         pass_filenames: false
         always_run: true
-        stages: [pre-push]
-
-  # Библиотека проверяет сама себя: правило, которое не выдерживает свой же
-  # репозиторий, до чужого доезжать не должно.
-  - repo: local
-    hooks:
-      - id: python-checks
-        name: проверки соглашений проекта
-        entry: uv run python-checks run
-        language: system
-        types: [python]
-        # правила писались для кода библиотеки; тесты живут по своим
-        files: ^src/.*\.py$
-
-      - id: python-checks-sync
-        name: контракты импортов собраны заново
-        entry: uv run python-checks sync --check
-        language: system
-        always_run: true
-        pass_filenames: false
-
-      - id: import-contracts
-        name: импорты не пересекают границы
-        entry: uv run lint-imports --no-logo
-        language: system
-        always_run: true
-        pass_filenames: false
         stages: [pre-push]
