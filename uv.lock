@@ -693,7 +693,6 @@ name = "python-checks"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "import-linter" },
     { name = "libcst" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -704,6 +703,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "commitizen" },
+    { name = "import-linter" },
     { name = "pre-commit" },
     { name = "pyright" },
     { name = "pytest" },
@@ -717,7 +717,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "import-linter", specifier = ">=2.15,<3" },
     { name = "libcst", specifier = ">=1.9,<2" },
     { name = "pydantic", specifier = ">=2.13.5,<3" },
     { name = "pydantic-settings", specifier = ">=2.15.0,<3" },
@@ -728,6 +727,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "commitizen", specifier = ">=4.10,<5" },
+    { name = "import-linter", specifier = ">=2.15,<3" },
     { name = "pre-commit", specifier = ">=4.6.2,<5" },
     { name = "pyright", specifier = ">=1.1.414,<2" },
     { name = "pytest", specifier = ">=9.1.1,<10" },

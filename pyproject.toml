@@ -6,7 +6,6 @@ readme = "README.md"
 authors = [{ name = "Armontex", email = "windle1337@gmail.com" }]
 requires-python = ">=3.14"
 dependencies = [
-    "import-linter>=2.15,<3",
     "libcst>=1.9,<2",
     "pydantic>=2.13.5,<3",
     "pydantic-settings>=2.15.0,<3",
@@ -53,6 +52,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "commitizen>=4.10,<5",
+    "import-linter>=2.15,<3",
     "pre-commit>=4.6.2,<5",
     "pyright>=1.1.414,<2",
     "pytest>=9.1.1,<10",
