@@ -5,6 +5,8 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
+from pydantic import Field
+
 from python_checks.checks._kind import Kind, declarations
 from python_checks.checks._location import place
 from python_checks.checks.placement._marker import MARKER
@@ -21,6 +23,8 @@ CODE: Final = "operation-shape"
 
 PRIVATE: Final = "_"
 
+STATIC: Final = "staticmethod"
+
 
 class Operation(CheckSettings):
     """Директория с операциями и форма, которую там держат.
@@ -34,12 +38,19 @@ class Operation(CheckSettings):
     `forbids` — имена типов, которых операция не держит: `UnitOfWork` ловится
     и как `IPlacementUnitOfWork`, и как `UnitOfWorkFactory`, потому что
     запрещено держать транзакцию, а не писать её имя одним конкретным образом.
+
+    `max_arguments` — сколько аргументов занимает вход. Дверь несёт то, что
+    пришло снаружи, и вход длиннее нескольких полей — вещь с именем: команда,
+    запрос, DTO. Считаются публичные методы: конструктор получает зависимости,
+    а это проводка, не вход, и в счёт он не идёт уже потому, что публичным не
+    является.
     """
 
     inside: str
     suffix: str
     method: str | None = None
     forbids: tuple[str, ...] = ()
+    max_arguments: int | None = Field(default=None, gt=0)
 
 
 class OperationShapeSettings(CheckSettings):
@@ -48,6 +59,9 @@ class OperationShapeSettings(CheckSettings):
 
 class OperationShape:
     """Падает, если операция устроена не как операция.
+
+    Вход двери ограничен по числу аргументов, если предел задан: то, что
+    пришло снаружи, длиннее нескольких полей — это команда, запрос или DTO.
 
     Рядом с операцией не стоит ничего: ни второй класс, ни функция — ни выше,
     ни ниже. Хелпер перед предметом — абзац, который читатель пролистывает;
@@ -90,6 +104,7 @@ class OperationShape:
         if subject is not None and isinstance(subject.node, ast.ClassDef):
             found += [
                 *cls._door(file=file, subject=subject, node=subject.node, rule=rule),
+                *cls._input(file=file, subject=subject, node=subject.node, rule=rule),
                 *cls._held(file=file, subject=subject, node=subject.node, rule=rule),
             ]
         yield from sorted(found, key=lambda violation: (violation.line, violation.column))
@@ -175,6 +190,54 @@ class OperationShape:
                 f"остальные приватны или это другой класс"
             ),
         )
+
+    @classmethod
+    def _input(
+        cls,
+        *,
+        file: ParsedFile,
+        subject: Declaration,
+        node: ast.ClassDef,
+        rule: Operation,
+    ) -> Iterator[Violation]:
+        """Сколько аргументов занимает вход."""
+        if rule.max_arguments is None:
+            return
+        for method in cls._public(node=node):
+            count = cls._arguments(node=method)
+            if count <= rule.max_arguments:
+                continue
+            yield Violation(
+                path=file.path,
+                line=method.lineno,
+                column=method.col_offset + 1,
+                code=CODE,
+                message=(
+                    f"{subject.name}.{method.name} — аргументов {count}, предел "
+                    f"{rule.max_arguments}; передай команду, запрос или DTO"
+                ),
+                # Пометка снимается с любой строки подписи.
+                end_line=max(method.body[0].lineno - 1, method.lineno),
+            )
+
+    @classmethod
+    def _arguments(cls, *, node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
+        """Всё, что заполняет вызывающий; первый аргумент метода не в счёт.
+
+        По месту, а не по имени: `self` в `@staticmethod` — обычный аргумент.
+        """
+        receiver = 0 if cls._static(node=node) else 1
+        named = [*node.args.posonlyargs, *node.args.args][receiver:]
+        collectors = [one for one in (node.args.vararg, node.args.kwarg) if one is not None]
+        return len(named) + len(node.args.kwonlyargs) + len(collectors)
+
+    @staticmethod
+    def _static(*, node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+        names = {
+            item.id if isinstance(item, ast.Name) else getattr(item, "attr", "")
+            for item in node.decorator_list
+        }
+        return STATIC in names
 
     @classmethod
     def _held(

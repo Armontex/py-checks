@@ -5,6 +5,7 @@ src = "."
 inside = "use_cases"
 suffix = "UseCase"
 method = "execute"
+max-arguments = 3
 forbids = ["UnitOfWork"]
 
 # У сервиса дверей столько, сколько переходов у его сущности: одна на переход,
