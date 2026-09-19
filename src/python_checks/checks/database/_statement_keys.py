@@ -6,6 +6,7 @@ import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from python_checks.checks._location import place
+from python_checks.checks._names import name
 from python_checks.checks.database._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
@@ -107,16 +108,15 @@ class StatementKeys:
                     written=keyword.arg,
                     nodes=cls._keyed(node=keyword.value),
                 )
-        if cls._name(node=node.func) in limits.calls and node.args:
+        if name(node=node.func) in limits.calls and node.args:
             yield from cls._strings(
                 file=file,
-                written=cls._name(node=node.func),
+                written=name(node=node.func),
                 nodes=cls._elements(node=node.args[0]),
             )
 
-    @classmethod
+    @staticmethod
     def _loop(
-        cls,
         *,
         file: ParsedFile,
         node: ast.For | ast.AsyncFor | ast.While,
@@ -124,7 +124,7 @@ class StatementKeys:
     ) -> Iterator[Violation]:
         """Поход в базу на каждой итерации."""
         for child in ast.walk(node):
-            if not isinstance(child, ast.Call) or cls._name(node=child.func) not in limits.loops:
+            if not isinstance(child, ast.Call) or name(node=child.func) not in limits.loops:
                 continue
             yield Violation(
                 path=file.path,
@@ -135,14 +135,13 @@ class StatementKeys:
                 # причина принадлежит тому месту, где автор её и пишет.
                 end_line=child.end_lineno or child.lineno,
                 message=(
-                    f"{cls._name(node=child.func)}() внутри цикла — поход в базу на итерацию; "
+                    f"{name(node=child.func)}() внутри цикла — поход в базу на итерацию; "
                     f"один запрос по всему множеству говорит то же самое"
                 ),
             )
 
-    @classmethod
+    @staticmethod
     def _strings(
-        cls,
         *,
         file: ParsedFile,
         written: str,
@@ -167,11 +166,3 @@ class StatementKeys:
     def _keyed(*, node: ast.expr) -> Iterator[ast.expr]:
         if isinstance(node, ast.Dict):
             yield from (key for key in node.keys if key is not None)
-
-    @staticmethod
-    def _name(*, node: ast.expr) -> str:
-        match node:
-            case ast.Name(id=name) | ast.Attribute(attr=name):
-                return name
-            case _:
-                return ""

@@ -6,6 +6,7 @@ import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from python_checks.checks._location import place
+from python_checks.checks._names import name
 from python_checks.checks.database._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
@@ -113,7 +114,7 @@ class ModelColumns:
         limits: ModelColumnsSettings,
     ) -> Iterator[Violation]:
         """Материал и то, чем колонка заполняет себя сама."""
-        written = cls._name(node=node.func)
+        written = name(node=node.func)
         if written in limits.types and limits.homes.get(written) != file.path.stem:
             yield cls._says(
                 file=file,
@@ -181,15 +182,14 @@ class ModelColumns:
                 ),
             )
 
-    @classmethod
+    @staticmethod
     def _nullable(
-        cls,
         *,
         node: ast.expr | None,
         limits: ModelColumnsSettings,
     ) -> bool | None:
         """Что сказано в `nullable=`, если вообще сказано."""
-        if not isinstance(node, ast.Call) or cls._name(node=node.func) not in limits.factories:
+        if not isinstance(node, ast.Call) or name(node=node.func) not in limits.factories:
             return None
         for keyword in node.keywords:
             if keyword.arg == NULLABLE and isinstance(keyword.value, ast.Constant):
@@ -199,13 +199,13 @@ class ModelColumns:
     @classmethod
     def _mapped(cls, *, node: ast.expr) -> tuple[str, bool] | None:
         """Имя внутри `Mapped[...]` и то, допускает ли оно `None`."""
-        if not isinstance(node, ast.Subscript) or cls._name(node=node.value) != MAPPED:
+        if not isinstance(node, ast.Subscript) or name(node=node.value) != MAPPED:
             return None
         match node.slice:
-            case ast.Name(id=name) | ast.Attribute(attr=name):
-                return name, False
-            case ast.BinOp(left=ast.Name(id=name), op=ast.BitOr(), right=right):
-                return name, cls._none(node=right)
+            case ast.Name(id=inside) | ast.Attribute(attr=inside):
+                return inside, False
+            case ast.BinOp(left=ast.Name(id=inside), op=ast.BitOr(), right=right):
+                return inside, cls._none(node=right)
             case _:
                 return None
 
@@ -237,11 +237,3 @@ class ModelColumns:
             code=CODE,
             message=message,
         )
-
-    @staticmethod
-    def _name(*, node: ast.expr) -> str:
-        match node:
-            case ast.Name(id=name) | ast.Attribute(attr=name):
-                return name
-            case _:
-                return ""

@@ -6,6 +6,7 @@ import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from python_checks.checks._location import place
+from python_checks.checks._names import name
 from python_checks.checks.types._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
@@ -84,12 +85,12 @@ class FrozenDataclasses:
                 ),
             )
 
-    @classmethod
-    def _decorator(cls, *, node: ast.ClassDef) -> ast.expr | None:
+    @staticmethod
+    def _decorator(*, node: ast.ClassDef) -> ast.expr | None:
         """Декоратор `@dataclass`, с аргументами или без."""
         for item in node.decorator_list:
             called = item.func if isinstance(item, ast.Call) else item
-            if cls._name(node=called) == DECORATOR:
+            if name(node=called) == DECORATOR:
                 return item
         return None
 
@@ -107,11 +108,3 @@ class FrozenDataclasses:
     @staticmethod
     def _true(*, node: ast.expr) -> bool:
         return isinstance(node, ast.Constant) and node.value is True
-
-    @staticmethod
-    def _name(*, node: ast.expr) -> str:
-        match node:
-            case ast.Name(id=name) | ast.Attribute(attr=name):
-                return name
-            case _:
-                return ""

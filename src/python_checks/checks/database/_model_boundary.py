@@ -6,6 +6,7 @@ import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from python_checks.checks._location import place
+from python_checks.checks._names import name, walked
 from python_checks.checks.database._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
@@ -119,7 +120,7 @@ class ModelBoundary:
         for node in ast.walk(file.tree):
             if not isinstance(node, ast.ClassDef):
                 continue
-            if any(cls._name(node=base) == limits.base for base in node.bases):
+            if any(name(node=base) == limits.base for base in node.bases):
                 yield Violation.from_node(
                     node=node,
                     path=file.path,
@@ -149,7 +150,7 @@ class ModelBoundary:
         for node in ast.walk(file.tree):
             if not isinstance(node, ast.Call):
                 continue
-            built = cls._name(node=node.func)
+            built = name(node=node.func)
             if built in models:
                 yield Violation.from_node(
                     node=node,
@@ -236,23 +237,11 @@ class ModelBoundary:
     ) -> bool:
         return any(where.holds(path=zone) for zone in zones)
 
-    @classmethod
+    @staticmethod
     def _named(
-        cls,
         *,
         node: ast.expr,
         models: frozenset[str],
     ) -> str | None:
         """Имя модели, названное где-нибудь внутри аннотации."""
-        for child in ast.walk(node):
-            if isinstance(child, ast.expr) and cls._name(node=child) in models:
-                return cls._name(node=child)
-        return None
-
-    @staticmethod
-    def _name(*, node: ast.expr) -> str:
-        match node:
-            case ast.Name(id=name) | ast.Attribute(attr=name) | ast.Constant(value=str() as name):
-                return name
-            case _:
-                return ""
+        return next((found for found in walked(node=node) if found in models), None)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
+from python_checks.checks._names import name
 from python_checks.checks.types._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
@@ -66,7 +67,7 @@ class AnnotationShapes:
         for node in ast.walk(file.tree):
             if not isinstance(node, ast.Subscript):
                 continue
-            written = cls._name(node=node.value)
+            written = name(node=node.value)
             arguments = cls._arguments(node=node)
             if written == MAPPING and cls._keyed(
                 arguments=arguments,
@@ -90,14 +91,13 @@ class AnnotationShapes:
                     ),
                 )
 
-    @classmethod
+    @staticmethod
     def _keyed(
-        cls,
         *,
         arguments: list[ast.expr],
         keys: tuple[str, ...],
     ) -> bool:
-        return bool(arguments) and cls._name(node=arguments[0]) in keys
+        return bool(arguments) and name(node=arguments[0]) in keys
 
     @staticmethod
     def _fixed(*, arguments: list[ast.expr]) -> bool:
@@ -125,11 +125,3 @@ class AnnotationShapes:
             code=CODE,
             message=message,
         )
-
-    @staticmethod
-    def _name(*, node: ast.expr) -> str:
-        match node:
-            case ast.Name(id=name) | ast.Attribute(attr=name):
-                return name
-            case _:
-                return ""

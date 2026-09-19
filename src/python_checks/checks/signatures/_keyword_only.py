@@ -105,8 +105,8 @@ class KeywordOnlyArguments:
             return False
         return own.startswith("__") and own.endswith("__")
 
-    @classmethod
-    def _positional(cls, *, definition: Definition) -> tuple[str, ...]:
+    @staticmethod
+    def _positional(*, definition: Definition) -> tuple[str, ...]:
         """Аргументы, которые вызывающий может передать по позиции."""
         skip = receiver(definition=definition)
         arguments = [*definition.node.args.posonlyargs, *definition.node.args.args]
@@ -118,9 +118,8 @@ class KeywordOnlyArguments:
         stars = ((node.args.vararg, "*"), (node.args.kwarg, "**"))
         return tuple(f"{star}{argument.arg}" for argument, star in stars if argument)
 
-    @classmethod
+    @staticmethod
     def _star(
-        cls,
         *,
         definition: Definition,
         file: ParsedFile,

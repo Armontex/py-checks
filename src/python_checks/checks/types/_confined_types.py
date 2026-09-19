@@ -6,6 +6,7 @@ import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from python_checks.checks._location import place
+from python_checks.checks._names import walked
 from python_checks.checks.types._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
@@ -76,7 +77,7 @@ class ConfinedTypes:
         if not forbidden:
             return
         for name, statement in cls._fields(tree=file.tree):
-            found = cls._named(node=statement.annotation) & forbidden
+            found = frozenset(walked(node=statement.annotation)) & forbidden
             if not found:
                 continue
             yield Violation.from_node(
@@ -100,8 +101,8 @@ class ConfinedTypes:
             name for zone, names in zones.items() if where.holds(path=zone) for name in names
         )
 
-    @classmethod
-    def _fields(cls, *, tree: ast.Module) -> Iterator[tuple[str, ast.AnnAssign]]:
+    @staticmethod
+    def _fields(*, tree: ast.Module) -> Iterator[tuple[str, ast.AnnAssign]]:
         """Поля классов модуля под именами вида `Класс.поле`."""
         for node in ast.walk(tree):
             if not isinstance(node, ast.ClassDef):
@@ -111,15 +112,6 @@ class ConfinedTypes:
                     continue
                 if not isinstance(statement.target, ast.Name):
                     continue
-                if cls._named(node=statement.annotation) & ASIDE:
+                if frozenset(walked(node=statement.annotation)) & ASIDE:
                     continue
                 yield f"{node.name}.{statement.target.id}", statement
-
-    @staticmethod
-    def _named(*, node: ast.expr) -> frozenset[str]:
-        """Имена, написанные внутри аннотации, на любой глубине."""
-        return frozenset(
-            child.id if isinstance(child, ast.Name) else child.attr
-            for child in ast.walk(node)
-            if isinstance(child, ast.Name | ast.Attribute)
-        )

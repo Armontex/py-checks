@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
+from python_checks.checks._names import name
 from python_checks.checks.database._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
@@ -80,7 +81,7 @@ class RawSql:
         for node in ast.walk(file.tree):
             if not isinstance(node, ast.Call) or not node.args:
                 continue
-            written = cls._name(node=node.func)
+            written = name(node=node.func)
             if written not in calls or not cls._sql(node=node.args[0]):
                 continue
             yield Violation(
@@ -93,8 +94,8 @@ class RawSql:
                 message=f"{written}(...) со строкой SQL; вместо неё — {calls[written]}",
             )
 
-    @classmethod
-    def _sql(cls, *, node: ast.expr) -> bool:
+    @staticmethod
+    def _sql(*, node: ast.expr) -> bool:
         """Строковый литерал или строка, собранная из литералов."""
         match node:
             case ast.Constant(value=str()):
@@ -106,11 +107,3 @@ class RawSql:
                 )
             case _:
                 return False
-
-    @staticmethod
-    def _name(*, node: ast.expr) -> str:
-        match node:
-            case ast.Name(id=name) | ast.Attribute(attr=name):
-                return name
-            case _:
-                return ""

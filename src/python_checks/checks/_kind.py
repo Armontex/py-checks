@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final
 
+from python_checks.checks._names import name, names
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
@@ -134,14 +136,14 @@ def _class(*, node: ast.ClassDef) -> Kind | None:
     это можно только прочитав тот модуль. Про такой класс правило молчит:
     заблудившийся хелпер, ради которого оно написано, базы обычно не имеет.
     """
-    bases = frozenset(_names(nodes=node.bases))
+    bases = frozenset(names(nodes=node.bases))
     if bases & ABSTRACT or _metaclass(node=node):
         return Kind.PORT
     if MODEL in bases:
         return Kind.MODEL
     if bases & ENUMS:
         return Kind.ENUM
-    if DATACLASS in frozenset(_names(nodes=node.decorator_list)):
+    if DATACLASS in frozenset(names(nodes=node.decorator_list)):
         return Kind.DATACLASS
     if _error(bases=bases):
         return Kind.ERROR
@@ -156,7 +158,7 @@ def _error(*, bases: frozenset[str]) -> bool:
 
 def _metaclass(*, node: ast.ClassDef) -> bool:
     return any(
-        keyword.arg == "metaclass" and _name(node=keyword.value) == ABSTRACT_METACLASS
+        keyword.arg == "metaclass" and name(node=keyword.value) == ABSTRACT_METACLASS
         for keyword in node.keywords
     )
 
@@ -167,33 +169,16 @@ def _alias(*, node: ast.AnnAssign | ast.Assign) -> bool:
     Три вида: с аннотацией `TypeAlias`, вызов фабрики вроде `NewType`, и голое
     `Row = dict[str, int]` — имя для формы, а не значение.
     """
-    if isinstance(node, ast.AnnAssign) and _name(node=node.annotation) == ALIAS_ANNOTATION:
+    if isinstance(node, ast.AnnAssign) and name(node=node.annotation) == ALIAS_ANNOTATION:
         return True
     if node.value is None:
         return False
     match node.value:
         case ast.Call(func=function):
-            return _name(node=function) in ALIAS_FACTORIES
+            return name(node=function) in ALIAS_FACTORIES
         case ast.Subscript(value=value):
-            return _name(node=value) in ALIAS_CONSTRUCTORS
+            return name(node=value) in ALIAS_CONSTRUCTORS
         case ast.BinOp(op=ast.BitOr()):
             return True
         case _:
             return False
-
-
-def _names(*, nodes: list[ast.expr]) -> Iterator[str]:
-    for node in nodes:
-        base = node.value if isinstance(node, ast.Subscript) else node
-        if (name := _name(node=base)) is not None:
-            yield name
-
-
-def _name(*, node: ast.expr) -> str | None:
-    match node:
-        case ast.Name(id=name) | ast.Attribute(attr=name):
-            return name
-        case ast.Call(func=function):
-            return _name(node=function)
-        case _:
-            return None

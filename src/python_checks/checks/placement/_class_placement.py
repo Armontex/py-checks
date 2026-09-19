@@ -110,9 +110,8 @@ class ClassPlacement:
                 message=(f"{declared.name} {rule.said}; ему место в {', '.join(rule.inside)}"),
             )
 
-    @classmethod
+    @staticmethod
     def _rule(
-        cls,
         *,
         declared: Declaration,
         where: Place,

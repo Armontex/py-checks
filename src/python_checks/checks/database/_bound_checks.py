@@ -6,6 +6,7 @@ import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from python_checks.checks._location import place
+from python_checks.checks._names import name
 from python_checks.checks.database._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
@@ -144,7 +145,7 @@ class BoundChecks:
         """Колонка — тип, по каждому вызову в теле класса."""
         found: dict[str, str] = {}
         for child in ast.walk(node):
-            if not isinstance(child, ast.Call) or cls._name(node=child.func) != limits.call:
+            if not isinstance(child, ast.Call) or name(node=child.func) != limits.call:
                 continue
             column = cls._argument(
                 node=child,
@@ -158,9 +159,8 @@ class BoundChecks:
                 found[column] = primitive
         return found
 
-    @classmethod
+    @staticmethod
     def _argument(
-        cls,
         *,
         node: ast.Call,
         named: str,
@@ -170,23 +170,15 @@ class BoundChecks:
                 return keyword.value.id
         return None
 
-    @classmethod
-    def _bounded(cls, *, node: ast.expr) -> str | None:
+    @staticmethod
+    def _bounded(*, node: ast.expr) -> str | None:
         """X из `Mapped[X]` или `Mapped[X | None]`, если это простое имя."""
-        if not isinstance(node, ast.Subscript) or cls._name(node=node.value) != MAPPED:
+        if not isinstance(node, ast.Subscript) or name(node=node.value) != MAPPED:
             return None
         match node.slice:
-            case ast.Name(id=name):
-                return name
-            case ast.BinOp(left=ast.Name(id=name), op=ast.BitOr()):
-                return name
+            case ast.Name(id=inside):
+                return inside
+            case ast.BinOp(left=ast.Name(id=inside), op=ast.BitOr()):
+                return inside
             case _:
                 return None
-
-    @staticmethod
-    def _name(*, node: ast.expr) -> str:
-        match node:
-            case ast.Name(id=name) | ast.Attribute(attr=name):
-                return name
-            case _:
-                return ""

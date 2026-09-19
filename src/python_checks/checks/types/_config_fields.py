@@ -6,6 +6,7 @@ import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from python_checks.checks._location import place
+from python_checks.checks._names import walked
 from python_checks.checks.types._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
@@ -120,7 +121,7 @@ class ConfigFields:
                 continue
             if not isinstance(statement.target, ast.Name):
                 continue
-            named = cls._named(node=statement.annotation)
+            named = frozenset(walked(node=statement.annotation))
             if CLASS_VAR in named:
                 continue
             reason = cls._reason(
@@ -231,12 +232,3 @@ class ConfigFields:
             for base in node.bases
         }
         return not bases & NOT_SETTINGS
-
-    @staticmethod
-    def _named(*, node: ast.expr) -> frozenset[str]:
-        """Имена типов, написанные внутри аннотации."""
-        return frozenset(
-            child.id if isinstance(child, ast.Name) else child.attr
-            for child in ast.walk(node)
-            if isinstance(child, ast.Name | ast.Attribute)
-        )

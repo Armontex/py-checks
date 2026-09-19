@@ -83,9 +83,8 @@ class ClassModules:
                 ),
             )
 
-    @classmethod
+    @staticmethod
     def _policy(
-        cls,
         *,
         where: Place,
         policies: dict[str, tuple[Kind, ...]],
