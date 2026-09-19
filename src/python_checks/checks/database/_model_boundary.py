@@ -112,8 +112,7 @@ class ModelBoundary:
         limits: ModelBoundarySettings,
     ) -> Iterator[Violation]:
         """Модель, объявленная не в доме моделей."""
-        if cls._inside(
-            where=where,
+        if where.anywhere(
             zones=limits.declared,
         ):
             return
@@ -142,8 +141,7 @@ class ModelBoundary:
         models: frozenset[str],
     ) -> Iterator[Violation]:
         """Модель, собранная там, где нечем записать строку."""
-        if cls._inside(
-            where=where,
+        if where.anywhere(
             zones=limits.built + limits.declared,
         ):
             return
@@ -172,8 +170,7 @@ class ModelBoundary:
         models: frozenset[str],
     ) -> Iterator[Violation]:
         """Модель, отданная наружу публичным методом репозитория."""
-        if not cls._inside(
-            where=where,
+        if not where.anywhere(
             zones=limits.built,
         ):
             return
@@ -228,14 +225,6 @@ class ModelBoundary:
         return any(
             f"{SEPARATOR}{zone}{SEPARATOR}" in f"{SEPARATOR}{path}{SEPARATOR}" for zone in zones
         )
-
-    @staticmethod
-    def _inside(
-        *,
-        where: Place,
-        zones: tuple[str, ...],
-    ) -> bool:
-        return any(where.holds(path=zone) for zone in zones)
 
     @staticmethod
     def _named(

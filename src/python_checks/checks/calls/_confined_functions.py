@@ -14,7 +14,6 @@ from python_checks.core import Scope, Violation, settings_as
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from python_checks.checks._location import Place
     from python_checks.core import ParsedFile
 
 CODE: Final = "confined-functions"
@@ -73,8 +72,7 @@ class ConfinedFunctions:
                 called=called,
                 calls=limits.calls,
             )
-            if allowed is None or cls._inside(
-                where=where,
+            if allowed is None or where.anywhere(
                 zones=allowed,
             ):
                 continue
@@ -102,11 +100,3 @@ class ConfinedFunctions:
             ),
             None,
         )
-
-    @staticmethod
-    def _inside(
-        *,
-        where: Place,
-        zones: tuple[str, ...],
-    ) -> bool:
-        return any(where.holds(path=zone) for zone in zones)

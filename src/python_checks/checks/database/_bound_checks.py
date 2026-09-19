@@ -5,15 +5,15 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
-from python_checks.checks._location import place
+from python_checks.checks._location import ZonedSettings, zoned
 from python_checks.checks._names import name
 from python_checks.checks.database._marker import MARKER
-from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from python_checks.config import CheckSettings
     from python_checks.core import ParsedFile
 
 CODE: Final = "bound-checks"
@@ -21,8 +21,7 @@ CODE: Final = "bound-checks"
 MAPPED: Final = "Mapped"
 
 
-class BoundChecksSettings(CheckSettings):
-    zones: tuple[str, ...] = ()
+class BoundChecksSettings(ZonedSettings):
     primitives: tuple[str, ...] = ()
     call: str = "bound_check"
     column: str = "column"
@@ -69,8 +68,11 @@ class BoundChecks:
             model=BoundChecksSettings,
             code=CODE,
         )
-        where = place(file=file)
-        if where is None or not any(where.holds(path=zone) for zone in limits.zones):
+        where = zoned(
+            file=file,
+            zones=limits.zones,
+        )
+        if where is None:
             return
         for node in file.tree.body:
             if isinstance(node, ast.ClassDef):

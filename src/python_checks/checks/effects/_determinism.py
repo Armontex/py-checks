@@ -5,22 +5,21 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
-from python_checks.checks._location import place
+from python_checks.checks._location import ZonedSettings, zoned
 from python_checks.checks._names import matches
 from python_checks.checks.effects._marker import MARKER
-from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from python_checks.config import CheckSettings
     from python_checks.core import ParsedFile
 
 CODE: Final = "determinism"
 
 
-class DeterminismSettings(CheckSettings):
-    zones: tuple[str, ...] = ()
+class DeterminismSettings(ZonedSettings):
     sources: dict[str, str] = {}  # noqa: RUF012 — pydantic копирует значение по умолчанию
 
 
@@ -63,10 +62,11 @@ class Determinism:
             model=DeterminismSettings,
             code=CODE,
         )
-        where = place(file=file)
+        where = zoned(
+            file=file,
+            zones=limits.zones,
+        )
         if where is None or not limits.sources:
-            return
-        if not any(where.holds(path=zone) for zone in limits.zones):
             return
         for node in ast.walk(file.tree):
             if not isinstance(node, ast.Call):

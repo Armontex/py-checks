@@ -5,15 +5,15 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
-from python_checks.checks._location import place
+from python_checks.checks._location import ZonedSettings, zoned
 from python_checks.checks._names import name
 from python_checks.checks.database._marker import MARKER
-from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from python_checks.config import CheckSettings
     from python_checks.core import ParsedFile
 
 CODE: Final = "model-columns"
@@ -23,8 +23,7 @@ AWARE: Final = "timezone"
 NULLABLE: Final = "nullable"
 
 
-class ModelColumnsSettings(CheckSettings):
-    zones: tuple[str, ...] = ()
+class ModelColumnsSettings(ZonedSettings):
     factories: tuple[str, ...] = ("mapped_column", "Column")
     types: dict[str, str] = {}
     homes: dict[str, str] = {}
@@ -88,8 +87,11 @@ class ModelColumns:
             model=ModelColumnsSettings,
             code=CODE,
         )
-        where = place(file=file)
-        if where is None or not any(where.holds(path=zone) for zone in limits.zones):
+        where = zoned(
+            file=file,
+            zones=limits.zones,
+        )
+        if where is None:
             return
         for node in ast.walk(file.tree):
             if isinstance(node, ast.Call):

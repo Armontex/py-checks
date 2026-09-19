@@ -11,7 +11,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
+from python_checks.config import CheckSettings
+
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
 
     from python_checks.core import ParsedFile
@@ -46,6 +49,14 @@ class Place:
         wanted = tuple(prefix.split(SEPARATOR))
         return self.parts[: len(wanted)] == wanted
 
+    def anywhere(self, *, zones: Iterable[str]) -> bool:
+        """Лежит ли файл хоть в одной из этих зон.
+
+        Зоны складываются, а не спорят: правило работает там, где его о том
+        попросили, и молчит везде остальном.
+        """
+        return any(self.holds(path=zone) for zone in zones)
+
     def holds(self, *, path: str) -> bool:
         """Идут ли эти куски адреса подряд где угодно внутри него.
 
@@ -73,6 +84,30 @@ class Place:
             parts=self.parts[:-1],
             wanted=directory,
         )
+
+
+class ZonedSettings(CheckSettings):
+    """Настройки правила, которое работает не везде.
+
+    `zones` — места, где правило судит; пустой список означает, что правило
+    молчит. Молчит, а не судит всюду: соглашение про репозитории неверно для
+    сценариев, и правило, которому забыли назвать зону, лучше не скажет ничего,
+    чем скажет неправду по всему дереву.
+    """
+
+    zones: tuple[str, ...] = ()
+
+
+def zoned(
+    *,
+    file: ParsedFile,
+    zones: Iterable[str],
+) -> Place | None:
+    """Адрес файла, если он в одной из зон; иначе `None` — правилу тут нечего сказать."""
+    where = place(file=file)
+    if where is None or not where.anywhere(zones=zones):
+        return None
+    return where
 
 
 def place(*, file: ParsedFile) -> Place | None:

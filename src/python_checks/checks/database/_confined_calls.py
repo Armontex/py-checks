@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
-from python_checks.checks._location import place
+from python_checks.checks._location import ZonedSettings, place
 from python_checks.checks.database._marker import MARKER
 from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 CODE: Final = "confined-calls"
 
 
-class Confined(CheckSettings):
+class Confined(ZonedSettings):
     """Имена методов, зона, где они запрещены, и модуль, который ими владеет.
 
     `owner` — имя модуля без расширения. Правило его не касается: там вызов и
@@ -31,7 +31,6 @@ class Confined(CheckSettings):
     """
 
     methods: tuple[str, ...]
-    zones: tuple[str, ...] = ()
     outside: tuple[str, ...] = ()
     owner: str | None = None
     said: str = "этим владеет другой модуль"
@@ -111,6 +110,6 @@ class ConfinedCalls:
     ) -> bool:
         if rule.owner is not None and file.path.stem == rule.owner:
             return False
-        if any(where.holds(path=zone) for zone in rule.outside):
+        if where.anywhere(zones=rule.outside):
             return False
-        return any(where.holds(path=zone) for zone in rule.zones)
+        return where.anywhere(zones=rule.zones)

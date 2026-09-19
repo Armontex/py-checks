@@ -5,15 +5,15 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
-from python_checks.checks._location import place
+from python_checks.checks._location import ZonedSettings, zoned
 from python_checks.checks._names import walked
 from python_checks.checks.types._marker import MARKER
-from python_checks.config import CheckSettings
 from python_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from python_checks.config import CheckSettings
     from python_checks.core import ParsedFile
 
 CODE: Final = "config-fields"
@@ -41,8 +41,7 @@ CLASS_VAR: Final = "ClassVar"
 FACTORY: Final = "default_factory"
 
 
-class ConfigFieldsSettings(CheckSettings):
-    zones: tuple[str, ...] = ()
+class ConfigFieldsSettings(ZonedSettings):
     factory: str = "Field"
     alias: str | None = None
     bounds: dict[str, tuple[str, ...]] = BOUNDS
@@ -97,8 +96,11 @@ class ConfigFields:
             model=ConfigFieldsSettings,
             code=CODE,
         )
-        where = place(file=file)
-        if where is None or not any(where.holds(path=zone) for zone in limits.zones):
+        where = zoned(
+            file=file,
+            zones=limits.zones,
+        )
+        if where is None:
             return
         for node in ast.walk(file.tree):
             if isinstance(node, ast.ClassDef) and cls._settings(node=node):
