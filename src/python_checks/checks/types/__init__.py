@@ -6,6 +6,7 @@
 """
 
 from python_checks.checks.types._config_fields import ConfigFields, ConfigFieldsSettings
+from python_checks.checks.types._confined_types import ConfinedTypes, ConfinedTypesSettings
 from python_checks.checks.types._frozen_dataclasses import (
     FrozenDataclasses,
     FrozenDataclassesSettings,
@@ -16,6 +17,8 @@ __all__ = [
     "MARKER",
     "ConfigFields",
     "ConfigFieldsSettings",
+    "ConfinedTypes",
+    "ConfinedTypesSettings",
     "FrozenDataclasses",
     "FrozenDataclassesSettings",
 ]

@@ -20,6 +20,9 @@ INIT: Final = "__init__"
 
 SEPARATOR: Final = "/"
 
+# Один любой кусок пути: `modules/*/domain` — домен любого модуля.
+ANY: Final = "*"
+
 # Пакет и хотя бы один шаг внутри него: файл, лежащий прямо в корне исходников,
 # ни в каком пакете не находится, и говорить о его месте нечего.
 INSIDE: Final = 2
@@ -108,12 +111,27 @@ def _run(
     parts: tuple[str, ...],
     wanted: str,
 ) -> int | None:
-    """Конец последнего вхождения подряд идущих кусков пути."""
+    """Конец последнего вхождения подряд идущих кусков пути.
+
+    `*` подходит любому одному куску: `modules/*/domain` — это домен любого
+    модуля, и перечислять модули по именам не нужно.
+    """
     needle = tuple(wanted.split(SEPARATOR))
     span = len(needle)
     ends = [
         start + span
         for start in range(len(parts) - span + 1)
-        if parts[start : start + span] == needle
+        if _same(
+            found=parts[start : start + span],
+            needle=needle,
+        )
     ]
     return max(ends) if ends else None
+
+
+def _same(
+    *,
+    found: tuple[str, ...],
+    needle: tuple[str, ...],
+) -> bool:
+    return all(wanted in (ANY, part) for part, wanted in zip(found, needle, strict=True))
