@@ -34,6 +34,12 @@
     'bad/config/kafka.py:10:5: config-fields: KafkaSettings.retries объявлено без значения; поле настроек объявляют через Field(...)',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[confined_calls]
+  list([
+    'bad/infra/database/orders.py:21:16: confined-calls: self._session.begin_nested: границей транзакции владеет unit_of_work',
+    'bad/infra/database/orders.py:18:15: confined-calls: self._session.commit: границей транзакции владеет unit_of_work',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[confined_imports]
   list([
     'bad/application/service.py:4:1: confined-imports: fastapi в application/service; ему место в presentation, bootstrap',

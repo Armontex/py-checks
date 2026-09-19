@@ -1,0 +1,10 @@
+[tool.python-checks]
+src = "."
+
+[[tool.python-checks.confined-calls.rules]]
+methods = ["commit", "rollback", "begin", "begin_nested"]
+zones = ["modules", "presentation", "infra/database"]
+# Край брокера: `commit()` у консьюмера подтверждает смещение, а не транзакцию.
+outside = ["presentation/consumers"]
+owner = "unit_of_work"
+said = "границей транзакции владеет unit_of_work"
