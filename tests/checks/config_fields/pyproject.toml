@@ -1,0 +1,5 @@
+[tool.python-checks]
+src = "."
+
+[tool.python-checks.config-fields]
+zones = ["config"]

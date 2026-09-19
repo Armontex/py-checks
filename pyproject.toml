@@ -19,6 +19,7 @@ python-checks = "python_checks.cli:main"
 
 [project.entry-points."python_checks.checks"]
 class-modules = "python_checks.checks.placement:ClassModules"
+config-fields = "python_checks.checks.types:ConfigFields"
 frozen-dataclasses = "python_checks.checks.types:FrozenDataclasses"
 class-placement = "python_checks.checks.placement:ClassPlacement"
 operation-shape = "python_checks.checks.placement:OperationShape"

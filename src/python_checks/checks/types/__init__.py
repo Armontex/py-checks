@@ -5,6 +5,7 @@
 дженерик — строгим режимом pyright, остальное — соглашения проекта.
 """
 
+from python_checks.checks.types._config_fields import ConfigFields, ConfigFieldsSettings
 from python_checks.checks.types._frozen_dataclasses import (
     FrozenDataclasses,
     FrozenDataclassesSettings,
@@ -13,6 +14,8 @@ from python_checks.checks.types._marker import MARKER
 
 __all__ = [
     "MARKER",
+    "ConfigFields",
+    "ConfigFieldsSettings",
     "FrozenDataclasses",
     "FrozenDataclassesSettings",
 ]
