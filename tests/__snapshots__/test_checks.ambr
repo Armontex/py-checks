@@ -26,6 +26,13 @@
     'bad/presentation/handlers.py:4:1: confined-imports: sqlalchemy в presentation/handlers; ему место в infra/database, ioc',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[frozen_dataclasses]
+  list([
+    'bad/modules/betslip/domain/selection.py:7:1: frozen-dataclasses: dataclass Selection объявлен без frozen=True, slots=True',
+    'bad/modules/betslip/domain/selection.py:13:1: frozen-dataclasses: dataclass Outcome объявлен без slots=True',
+    'bad/modules/betslip/domain/selection.py:18:1: frozen-dataclasses: dataclass Draft объявлен без frozen=True',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[keyword_only_arguments]
   list([
     'bad/positional.py:4:1: keyword-only-arguments: price принимает market, stake по позиции; поставь `*` перед ними',

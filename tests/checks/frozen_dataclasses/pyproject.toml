@@ -1,0 +1,5 @@
+[tool.python-checks]
+src = "."
+
+[tool.python-checks.frozen-dataclasses]
+zones = ["modules"]
