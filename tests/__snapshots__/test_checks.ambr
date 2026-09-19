@@ -127,3 +127,12 @@
     'bad/line.py:12:12: signature-layout: price: аргументов 2 в одну строку; по одному на строку',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[statement_keys]
+  list([
+    'bad/infra/database/repositories/inbox.py:36:9: statement-keys: execute() внутри цикла — поход в базу на итерацию; один запрос по всему множеству говорит то же самое',
+    'bad/infra/database/repositories/inbox.py:27:33: statement-keys: index_elements: называет колонку строкой; маппед-атрибут переезжает вместе с ней',
+    'bad/infra/database/repositories/inbox.py:28:23: statement-keys: set_: называет колонку строкой; маппед-атрибут переезжает вместе с ней',
+    'bad/infra/database/repositories/inbox.py:33:60: statement-keys: from_select: называет колонку строкой; маппед-атрибут переезжает вместе с ней',
+    'bad/infra/database/repositories/inbox.py:33:72: statement-keys: from_select: называет колонку строкой; маппед-атрибут переезжает вместе с ней',
+  ])
+# ---
