@@ -41,6 +41,11 @@ repos:
       - id: trailing-whitespace
       - id: mixed-line-ending
         args: [--fix=lf]
+      # `CLAUDE.md` — симлинк на `AGENTS.md`: два инструмента читают два имени
+      # одних и тех же указаний, а указатель внутри файла не работает — каждый
+      # читает только своё имя.
+      - id: check-symlinks
+      - id: destroyed-symlinks
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.22
