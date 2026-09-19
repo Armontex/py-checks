@@ -98,6 +98,12 @@
     'bad/positional.py:39:9: keyword-only-arguments: Outer.method.inner принимает self по позиции; поставь `*` перед ними',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[log_events]
+  list([
+    "bad/modules/orders/application/place.py:8:9: log-events: logger.info('order.placed'...): имя события — член LogEvent, а не фраза; по нему джойнятся счётчик и алерт",
+    "bad/modules/orders/application/place.py:9:9: log-events: self._logger.warning(f'заказ {order_id} медленный'...): имя события — член LogEvent, а не фраза; по нему джойнятся счётчик и алерт",
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[model_boundary]
   list([
     'bad/infra/database/repositories/orders.py:5:5: model-boundary: get возвращает OrderModel; модель уносит с собой сессию — отдавай DTO, идентификатор, количество',

@@ -1,0 +1,5 @@
+[tool.python-checks]
+src = "."
+
+[tool.python-checks.log-events]
+enum = "LogEvent"

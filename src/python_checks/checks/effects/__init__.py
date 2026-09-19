@@ -7,6 +7,13 @@
 """
 
 from python_checks.checks.effects._determinism import Determinism, DeterminismSettings
+from python_checks.checks.effects._log_events import LogEvents, LogEventsSettings
 from python_checks.checks.effects._marker import MARKER
 
-__all__ = ["MARKER", "Determinism", "DeterminismSettings"]
+__all__ = [
+    "MARKER",
+    "Determinism",
+    "DeterminismSettings",
+    "LogEvents",
+    "LogEventsSettings",
+]
