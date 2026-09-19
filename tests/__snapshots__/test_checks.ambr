@@ -105,6 +105,12 @@
     'bad/application/use_cases/settle_bet.py:11:32: operation-shape: SettleBetUseCase держит PlacementUnitOfWork; операции передают то, через что она пишет, а транзакция остаётся вызывающему',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[raw_sql]
+  list([
+    'bad/infra/database/models.py:20:12: raw-sql: text(...) со строкой SQL; вместо неё — select()/insert(), собранный из атрибутов модели',
+    'bad/infra/database/models.py:16:23: raw-sql: CheckConstraint(...) со строкой SQL; вместо неё — выражение по колонке, например and_(margin >= NOTHING, margin < WHOLE)',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[required_class]
   list([
     'bad/config/kafka.py:4:1: required-class: Topics объявлен выше ...Settings, ради которого существует модуль; хелперам место ниже',

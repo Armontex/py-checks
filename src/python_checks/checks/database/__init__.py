@@ -11,6 +11,7 @@ from python_checks.checks.database._confined_calls import (
     ConfinedCallsSettings,
 )
 from python_checks.checks.database._marker import MARKER
+from python_checks.checks.database._raw_sql import RawSql, RawSqlSettings
 from python_checks.checks.database._statement_keys import StatementKeys, StatementKeysSettings
 
 __all__ = [
@@ -18,6 +19,8 @@ __all__ = [
     "Confined",
     "ConfinedCalls",
     "ConfinedCallsSettings",
+    "RawSql",
+    "RawSqlSettings",
     "StatementKeys",
     "StatementKeysSettings",
 ]
