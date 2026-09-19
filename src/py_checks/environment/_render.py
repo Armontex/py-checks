@@ -45,15 +45,16 @@ def render(
     if not declared.settings:
         return None
     blocks = [
-        _block(
+        block
+        for name in declared.settings
+        for block in _blocks(
             model=_imported(
                 path=name,
                 root=root,
                 src=config.src,
             ),
-            origin=name,
+            seen=set(),
         )
-        for name in declared.settings
     ]
     return root / declared.path, "\n".join(
         [
@@ -105,20 +106,64 @@ def _reachable(
             sys.path.insert(0, name)
 
 
-def _block(
+def _blocks(
     *,
     model: type[BaseModel],
-    origin: str,
-) -> str:
-    """Один класс: заголовок, о чём эта секция, и её переменные."""
-    lines = [f"# --- {origin} ---", *_commented(text=_said(model=model))]
+    seen: set[type[BaseModel]],
+) -> list[str]:
+    """Класс и вложенные в него секции, каждая своим куском.
+
+    Проекту хватает назвать корневой класс: секции он и так перечислил — в
+    собственных полях, — и повторять их список в настройках значит завести
+    второй, который разойдётся с первым.
+    """
+    if model in seen:
+        return []
+    seen.add(model)
+    lines = [f"# --- {_origin(model=model)} ---", *_commented(text=_said(model=model))]
+    nested: list[str] = []
     for field in model.model_fields.values():
+        section = _section(field=field)
+        if section is not None:
+            nested.extend(
+                _blocks(
+                    model=section,
+                    seen=seen,
+                )
+            )
+            continue
         name = _variable(field=field)
         if name is None:
             continue
         lines.extend(_commented(text=field.description))
         lines.append(f"{name}={_value(field=field)}")
-    return "\n".join(lines) + "\n"
+    # Корень, у которого своих переменных нет, в файл не едет: заголовок с
+    # докстрингом и пустотой под ним ничего не сообщает.
+    own = [] if len(lines) == 1 or not _variables(lines=lines) else ["\n".join(lines) + "\n"]
+    return own + nested
+
+
+def _variables(*, lines: list[str]) -> bool:
+    """Есть ли в куске хоть одна переменная, а не одни комментарии."""
+    return any(not line.startswith("#") for line in lines)
+
+
+def _origin(*, model: type[BaseModel]) -> str:
+    """Как класс записывают в настройках: `модуль:Класс`."""
+    return f"{model.__module__}{SEPARATOR}{model.__qualname__}"
+
+
+def _section(*, field: FieldInfo) -> type[BaseModel] | None:
+    """Вложенная секция настроек, если поле — она.
+
+    Секция узнаётся по типу поля: `default_factory` бывает и у обычного
+    значения, а модель в аннотации — это ровно «здесь начинается ещё одна
+    группа переменных».
+    """
+    annotation = field.annotation
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return annotation
+    return None
 
 
 def _said(*, model: type[BaseModel]) -> str | None:

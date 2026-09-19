@@ -106,7 +106,7 @@ def test_a_secret_is_written_as_the_value_and_not_as_stars(tmp_path: Path) -> No
     assert "DATABASE_PASSWORD=\n" in built[1]
 
 
-def test_a_section_assembled_by_a_factory_is_not_a_variable(tmp_path: Path) -> None:
+def test_the_root_class_is_enough_and_its_sections_are_walked(tmp_path: Path) -> None:
     root = project(
         tmp_path,
         '\n[tool.py-checks.env-example]\nsettings = ["app.config:Settings"]\n',
@@ -115,7 +115,23 @@ def test_a_section_assembled_by_a_factory_is_not_a_variable(tmp_path: Path) -> N
     built = render(root=root, config=load(root=root))
 
     assert built is not None
-    assert "database" not in built[1]
+    # Переменные приезжают из вложенной секции, а поле, которым она объявлена,
+    # переменной не становится - у него своего имени в окружении нет.
+    assert "# --- app.config:DatabaseSettings ---" in built[1]
+    assert "DATABASE_PATH=app.db" in built[1]
+    assert "\ndatabase=" not in built[1]
+
+
+def test_a_root_with_no_variables_of_its_own_gets_no_block(tmp_path: Path) -> None:
+    root = project(
+        tmp_path,
+        '\n[tool.py-checks.env-example]\nsettings = ["app.config:Settings"]\n',
+    )
+
+    built = render(root=root, config=load(root=root))
+
+    assert built is not None
+    assert "# --- app.config:Settings ---" not in built[1]
 
 
 def test_a_project_that_declared_nothing_gets_no_file(tmp_path: Path) -> None:
