@@ -128,10 +128,9 @@ class StatementKeys:
         for child in ast.walk(node):
             if not isinstance(child, ast.Call) or name(node=child.func) not in limits.loops:
                 continue
-            yield Violation(
+            yield Violation.from_node(
+                node=node,
                 path=file.path,
-                line=node.lineno,
-                column=node.col_offset + 1,
                 code=CODE,
                 # Пометка снимается со строки цикла или с любой строки вызова:
                 # причина принадлежит тому месту, где автор её и пишет.

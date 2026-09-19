@@ -249,10 +249,9 @@ class OperationShape:
             count = cls._arguments(node=method)
             if count <= rule.max_arguments:
                 continue
-            yield Violation(
+            yield Violation.from_node(
+                node=method,
                 path=file.path,
-                line=method.lineno,
-                column=method.col_offset + 1,
                 code=CODE,
                 message=(
                     f"{subject.name}.{method.name} — аргументов {count}, предел "

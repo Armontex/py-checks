@@ -84,10 +84,9 @@ class RawSql:
             written = name(node=node.func)
             if written not in calls or not cls._sql(node=node.args[0]):
                 continue
-            yield Violation(
+            yield Violation.from_node(
+                node=node,
                 path=file.path,
-                line=node.lineno,
-                column=node.col_offset + 1,
                 code=CODE,
                 # Пометка снимается с любой строки самого вызова.
                 end_line=node.end_lineno or node.lineno,

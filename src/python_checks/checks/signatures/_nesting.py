@@ -110,10 +110,9 @@ class Nesting:
         if kind is not None:
             depth = depths[kind] + 1
             if depth > limits[kind]:
-                yield Violation(
+                yield Violation.from_node(
+                    node=node,
                     path=file.path,
-                    line=node.lineno,
-                    column=node.col_offset + 1,
                     code=CODE,
                     message=f"{kind} вложен на {depth}, предел {limits[kind]}",
                 )
