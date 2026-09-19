@@ -1,0 +1,9 @@
+[tool.python-checks]
+src = "."
+
+[tool.python-checks.endpoint-declarations]
+methods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"]
+required = ["path", "status_code", "summary", "responses"]
+body = "response_model"
+bodiless = [204, 205, 304]
+exempt = "include_in_schema"

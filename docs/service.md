@@ -780,8 +780,8 @@ zones = ["modules", "repositories"]
 
 ```python
 async def handle(self, *, command: PlaceBet) -> BetId:
-    placed_at = self._clock.now()   # порт, внедрённый
-    bet_id = command.bet_id         # выдан на краю
+    placed_at = self._clock.now()  # порт, внедрённый
+    bet_id = command.bet_id  # выдан на краю
 ```
 
 Вызов через порт правило не трогает — оно судит глобальные источники. Имя
@@ -823,8 +823,8 @@ enum = "LogEvent"
 одного теста, она просто перестаёт совпадать, и метрика тихо читает ноль.
 
 ```python
-logger.info("consumer started", topics=topics)       # отвергнуто
-logger.info(LogEvent.CONSUMER_STARTED, topics=...)   # требуется
+logger.info("consumer started", topics=topics)  # отвергнуто
+logger.info(LogEvent.CONSUMER_STARTED, topics=...)  # требуется
 ```
 
 Правило читает ФОРМУ `LogEvent.SOMETHING` и члена не ищет: имени, которого в

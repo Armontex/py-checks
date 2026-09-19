@@ -78,6 +78,14 @@
     'bad/modules/orders/application/place.py:13:20: determinism: random.choice() не детерминирован; прими значение аргументом',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[endpoint_declarations]
+  list([
+    "bad/presentation/api/v1/routers/tickets.py:10:2: endpoint-declarations: POST '/tickets' передаёт путь позиционно; напиши path=",
+    "bad/presentation/api/v1/routers/tickets.py:20:2: endpoint-declarations: GET '/tickets' не объявляет summary=",
+    "bad/presentation/api/v1/routers/tickets.py:20:2: endpoint-declarations: GET '/tickets' не объявляет responses=",
+    "bad/presentation/api/v1/routers/tickets.py:20:2: endpoint-declarations: GET '/tickets' не объявляет response_model= и отвечает телом; без него отвечают 204, 205, 304",
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[frozen_dataclasses]
   list([
     'bad/modules/betslip/domain/selection.py:7:1: frozen-dataclasses: dataclass Selection объявлен без frozen=True, slots=True, kw_only=True',

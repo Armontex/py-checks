@@ -1,5 +1,13 @@
 """API и события.
 
-Эндпоинт объявляет, чем отвечает; тип события и форма его полезной
-нагрузки не расходятся. Доменные правила, готовых инструментов нет.
+Маршрут объявляет в декораторе всё, чем он будет описан в схеме: механизм у
+фреймворка есть, требования писать — нет.
 """
+
+from python_checks.checks.api._endpoint_declarations import (
+    EndpointDeclarations,
+    EndpointDeclarationsSettings,
+)
+from python_checks.checks.api._marker import MARKER
+
+__all__ = ["MARKER", "EndpointDeclarations", "EndpointDeclarationsSettings"]
