@@ -34,8 +34,8 @@
 # ---
 # name: test_check_output_matches_the_snapshot[config_fields]
   list([
-    'bad/config/kafka.py:7:5: config-fields: KafkaSettings.brokers ничем не ограничено; назови одно из min_length, pattern или аннотируй типом, который несёт это правило',
-    'bad/config/kafka.py:8:5: config-fields: KafkaSettings.pool_size ничем не ограничено; назови одно из ge, gt, le, lt или аннотируй типом, который несёт это правило',
+    'bad/config/kafka.py:7:5: config-fields: KafkaSettings.brokers не называет validation_alias=; без него имя переменной знает один pydantic, а `.env.example` собирается из этих же полей',
+    'bad/config/kafka.py:8:5: config-fields: KafkaSettings.pool_size не называет validation_alias=; без него имя переменной знает один pydantic, а `.env.example` собирается из этих же полей',
     'bad/config/kafka.py:9:5: config-fields: KafkaSettings.topic объявлено не через Field(...)',
     'bad/config/kafka.py:10:5: config-fields: KafkaSettings.retries объявлено без значения; поле настроек объявляют через Field(...)',
   ])

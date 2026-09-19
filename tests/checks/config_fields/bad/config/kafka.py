@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class KafkaSettings(BaseModel):
-    brokers: str = Field(default="localhost:9092")
+    brokers: str = Field(default="localhost:9092", min_length=1)
     pool_size: int = Field(default=10)
     topic: str = "orders"
     retries: int

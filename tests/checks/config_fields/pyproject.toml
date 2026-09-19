@@ -3,3 +3,4 @@ src = "."
 
 [tool.python-checks.config-fields]
 zones = ["config"]
+alias = "validation_alias"

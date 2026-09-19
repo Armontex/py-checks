@@ -35,10 +35,15 @@ BOUNDS: Final[dict[str, tuple[str, ...]]] = {
 
 CLASS_VAR: Final = "ClassVar"
 
+# Поле, собранное фабрикой, — это вложенная секция, а не значение: переменной у
+# него нет, её читают поля внутри.
+FACTORY: Final = "default_factory"
+
 
 class ConfigFieldsSettings(CheckSettings):
     zones: tuple[str, ...] = ()
     factory: str = "Field"
+    alias: str | None = None
     bounds: dict[str, tuple[str, ...]] = BOUNDS
 
 
@@ -62,9 +67,16 @@ class ConfigFields:
     принимаются как настройка. Поле называет `min_length` или `pattern`, либо
     несёт тип, который это делает.
 
+    Поле называет переменную, из которой читается (`alias`, у pydantic это
+    `validation_alias`). Без неё имя переменной знает один pydantic — он
+    выводит его из имени поля и приставки, — и ни `.env.example`, собранный из
+    этих же классов, ни человек, ищущий, откуда берётся значение, назвать её не
+    могут. Поле, собранное `default_factory`, — исключение: это вложенная
+    секция, а не значение, и переменные читают её собственные поля.
+
     `ClassVar` — не поле настроек, а константа рядом с ними.
 
-    Настройки: `zones`, `factory`, `bounds`.
+    Настройки: `zones`, `factory`, `alias`, `bounds`.
     """
 
     code: ClassVar[str] = CODE
@@ -142,6 +154,21 @@ class ConfigFields:
                     f"объявлено без значения; поле настроек объявляют через {limits.factory}(...)"
                 )
             return f"объявлено не через {limits.factory}(...)"
+        if (
+            limits.alias is not None
+            and not cls._states(
+                node=statement.value,
+                wanted=(FACTORY,),
+            )
+            and not cls._states(
+                node=statement.value,
+                wanted=(limits.alias,),
+            )
+        ):
+            return (
+                f"не называет {limits.alias}=; без него имя переменной знает "
+                f"один pydantic, а `.env.example` собирается из этих же полей"
+            )
         wanted = cls._wanted(
             named=named,
             bounds=limits.bounds,
