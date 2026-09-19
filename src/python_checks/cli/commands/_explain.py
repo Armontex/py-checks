@@ -8,28 +8,20 @@ import typer
 from rich.console import Console
 
 from python_checks.cli.commands._summary import docstring
-from python_checks.core import Check, UnknownCheckError, get, get_project
+from python_checks.core import get
 
 
 def explain(  # check-ok: keyword-only-arguments: подпись команды разбирает typer
     code: Annotated[str, typer.Argument(help="код проверки")],
 ) -> None:
     """Показать, что проверка требует и какие у неё настройки."""
-    check = _found(code=code)
+    check = get(code=code)
     console = Console()
     console.print(docstring(check=check), markup=False)
     console.print("\nнастройки:", markup=False)
     for name, field in check.Settings.model_fields.items():
         key = field.alias or name
         console.print(f"  {key} = {field.get_default(call_default_factory=True)!r}", markup=False)
-
-
-def _found(*, code: str) -> Check:
-    """Правило по коду, из какой бы половины реестра оно ни было."""
-    try:
-        return get(code=code)
-    except UnknownCheckError:
-        return get_project(code=code)
 
 
 def register(*, app: typer.Typer) -> None:

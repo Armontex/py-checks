@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar, Final
 
 from python_checks.checks.types._marker import MARKER
 from python_checks.config import CheckSettings
-from python_checks.core import Violation, settings_as
+from python_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -48,6 +48,7 @@ class AnnotationShapes:
 
     code: ClassVar[str] = CODE
     Settings: ClassVar[type[CheckSettings]] = AnnotationShapesSettings
+    scope: ClassVar[Scope] = Scope.FILE
     marker: ClassVar[str] = MARKER
 
     @classmethod

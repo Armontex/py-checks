@@ -16,9 +16,38 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from python_checks.config import CheckSettings, Config
-    from python_checks.core._protocols import FileCheck, ProjectCheck
+    from python_checks.core._protocols import Check, FileCheck, ProjectCheck
+    from python_checks.core._registry import Checks
 
 SYNTAX: Final = "syntax"
+
+
+def survey(
+    *,
+    chosen: Checks,
+    files: Sequence[Path],
+    config: Config,
+    root: Path,
+) -> list[Violation]:
+    """Все нарушения выбранных правил: файловых — по файлам, проектных — по корню.
+
+    Разделение сделано один раз здесь, потому что вид правила виден только по
+    тому, что ему дают: у судящего файл и у судящего проект разные `run`, и
+    складывать их в один цикл нечестно.
+    """
+    return [
+        *inspect(
+            files=files,
+            checks=list(chosen.files.values()),
+            config=config,
+            root=root,
+        ),
+        *examine(
+            checks=list(chosen.project.values()),
+            config=config,
+            root=root,
+        ),
+    ]
 
 
 def inspect(
@@ -40,7 +69,7 @@ def inspect(
         )
         for check in checks
     }
-    registered = _registry.available()
+    registered = _registry.available().listed
     aliases = _aliases(registered=registered)
     source = root / config.src if root is not None else None
     violations: list[Violation] = []
@@ -82,7 +111,7 @@ def examine(
     ]
 
 
-def _aliases(*, registered: Mapping[str, FileCheck]) -> dict[str, frozenset[str]]:
+def _aliases(*, registered: Mapping[str, Check]) -> dict[str, frozenset[str]]:
     """Слово группы и все правила, которые оно снимает.
 
     Слово у группы одно на всех, поэтому `# signature-ok` снимает любую

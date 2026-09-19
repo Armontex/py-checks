@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from python_checks.config import load
-from python_checks.core import examine, get_project
+from python_checks.core import available, examine
 
 if TYPE_CHECKING:
     from syrupy.assertion import SnapshotAssertion
@@ -24,7 +24,7 @@ CASES = (
 def rendered(case: str, code: str) -> list[str]:
     root = PROJECTS / case
     violations = examine(
-        checks=[get_project(code=code)],
+        checks=[available().project[code]],
         config=load(root=root),
         root=root,
     )

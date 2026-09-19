@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, Final
 from python_checks.checks._location import place
 from python_checks.checks.database._marker import MARKER
 from python_checks.config import CheckSettings
-from python_checks.core import Violation, settings_as
+from python_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -54,6 +54,7 @@ class StatementKeys:
 
     code: ClassVar[str] = CODE
     Settings: ClassVar[type[CheckSettings]] = StatementKeysSettings
+    scope: ClassVar[Scope] = Scope.FILE
     marker: ClassVar[str] = MARKER
 
     @classmethod

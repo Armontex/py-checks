@@ -1,11 +1,11 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 from typer.testing import CliRunner
 
 from python_checks.cli import app
 from python_checks.config import CheckSettings
-from python_checks.core import Violation
+from python_checks.core import Checks, Scope, Violation
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -26,9 +26,10 @@ class ModuleLength:
     Лимит задаётся настройкой `max-lines`.
     """
 
-    code = "module-length"
-    Settings = Limits
-    marker = "# signature-ok"
+    code: ClassVar[str] = "module-length"
+    Settings: ClassVar[type[CheckSettings]] = Limits
+    scope: ClassVar[Scope] = Scope.FILE
+    marker: ClassVar[str] = "# signature-ok"
 
     def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
         assert isinstance(settings, Limits)
@@ -45,9 +46,10 @@ class ModuleLength:
 class NeedsTree:
     """Проверка, которой нужно дерево: на ней видно поведение на сломанном файле."""
 
-    code = "needs-tree"
-    Settings = CheckSettings
-    marker = "# tree-ok"
+    code: ClassVar[str] = "needs-tree"
+    Settings: ClassVar[type[CheckSettings]] = CheckSettings
+    scope: ClassVar[Scope] = Scope.FILE
+    marker: ClassVar[str] = "# tree-ok"
 
     def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
         _ = settings
@@ -67,7 +69,7 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture(autouse=True)
 def registry(monkeypatch: pytest.MonkeyPatch) -> None:
-    checks = {ModuleLength.code: ModuleLength()}
+    checks = Checks(files={ModuleLength.code: ModuleLength()}, project={})
     for module in ("_run", "_list"):
         monkeypatch.setattr(f"python_checks.cli.commands.{module}.available", lambda: checks)
     monkeypatch.setattr("python_checks.core._registry.available", lambda: checks)
@@ -134,7 +136,7 @@ def test_broken_syntax_is_one_violation_not_a_crash(
 ) -> None:
     monkeypatch.setattr(
         "python_checks.cli.commands._run.available",
-        lambda: {NeedsTree.code: NeedsTree()},
+        lambda: Checks(files={NeedsTree.code: NeedsTree()}, project={}),
     )
     (project / "src" / "broken.py").write_text("def (:\n", encoding="utf-8")
 

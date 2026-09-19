@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, Final
 from python_checks.checks.signatures._functions import definitions, receiver
 from python_checks.checks.signatures._marker import MARKER
 from python_checks.config import CheckSettings
-from python_checks.core import Edit, Violation, column, settings_as
+from python_checks.core import Edit, Scope, Violation, column, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -60,6 +60,7 @@ class SignatureLayout:
 
     code: ClassVar[str] = CODE
     Settings: ClassVar[type[CheckSettings]] = SignatureLayoutSettings
+    scope: ClassVar[Scope] = Scope.FILE
     marker: ClassVar[str] = MARKER
 
     @classmethod

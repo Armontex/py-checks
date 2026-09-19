@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from python_checks.config import load
-from python_checks.core import get, inspect, python_files
+from python_checks.core import available, inspect, python_files
 
 if TYPE_CHECKING:
     from syrupy.assertion import SnapshotAssertion
@@ -23,7 +23,7 @@ def cases() -> list[str]:
 def rendered(case: str) -> list[str]:
     root = FIXTURES / case
     config = load(root=root)
-    check = get(code=case.replace("_", "-"))
+    check = available().files[case.replace("_", "-")]
     files = python_files(paths=[], root=root, default=root / config.src, exclude=config.exclude)
     violations = inspect(files=files, checks=[check], config=config, root=root)
     return [violation.render(root=root) for violation in violations]

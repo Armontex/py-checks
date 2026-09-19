@@ -12,7 +12,7 @@ from python_checks.checks.signatures._functions import (
 )
 from python_checks.checks.signatures._marker import MARKER
 from python_checks.config import CheckSettings
-from python_checks.core import Edit, Violation, column
+from python_checks.core import Edit, Scope, Violation, column
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -48,6 +48,7 @@ class KeywordOnlyArguments:
 
     code: ClassVar[str] = CODE
     Settings: ClassVar[type[CheckSettings]] = CheckSettings
+    scope: ClassVar[Scope] = Scope.FILE
     marker: ClassVar[str] = MARKER
 
     def run(

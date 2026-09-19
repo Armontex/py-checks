@@ -10,7 +10,7 @@ from pydantic import model_validator
 
 from python_checks.checks.effects._marker import MARKER
 from python_checks.config import CheckSettings
-from python_checks.core import Violation, settings_as
+from python_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -59,6 +59,7 @@ class LogEvents:
 
     code: ClassVar[str] = CODE
     Settings: ClassVar[type[CheckSettings]] = LogEventsSettings
+    scope: ClassVar[Scope] = Scope.FILE
     marker: ClassVar[str] = MARKER
 
     @classmethod

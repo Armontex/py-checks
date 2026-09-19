@@ -3,26 +3,26 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 
 from python_checks.config import Config, find_root, load
 from python_checks.core import (
-    FileCheck,
-    ProjectCheck,
+    Checks,
+    Scope,
     Violation,
     available,
-    available_project,
-    examine,
     fix,
     get,
-    get_project,
-    inspect,
     python_files,
     reformat,
     report,
+    survey,
 )
+
+if TYPE_CHECKING:
+    from python_checks.core import Check
 
 
 def run(  # check-ok: keyword-only-arguments: подпись команды разбирает typer
@@ -38,37 +38,31 @@ def run(  # check-ok: keyword-only-arguments: подпись команды ра
         bool,
         typer.Option("--fix", help="исправить то, что правится само"),
     ] = False,
+    everything: Annotated[
+        bool,
+        typer.Option("--all", help="вместе с правилами, которым нужна живая среда"),
+    ] = False,
 ) -> None:
     """Проверить файлы и вернуть код выхода: 0 — чисто, 1 — есть нарушения."""
     root = find_root(start=Path.cwd())
     config = load(root=root)
-    checks = _chosen(
-        select=select,
-        config=config,
-    )
     files = python_files(
         paths=paths or [],
         root=root,
         default=root / config.src,
         exclude=config.excluded,
     )
-    violations = [
-        *inspect(
-            files=files,
-            checks=checks,
+    violations = survey(
+        chosen=_chosen(
+            select=select,
             config=config,
-            root=root,
+            paths=bool(paths),
+            everything=everything,
         ),
-        *examine(
-            checks=_project(
-                select=select,
-                config=config,
-                paths=paths,
-            ),
-            config=config,
-            root=root,
-        ),
-    ]
+        files=files,
+        config=config,
+        root=root,
+    )
     if autofix:
         violations = _fixed(violations=violations)
     raise typer.Exit(
@@ -91,36 +85,50 @@ def _chosen(
     *,
     select: list[str] | None,
     config: Config,
-) -> list[FileCheck]:
+    paths: bool,
+    everything: bool,
+) -> Checks:
     """Выбранные проверки, а без выбора — все, кроме отключённых в конфиге.
 
-    Явный `--select` сильнее `ignore`: если проверку позвали по имени, значит её
-    хотят запустить именно сейчас.
+    Явный `--select` сильнее всего остального: если проверку позвали по имени,
+    значит её хотят запустить именно сейчас — и несмотря на `ignore`, и
+    несмотря на то, что ей нужна база.
     """
+    listed = available()
     if select:
-        return [get(code=code) for code in select]
-    return [check for code, check in sorted(available().items()) if config.enabled(code=code)]
+        return listed.only(codes={get(code=code).code for code in select})
+    return listed.only(
+        codes={
+            code
+            for code, check in listed.listed.items()
+            if config.enabled(code=code)
+            and _wanted(
+                check=check,
+                paths=paths,
+                everything=everything,
+            )
+        }
+    )
 
 
-def _project(
+def _wanted(
     *,
-    select: list[str] | None,
-    config: Config,
-    paths: list[Path] | None,
-) -> list[ProjectCheck]:
-    """Правила про проект целиком: они судят не файлы, а манифест и репозиторий.
+    check: Check,
+    paths: bool,
+    everything: bool,
+) -> bool:
+    """Входит ли правило в прогон, которому не назвали имён.
 
-    Названные пути их не касаются — прогон по одному файлу проверяет этот файл,
-    а не проект вокруг него; поэтому с путями они молчат, если их не позвали по
+    Названные пути правил про проект не касаются: прогон по одному файлу
+    проверяет этот файл, а не проект вокруг него. Правилу, которому нужна
+    живая среда, место в CI, а не в хуке на коммит, — его зовут `--all` или по
     имени.
     """
-    if select:
-        return [get_project(code=code) for code in select if code in available_project()]
-    if paths:
-        return []
-    return [
-        check for code, check in sorted(available_project().items()) if config.enabled(code=code)
-    ]
+    if paths and check.scope is not Scope.FILE:
+        return False
+    if check.scope is Scope.ENVIRONMENT:
+        return everything
+    return True
 
 
 def register(*, app: typer.Typer) -> None:

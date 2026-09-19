@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from python_checks.checks.hygiene._marker import MARKER
 from python_checks.config import CheckSettings
-from python_checks.core import Violation, settings_as
+from python_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -63,6 +63,7 @@ class DependencyBounds:
 
     code: ClassVar[str] = CODE
     Settings: ClassVar[type[CheckSettings]] = DependencyBoundsSettings
+    scope: ClassVar[Scope] = Scope.PROJECT
     marker: ClassVar[str] = MARKER
 
     @classmethod

@@ -10,7 +10,7 @@ from python_checks.checks._kind import Kind, declarations
 from python_checks.checks._location import place
 from python_checks.checks.placement._marker import MARKER
 from python_checks.config import CheckSettings
-from python_checks.core import Violation, settings_as
+from python_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -77,6 +77,7 @@ class ClassPlacement:
 
     code: ClassVar[str] = CODE
     Settings: ClassVar[type[CheckSettings]] = ClassPlacementSettings
+    scope: ClassVar[Scope] = Scope.FILE
     marker: ClassVar[str] = MARKER
 
     @classmethod
