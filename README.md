@@ -6,6 +6,7 @@
 
 **Архитектурные соглашения проекта, проверяемые как код.**
 
+[![ci](https://github.com/Armontex/py-checks/actions/workflows/ci.yml/badge.svg)](https://github.com/Armontex/py-checks/actions/workflows/ci.yml)
 [![python](https://img.shields.io/badge/python-3.14%2B-3776AB)](https://www.python.org/)
 [![правил](https://img.shields.io/badge/checks-27-2ea043)](#что-проверяется)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-FAB040)](#pre-commit)
@@ -167,7 +168,7 @@ text("SELECT 1")  # db-ok: raw-sql: проба живости, формы ORM н
 ## pre-commit
 
 ```yaml
-- repo: https://github.com/<owner>/py-checks
+- repo: https://github.com/Armontex/py-checks
   rev: v0.1.0
   hooks:
     - id: py-checks
