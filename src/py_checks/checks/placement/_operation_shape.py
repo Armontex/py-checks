@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from py_checks.checks._kind import Declaration
+    from py_checks.checks._location import Place
     from py_checks.core import ParsedFile
 
 CODE: Final = "operation-shape"
@@ -103,14 +104,12 @@ class OperationShape:
         where = place(file=file)
         if where is None or file.path.stem.startswith(PRIVATE):
             return
-        matched = [
-            (depth, len(one.inside), one)
-            for one in listed
-            if (depth := where.within(directory=one.inside)) is not None
-        ]
-        if not matched:
+        rule = cls._rule(
+            where=where,
+            listed=listed,
+        )
+        if rule is None:
             return
-        rule = max(matched, key=lambda found: found[:2])[2]
         declared = list(declarations(tree=file.tree))
         subject = cls._subject(
             declared=declared,
@@ -146,6 +145,27 @@ class OperationShape:
                 ),
             ]
         yield from sorted(found, key=lambda violation: (violation.line, violation.column))
+
+    @staticmethod
+    def _rule(
+        *,
+        where: Place,
+        listed: tuple[Operation, ...],
+    ) -> Operation | None:
+        """Правило этой директории: самое глубокое, а при равенстве — точное.
+
+        Директорий в `inside` у правила может быть несколько, и файл попадает
+        под оба: `use_cases` внутри `application/services` судит то, что
+        названо длиннее и лежит ближе.
+        """
+        matched = [
+            (depth, len(one.inside), one)
+            for one in listed
+            if (depth := where.within(directory=one.inside)) is not None
+        ]
+        if not matched:
+            return None
+        return max(matched, key=lambda found: found[:2])[2]
 
     @staticmethod
     def _subject(

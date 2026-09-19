@@ -100,6 +100,12 @@
     'bad/modules/betslip/domain/selection.py:23:1: frozen-dataclasses: dataclass Ticket объявлен без kw_only=True',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[function_length]
+  list([
+    'bad/too_long.py:1:1: function-length: walks_far: строк 7, предел 5; вынеси часть в отдельную функцию',
+    'bad/too_long.py:12:5: function-length: Holder.method: строк 6, предел 5; вынеси часть в отдельную функцию',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[keyword_only_arguments]
   list([
     'bad/positional.py:4:1: keyword-only-arguments: price принимает market, stake по позиции; поставь `*` перед ними',
