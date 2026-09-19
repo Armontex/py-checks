@@ -28,5 +28,8 @@ def available() -> dict[str, FileCheck]:
 def get(*, code: str) -> FileCheck:
     checks = available()
     if code not in checks:
-        raise UnknownCheckError(code=code, known=tuple(sorted(checks)))
+        raise UnknownCheckError(
+            code=code,
+            known=tuple(sorted(checks)),
+        )
     return checks[code]

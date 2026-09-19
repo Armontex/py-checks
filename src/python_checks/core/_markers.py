@@ -49,7 +49,11 @@ class Marker:
     column: int
 
 
-def read(*, line: str, aliases: Mapping[str, frozenset[str]]) -> Marker | None:
+def read(
+    *,
+    line: str,
+    aliases: Mapping[str, frozenset[str]],
+) -> Marker | None:
     """Маркер из строки, если он там есть.
 
     Разбор нарочно не падает на кривой записи: маркер без кода или без причины
@@ -84,7 +88,11 @@ def surviving(
     return [
         violation
         for violation in violations
-        if not _covered(violation=violation, file=file, aliases=aliases)
+        if not _covered(
+            violation=violation,
+            file=file,
+            aliases=aliases,
+        )
     ]
 
 
@@ -101,10 +109,18 @@ def complaints(
     нарушение.
     """
     for number, line in enumerate(file.lines, start=1):
-        marker = read(line=line, aliases=aliases)
+        marker = read(
+            line=line,
+            aliases=aliases,
+        )
         if marker is None:
             continue
-        yield from _wrong(marker=marker, path=file.path, line=number, known=known)
+        yield from _wrong(
+            marker=marker,
+            path=file.path,
+            line=number,
+            known=known,
+        )
 
 
 def _named(*, text: str) -> bool:
@@ -130,14 +146,24 @@ def _covered(
     file: ParsedFile,
     aliases: Mapping[str, frozenset[str]],
 ) -> bool:
-    for line in _span(violation=violation, file=file):
-        marker = read(line=line, aliases=aliases)
+    for line in _span(
+        violation=violation,
+        file=file,
+    ):
+        marker = read(
+            line=line,
+            aliases=aliases,
+        )
         if marker is not None and violation.code in marker.codes:
             return True
     return False
 
 
-def _span(*, violation: Violation, file: ParsedFile) -> tuple[str, ...]:
+def _span(
+    *,
+    violation: Violation,
+    file: ParsedFile,
+) -> tuple[str, ...]:
     """Строки, в которых ищем маркер.
 
     Нарушение указывает на первую строку того, что нашло, а пометке место в
@@ -178,5 +204,17 @@ def _wrong(
         )
 
 
-def _complaint(*, path: Path, line: int, column: int, message: str) -> Violation:
-    return Violation(path=path, line=line, column=column, code=CODE, message=message)
+def _complaint(
+    *,
+    path: Path,
+    line: int,
+    column: int,
+    message: str,
+) -> Violation:
+    return Violation(
+        path=path,
+        line=line,
+        column=column,
+        code=CODE,
+        message=message,
+    )

@@ -39,7 +39,10 @@ def load(*, root: Path) -> Config:
         document: TomlTable = tomllib.loads(pyproject.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as error:
         raise ConfigError(f"{pyproject}: {error}") from error
-    return _build(section=_section(document=document), source=pyproject)
+    return _build(
+        section=_section(document=document),
+        source=pyproject,
+    )
 
 
 def _section(*, document: TomlTable) -> TomlTable:
@@ -48,7 +51,11 @@ def _section(*, document: TomlTable) -> TomlTable:
     return section if isinstance(section, dict) else {}
 
 
-def _build(*, section: TomlTable, source: Path) -> Config:
+def _build(
+    *,
+    section: TomlTable,
+    source: Path,
+) -> Config:
     own, checks = _split(section=section)
     try:
         return Config.model_validate({**own, "checks": checks})
@@ -61,7 +68,12 @@ def _split(*, section: TomlTable) -> tuple[TomlTable, dict[str, TomlTable]]:
     own: TomlTable = {}
     checks: dict[str, TomlTable] = {}
     for key, value in section.items():
-        _place(key=key, value=value, own=own, checks=checks)
+        _place(
+            key=key,
+            value=value,
+            own=own,
+            checks=checks,
+        )
     return own, checks
 
 

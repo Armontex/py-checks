@@ -80,13 +80,26 @@ class ClassPlacement:
     marker: ClassVar[str] = MARKER
 
     @classmethod
-    def run(cls, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
-        rules = settings_as(settings=settings, model=ClassPlacementSettings, code=CODE).rules
+    def run(
+        cls,
+        *,
+        file: ParsedFile,
+        settings: CheckSettings,
+    ) -> Iterator[Violation]:
+        rules = settings_as(
+            settings=settings,
+            model=ClassPlacementSettings,
+            code=CODE,
+        ).rules
         where = place(file=file)
         if where is None:
             return
         for declared in declarations(tree=file.tree):
-            rule = cls._rule(declared=declared, where=where, rules=rules)
+            rule = cls._rule(
+                declared=declared,
+                where=where,
+                rules=rules,
+            )
             if rule is None:
                 continue
             yield Violation.from_node(

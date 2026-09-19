@@ -30,4 +30,9 @@ class FileCheck(Protocol):
     # `# check-ok: <код>` работает всегда и снимает ровно одно правило.
     marker: str
 
-    def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]: ...
+    def run(
+        self,
+        *,
+        file: ParsedFile,
+        settings: CheckSettings,
+    ) -> Iterator[Violation]: ...

@@ -28,9 +28,16 @@ def report(
     подсветка не должна мешать разбирать строку. Цвета `rich` отключает сам,
     когда вывод идёт не в терминал, — а под pre-commit это всегда так.
     """
-    console = console or Console(stderr=True, soft_wrap=True)
+    console = console or Console(
+        stderr=True,
+        soft_wrap=True,
+    )
     for violation in violations:
-        console.print(violation.render(root=root), markup=False, highlight=False)
+        console.print(
+            violation.render(root=root),
+            markup=False,
+            highlight=False,
+        )
     if violations:
         console.print(f"\n{len(violations)} нарушени(й) в {checked} файл(ах)", markup=False)
         return EXIT_VIOLATION

@@ -50,7 +50,10 @@ class Operation(CheckSettings):
     suffix: str
     method: str | None = None
     forbids: tuple[str, ...] = ()
-    max_arguments: int | None = Field(default=None, gt=0)
+    max_arguments: int | None = Field(
+        default=None,
+        gt=0,
+    )
 
 
 class OperationShapeSettings(CheckSettings):
@@ -85,8 +88,17 @@ class OperationShape:
     marker: ClassVar[str] = MARKER
 
     @classmethod
-    def run(cls, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
-        listed = settings_as(settings=settings, model=OperationShapeSettings, code=CODE).operations
+    def run(
+        cls,
+        *,
+        file: ParsedFile,
+        settings: CheckSettings,
+    ) -> Iterator[Violation]:
+        listed = settings_as(
+            settings=settings,
+            model=OperationShapeSettings,
+            code=CODE,
+        ).operations
         where = place(file=file)
         if where is None or file.path.stem.startswith(PRIVATE):
             return
@@ -99,18 +111,47 @@ class OperationShape:
             return
         rule = max(matched, key=lambda found: found[:2])[2]
         declared = list(declarations(tree=file.tree))
-        subject = cls._subject(declared=declared, rule=rule)
-        found = list(cls._beside(file=file, declared=declared, subject=subject, rule=rule))
+        subject = cls._subject(
+            declared=declared,
+            rule=rule,
+        )
+        found = list(
+            cls._beside(
+                file=file,
+                declared=declared,
+                subject=subject,
+                rule=rule,
+            )
+        )
         if subject is not None and isinstance(subject.node, ast.ClassDef):
             found += [
-                *cls._door(file=file, subject=subject, node=subject.node, rule=rule),
-                *cls._input(file=file, subject=subject, node=subject.node, rule=rule),
-                *cls._held(file=file, subject=subject, node=subject.node, rule=rule),
+                *cls._door(
+                    file=file,
+                    subject=subject,
+                    node=subject.node,
+                    rule=rule,
+                ),
+                *cls._input(
+                    file=file,
+                    subject=subject,
+                    node=subject.node,
+                    rule=rule,
+                ),
+                *cls._held(
+                    file=file,
+                    subject=subject,
+                    node=subject.node,
+                    rule=rule,
+                ),
             ]
         yield from sorted(found, key=lambda violation: (violation.line, violation.column))
 
     @staticmethod
-    def _subject(*, declared: list[Declaration], rule: Operation) -> Declaration | None:
+    def _subject(
+        *,
+        declared: list[Declaration],
+        rule: Operation,
+    ) -> Declaration | None:
         """Операция, ради которой существует модуль, — по имени, а не по месту.
 
         По месту было бы неверно: класс, по ошибке вставший выше операции, —
@@ -312,5 +353,15 @@ class OperationShape:
                     continue
 
     @staticmethod
-    def _says(*, file: ParsedFile, declared: Declaration, message: str) -> Violation:
-        return Violation.from_node(node=declared.node, path=file.path, code=CODE, message=message)
+    def _says(
+        *,
+        file: ParsedFile,
+        declared: Declaration,
+        message: str,
+    ) -> Violation:
+        return Violation.from_node(
+            node=declared.node,
+            path=file.path,
+            code=CODE,
+            message=message,
+        )

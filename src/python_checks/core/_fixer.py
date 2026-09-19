@@ -28,17 +28,27 @@ def fix(*, violations: Sequence[Violation]) -> tuple[list[Path], list[Violation]
     left: list[Violation] = []
     for path, found in grouped.items():
         left.extend(violation for violation in found if violation.edit is None)
-        if _rewrite(path=path, found=found):
+        if _rewrite(
+            path=path,
+            found=found,
+        ):
             changed.append(path)
     return changed, left
 
 
-def _rewrite(*, path: Path, found: Sequence[Violation]) -> bool:
+def _rewrite(
+    *,
+    path: Path,
+    found: Sequence[Violation],
+) -> bool:
     edits = [violation.edit for violation in found if violation.edit is not None]
     if not edits:
         return False
     text = path.read_text(encoding="utf-8")
-    fixed = apply(text=text, edits=edits)
+    fixed = apply(
+        text=text,
+        edits=edits,
+    )
     if fixed == text:
         return False
     path.write_text(fixed, encoding="utf-8")

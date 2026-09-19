@@ -20,7 +20,10 @@ def planned(*, root: Path) -> dict[Path, str]:
     файл начнёт врать, как только появится новый слой, и import-linter упадёт
     на первом же несуществующем модуле.
     """
-    contracts = render(root=root, config=load(root=root))
+    contracts = render(
+        root=root,
+        config=load(root=root),
+    )
     if contracts is None:
         return {}
     return {root / FILE: contracts}

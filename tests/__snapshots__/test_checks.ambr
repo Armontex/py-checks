@@ -76,3 +76,9 @@
     'bad/shared/validation.py:3:1: sealed-imports: email_validator в shared/validation: запечатанная зона знает только стандартную библиотеку и код сервиса',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[signature_layout]
+  list([
+    'bad/line.py:6:1: signature-layout: price: параметров 2 в одну строку; по одному на строку',
+    'bad/line.py:12:12: signature-layout: price: аргументов 2 в одну строку; по одному на строку',
+  ])
+# ---

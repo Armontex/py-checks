@@ -8,6 +8,10 @@ ruff, вложенный `with` — правилом `SIM117`.
 from python_checks.checks.signatures._keyword_only import KeywordOnlyArguments
 from python_checks.checks.signatures._module_length import ModuleLength, ModuleLengthSettings
 from python_checks.checks.signatures._nesting import Nesting, NestingSettings
+from python_checks.checks.signatures._signature_layout import (
+    SignatureLayout,
+    SignatureLayoutSettings,
+)
 
 __all__ = [
     "KeywordOnlyArguments",
@@ -15,4 +19,6 @@ __all__ = [
     "ModuleLengthSettings",
     "Nesting",
     "NestingSettings",
+    "SignatureLayout",
+    "SignatureLayoutSettings",
 ]

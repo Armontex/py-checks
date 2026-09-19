@@ -24,27 +24,56 @@ def sync(  # check-ok: keyword-only-arguments: подпись команды р�
 ) -> None:
     """Собрать контракты импортов из слоёв, объявленных проектом."""
     root = find_root(start=Path.cwd())
-    console = Console(stderr=True, soft_wrap=True)
+    console = Console(
+        stderr=True,
+        soft_wrap=True,
+    )
     if check:
-        raise typer.Exit(_report(stale=stale(root=root), console=console))
+        raise typer.Exit(
+            _report(
+                stale=stale(root=root),
+                console=console,
+            )
+        )
     for path in write(root=root):
-        _say(text=f"собран {path.relative_to(root)}", console=console)
+        _say(
+            text=f"собран {path.relative_to(root)}",
+            console=console,
+        )
     raise typer.Exit(EXIT_OK)
 
 
-def _report(*, stale: Sequence[Path], console: Console) -> int:
+def _report(
+    *,
+    stale: Sequence[Path],
+    console: Console,
+) -> int:
     """Собранный файл отстал от того, что объявлено в настройках или лежит на диске."""
     for path in stale:
-        _say(text=f"{path}: устарел, запусти `python-checks sync`", console=console)
+        _say(
+            text=f"{path}: устарел, запусти `python-checks sync`",
+            console=console,
+        )
     if stale:
         return EXIT_VIOLATION
-    _say(text="ok: контракты совпадают с настройками", console=console)
+    _say(
+        text="ok: контракты совпадают с настройками",
+        console=console,
+    )
     return EXIT_OK
 
 
-def _say(*, text: str, console: Console) -> None:
+def _say(
+    *,
+    text: str,
+    console: Console,
+) -> None:
     """Печатать как есть: в строке бывают пути и секции, разметка тут лишняя."""
-    console.print(text, markup=False, highlight=False)
+    console.print(
+        text,
+        markup=False,
+        highlight=False,
+    )
 
 
 def register(*, app: typer.Typer) -> None:

@@ -104,12 +104,24 @@ def declarations(*, tree: ast.Module) -> Iterator[Declaration]:
     for node in tree.body:
         match node:
             case ast.ClassDef(name=name):
-                yield Declaration(name=name, kind=_class(node=node), node=node)
+                yield Declaration(
+                    name=name,
+                    kind=_class(node=node),
+                    node=node,
+                )
             case ast.FunctionDef(name=name) | ast.AsyncFunctionDef(name=name):
-                yield Declaration(name=name, kind=Kind.FUNCTION, node=node)
+                yield Declaration(
+                    name=name,
+                    kind=Kind.FUNCTION,
+                    node=node,
+                )
             case ast.AnnAssign(target=ast.Name(id=name)) | ast.Assign(targets=[ast.Name(id=name)]):
                 if _alias(node=node):
-                    yield Declaration(name=name, kind=Kind.ALIAS, node=node)
+                    yield Declaration(
+                        name=name,
+                        kind=Kind.ALIAS,
+                        node=node,
+                    )
             case _:
                 continue
 

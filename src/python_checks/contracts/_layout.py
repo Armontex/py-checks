@@ -15,7 +15,11 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def package(*, root: Path, src: Path) -> str | None:
+def package(
+    *,
+    root: Path,
+    src: Path,
+) -> str | None:
     """Корневой пакет проекта: единственный пакет внутри `src`."""
     source = root / src
     if not source.is_dir():
@@ -30,7 +34,13 @@ def package(*, root: Path, src: Path) -> str | None:
     return found[0]
 
 
-def expressions(*, root: Path, src: Path, package: str, layer: str) -> tuple[str, ...]:
+def expressions(
+    *,
+    root: Path,
+    src: Path,
+    package: str,
+    layer: str,
+) -> tuple[str, ...]:
     """Как назвать слой в контракте: сам по себе, внутри модулей, или никак."""
     found: list[str] = []
     if (root / src / package / layer).is_dir():
@@ -40,7 +50,12 @@ def expressions(*, root: Path, src: Path, package: str, layer: str) -> tuple[str
     return tuple(found)
 
 
-def modules(*, root: Path, src: Path, package: str) -> bool:
+def modules(
+    *,
+    root: Path,
+    src: Path,
+    package: str,
+) -> bool:
     return (root / src / package / MODULES).is_dir()
 
 

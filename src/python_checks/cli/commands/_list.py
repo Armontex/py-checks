@@ -19,7 +19,10 @@ if TYPE_CHECKING:
 def list_checks() -> None:
     """Показать все проверки: код, состояние и одну строку описания."""
     config = load(root=find_root(start=Path.cwd()))
-    table = Table(box=None, pad_edge=False)
+    table = Table(
+        box=None,
+        pad_edge=False,
+    )
     table.add_column("код")
     table.add_column("состояние")
     table.add_column("что делает")

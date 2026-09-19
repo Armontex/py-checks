@@ -11,7 +11,13 @@ if TYPE_CHECKING:
 class SettingsMismatchError(Exception):
     """Проверке отдали не её настройки."""
 
-    def __init__(self, *, code: str, expected: type[object], got: type[object]) -> None:
+    def __init__(
+        self,
+        *,
+        code: str,
+        expected: type[object],
+        got: type[object],
+    ) -> None:
         super().__init__(f"{code}: ожидались {expected.__name__}, пришли {got.__name__}")
         self.code = code
 
@@ -30,5 +36,9 @@ def settings_as[S: CheckSettings](
     видит и редактор, и pyright.
     """
     if not isinstance(settings, model):
-        raise SettingsMismatchError(code=code, expected=model, got=type(settings))
+        raise SettingsMismatchError(
+            code=code,
+            expected=model,
+            got=type(settings),
+        )
     return settings

@@ -59,18 +59,34 @@ class RequiredClass:
     marker: ClassVar[str] = MARKER
 
     @classmethod
-    def run(cls, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
-        suffixes = settings_as(settings=settings, model=RequiredClassSettings, code=CODE).suffixes
+    def run(
+        cls,
+        *,
+        file: ParsedFile,
+        settings: CheckSettings,
+    ) -> Iterator[Violation]:
+        suffixes = settings_as(
+            settings=settings,
+            model=RequiredClassSettings,
+            code=CODE,
+        ).suffixes
         where = place(file=file)
         if where is None or file.path.stem.startswith("_"):
             return
-        suffix = cls._suffix(where=where, suffixes=suffixes)
+        suffix = cls._suffix(
+            where=where,
+            suffixes=suffixes,
+        )
         if suffix is None:
             return
         declared = list(declarations(tree=file.tree))
         if not declared:
             return
-        yield from cls._violations(file=file, declared=declared, suffix=suffix)
+        yield from cls._violations(
+            file=file,
+            declared=declared,
+            suffix=suffix,
+        )
 
     @classmethod
     def _violations(
@@ -101,7 +117,10 @@ class RequiredClass:
                 ),
             )
             return
-        ahead = cls._ahead(declared=declared, suffix=suffix)
+        ahead = cls._ahead(
+            declared=declared,
+            suffix=suffix,
+        )
         if ahead is not None:
             yield cls._says(
                 file=file,
@@ -113,7 +132,11 @@ class RequiredClass:
             )
 
     @staticmethod
-    def _ahead(*, declared: list[Declaration], suffix: str) -> Declaration | None:
+    def _ahead(
+        *,
+        declared: list[Declaration],
+        suffix: str,
+    ) -> Declaration | None:
         """Первое объявление, вставшее выше требуемого класса."""
         for one in declared:
             if one.name.endswith(suffix):
@@ -123,7 +146,11 @@ class RequiredClass:
         return None
 
     @staticmethod
-    def _suffix(*, where: Place, suffixes: dict[str, str]) -> str | None:
+    def _suffix(
+        *,
+        where: Place,
+        suffixes: dict[str, str],
+    ) -> str | None:
         """Суффикс самой внутренней из совпавших директорий."""
         matched = [
             (depth, len(directory), suffix)
@@ -133,8 +160,18 @@ class RequiredClass:
         return max(matched)[2] if matched else None
 
     @staticmethod
-    def _says(*, file: ParsedFile, node: Declaration, message: str) -> Violation:
-        return Violation.from_node(node=node.node, path=file.path, code=CODE, message=message)
+    def _says(
+        *,
+        file: ParsedFile,
+        node: Declaration,
+        message: str,
+    ) -> Violation:
+        return Violation.from_node(
+            node=node.node,
+            path=file.path,
+            code=CODE,
+            message=message,
+        )
 
     @staticmethod
     def _listed(*, declared: list[Declaration]) -> str:

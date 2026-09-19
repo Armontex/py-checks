@@ -21,27 +21,60 @@ HEADER: Final = """\
 """
 
 
-def render(*, root: Path, config: Config) -> str | None:
+def render(
+    *,
+    root: Path,
+    config: Config,
+) -> str | None:
     """Файл контрактов; `None`, если проверять нечего.
 
     Нечего — это либо проект, который не объявил ни одного слоя, либо
     раскладка, в которой объявленных слоёв нет на диске.
     """
-    name = package(root=root, src=config.src)
+    name = package(
+        root=root,
+        src=config.src,
+    )
     if name is None:
         return None
-    blocks = _contracts(root=root, config=config, package=name)
+    blocks = _contracts(
+        root=root,
+        config=config,
+        package=name,
+    )
     if not blocks:
         return None
-    return "\n".join([HEADER, _roots(root=root, package=name), *blocks])
+    return "\n".join(
+        [
+            HEADER,
+            _roots(
+                root=root,
+                package=name,
+            ),
+            *blocks,
+        ]
+    )
 
 
-def _roots(*, root: Path, package: str) -> str:
+def _roots(
+    *,
+    root: Path,
+    package: str,
+) -> str:
     packages = [package, MIGRATIONS] if migrations(root=root) else [package]
-    return _block(head="[importlinter]", scalars={}, lists={"root_packages": packages})
+    return _block(
+        head="[importlinter]",
+        scalars={},
+        lists={"root_packages": packages},
+    )
 
 
-def _contracts(*, root: Path, config: Config, package: str) -> list[str]:
+def _contracts(
+    *,
+    root: Path,
+    config: Config,
+    package: str,
+) -> list[str]:
     declared = contracts(config=config)
     table = declared.layers
     known = frozenset(table) | frozenset(declared.composition_root)
@@ -58,8 +91,19 @@ def _contracts(*, root: Path, config: Config, package: str) -> list[str]:
             )
         )
     ]
-    blocks.extend(_independence(root=root, config=config, package=package))
-    blocks.extend(_migrations(root=root, package=package))
+    blocks.extend(
+        _independence(
+            root=root,
+            config=config,
+            package=package,
+        )
+    )
+    blocks.extend(
+        _migrations(
+            root=root,
+            package=package,
+        )
+    )
     return blocks
 
 
@@ -72,11 +116,21 @@ def _layer(
     forbidden: Iterable[str],
 ) -> str | None:
     """Контракт «этому слою нельзя вот это»."""
-    sources = expressions(root=root, src=config.src, package=package, layer=layer)
+    sources = expressions(
+        root=root,
+        src=config.src,
+        package=package,
+        layer=layer,
+    )
     targets = [
         expression
         for other in sorted(forbidden)
-        for expression in expressions(root=root, src=config.src, package=package, layer=other)
+        for expression in expressions(
+            root=root,
+            src=config.src,
+            package=package,
+            layer=other,
+        )
     ]
     if not sources or not targets:
         return None
@@ -95,9 +149,18 @@ def _layer(
     )
 
 
-def _independence(*, root: Path, config: Config, package: str) -> list[str]:
+def _independence(
+    *,
+    root: Path,
+    config: Config,
+    package: str,
+) -> list[str]:
     """Модули друг о друге не знают: соседа зовут через порт, а не по имени."""
-    if not modules(root=root, src=config.src, package=package):
+    if not modules(
+        root=root,
+        src=config.src,
+        package=package,
+    ):
         return []
     return [
         _block(
@@ -108,7 +171,11 @@ def _independence(*, root: Path, config: Config, package: str) -> list[str]:
     ]
 
 
-def _migrations(*, root: Path, package: str) -> list[str]:
+def _migrations(
+    *,
+    root: Path,
+    package: str,
+) -> list[str]:
     """Миграция описывает схему, а не зовёт приложение: код уедет, схема останется.
 
     Смотрим только на `versions`: `env.py` — не история, а то, что её запускает,

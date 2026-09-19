@@ -39,8 +39,14 @@ def imports(*, tree: ast.Module) -> Iterator[Imported]:
         match node:
             case ast.Import(names=names):
                 for name in names:
-                    yield Imported(node=node, module=name.name)
+                    yield Imported(
+                        node=node,
+                        module=name.name,
+                    )
             case ast.ImportFrom(module=str(module), level=0):
-                yield Imported(node=node, module=module)
+                yield Imported(
+                    node=node,
+                    module=module,
+                )
             case _:
                 continue

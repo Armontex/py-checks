@@ -38,17 +38,31 @@ def run(  # check-ok: keyword-only-arguments: подпись команды ра
     """Проверить файлы и вернуть код выхода: 0 — чисто, 1 — есть нарушения."""
     root = find_root(start=Path.cwd())
     config = load(root=root)
-    checks = _chosen(select=select, config=config)
+    checks = _chosen(
+        select=select,
+        config=config,
+    )
     files = python_files(
         paths=paths or [],
         root=root,
         default=root / config.src,
         exclude=config.excluded,
     )
-    violations = inspect(files=files, checks=checks, config=config, root=root)
+    violations = inspect(
+        files=files,
+        checks=checks,
+        config=config,
+        root=root,
+    )
     if autofix:
         violations = _fixed(violations=violations)
-    raise typer.Exit(report(violations=violations, root=root, checked=len(files)))
+    raise typer.Exit(
+        report(
+            violations=violations,
+            root=root,
+            checked=len(files),
+        )
+    )
 
 
 def _fixed(*, violations: list[Violation]) -> list[Violation]:
@@ -58,7 +72,11 @@ def _fixed(*, violations: list[Violation]) -> list[Violation]:
     return left
 
 
-def _chosen(*, select: list[str] | None, config: Config) -> list[FileCheck]:
+def _chosen(
+    *,
+    select: list[str] | None,
+    config: Config,
+) -> list[FileCheck]:
     """Выбранные проверки, а без выбора — все, кроме отключённых в конфиге.
 
     Явный `--select` сильнее `ignore`: если проверку позвали по имени, значит её

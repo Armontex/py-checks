@@ -47,12 +47,24 @@ class ClassModules:
     marker: ClassVar[str] = MARKER
 
     @classmethod
-    def run(cls, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
-        policies = settings_as(settings=settings, model=ClassModulesSettings, code=CODE).policies
+    def run(
+        cls,
+        *,
+        file: ParsedFile,
+        settings: CheckSettings,
+    ) -> Iterator[Violation]:
+        policies = settings_as(
+            settings=settings,
+            model=ClassModulesSettings,
+            code=CODE,
+        ).policies
         where = place(file=file)
         if where is None:
             return
-        policy = cls._policy(where=where, policies=policies)
+        policy = cls._policy(
+            where=where,
+            policies=policies,
+        )
         if policy is None:
             return
         directory, allowed = policy

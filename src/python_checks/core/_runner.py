@@ -34,7 +34,11 @@ def inspect(
     раз, а проверок на него много.
     """
     settings = {
-        check.code: config.settings_for(code=check.code, model=check.Settings) for check in checks
+        check.code: config.settings_for(
+            code=check.code,
+            model=check.Settings,
+        )
+        for check in checks
     }
     registered = _registry.available()
     aliases = _aliases(registered=registered)
@@ -76,15 +80,34 @@ def _inspect_file(
     aliases: Mapping[str, frozenset[str]],
     known: Collection[str],
 ) -> list[Violation]:
-    file = ParsedFile.from_path(path=path, source=source)
+    file = ParsedFile.from_path(
+        path=path,
+        source=source,
+    )
     found: list[Violation] = []
     for check in checks:
         try:
-            found.extend(check.run(file=file, settings=settings[check.code]))
+            found.extend(
+                check.run(
+                    file=file,
+                    settings=settings[check.code],
+                )
+            )
         except ParseError as error:
             return [_broken(error=error)]
-    kept = surviving(violations=found, file=file, aliases=aliases)
-    return [*kept, *complaints(file=file, aliases=aliases, known=known)]
+    kept = surviving(
+        violations=found,
+        file=file,
+        aliases=aliases,
+    )
+    return [
+        *kept,
+        *complaints(
+            file=file,
+            aliases=aliases,
+            known=known,
+        ),
+    ]
 
 
 def _broken(*, error: ParseError) -> Violation:

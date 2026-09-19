@@ -46,8 +46,17 @@ class ConfinedImports:
     marker: ClassVar[str] = MARKER
 
     @classmethod
-    def run(cls, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
-        table = settings_as(settings=settings, model=ConfinedSettings, code=CODE).packages
+    def run(
+        cls,
+        *,
+        file: ParsedFile,
+        settings: CheckSettings,
+    ) -> Iterator[Violation]:
+        table = settings_as(
+            settings=settings,
+            model=ConfinedSettings,
+            code=CODE,
+        ).packages
         where = place(file=file)
         if where is None:
             return
@@ -55,7 +64,12 @@ class ConfinedImports:
             allowed = table.get(imported.top)
             if allowed is None or any(where.under(prefix=path) for path in allowed):
                 continue
-            yield cls._violation(imported=imported, where=where, allowed=allowed, path=file.path)
+            yield cls._violation(
+                imported=imported,
+                where=where,
+                allowed=allowed,
+                path=file.path,
+            )
 
     @staticmethod
     def _violation(
@@ -70,4 +84,9 @@ class ConfinedImports:
             if allowed
             else f"{imported.top} в {where.where}; этот пакет убран, импортировать его негде"
         )
-        return Violation.from_node(node=imported.node, path=path, code=CODE, message=message)
+        return Violation.from_node(
+            node=imported.node,
+            path=path,
+            code=CODE,
+            message=message,
+        )

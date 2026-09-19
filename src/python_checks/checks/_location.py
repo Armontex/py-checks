@@ -50,7 +50,13 @@ class Place:
         директория, и как файл `exceptions.py`: для словаря отказов это одно и
         то же место.
         """
-        return _run(parts=self.parts, wanted=path) is not None
+        return (
+            _run(
+                parts=self.parts,
+                wanted=path,
+            )
+            is not None
+        )
 
     def within(self, *, directory: str) -> int | None:
         """Где кончается самое глубокое вхождение этих директорий, или `None`.
@@ -60,23 +66,36 @@ class Place:
         можно только по тому, где они кончаются, — глубже тот, кто кончается
         позже.
         """
-        return _run(parts=self.parts[:-1], wanted=directory)
+        return _run(
+            parts=self.parts[:-1],
+            wanted=directory,
+        )
 
 
 def place(*, file: ParsedFile) -> Place | None:
     """Адрес файла; `None`, если корень исходников неизвестен или файл вне его."""
     if file.source is None:
         return None
-    relative = _relative(path=file.path, source=file.source)
+    relative = _relative(
+        path=file.path,
+        source=file.source,
+    )
     if relative is None or len(relative) < INSIDE:
         return None
     parts = relative[1:]
     if parts[-1] == INIT:
         parts = parts[:-1]
-    return Place(package=relative[0], parts=parts)
+    return Place(
+        package=relative[0],
+        parts=parts,
+    )
 
 
-def _relative(*, path: Path, source: Path) -> tuple[str, ...] | None:
+def _relative(
+    *,
+    path: Path,
+    source: Path,
+) -> tuple[str, ...] | None:
     try:
         inside = path.resolve().relative_to(source.resolve())
     except ValueError:
@@ -84,7 +103,11 @@ def _relative(*, path: Path, source: Path) -> tuple[str, ...] | None:
     return inside.with_suffix("").parts
 
 
-def _run(*, parts: tuple[str, ...], wanted: str) -> int | None:
+def _run(
+    *,
+    parts: tuple[str, ...],
+    wanted: str,
+) -> int | None:
     """Конец последнего вхождения подряд идущих кусков пути."""
     needle = tuple(wanted.split(SEPARATOR))
     span = len(needle)

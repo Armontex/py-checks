@@ -19,7 +19,10 @@ CODE: Final = "module-length"
 
 
 class ModuleLengthSettings(CheckSettings):
-    max_lines: int = Field(default=600, gt=0)
+    max_lines: int = Field(
+        default=600,
+        gt=0,
+    )
 
 
 class ModuleLength:
@@ -37,8 +40,17 @@ class ModuleLength:
     Settings: ClassVar[type[CheckSettings]] = ModuleLengthSettings
     marker: ClassVar[str] = MARKER
 
-    def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
-        limits = settings_as(settings=settings, model=ModuleLengthSettings, code=CODE)
+    def run(
+        self,
+        *,
+        file: ParsedFile,
+        settings: CheckSettings,
+    ) -> Iterator[Violation]:
+        limits = settings_as(
+            settings=settings,
+            model=ModuleLengthSettings,
+            code=CODE,
+        )
         length = len(file.lines)
         if length <= limits.max_lines:
             return

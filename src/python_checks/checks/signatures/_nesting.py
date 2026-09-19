@@ -71,13 +71,27 @@ class Nesting:
     marker: ClassVar[str] = MARKER
 
     @classmethod
-    def run(cls, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
-        limits = settings_as(settings=settings, model=NestingSettings, code=CODE).limits
+    def run(
+        cls,
+        *,
+        file: ParsedFile,
+        settings: CheckSettings,
+    ) -> Iterator[Violation]:
+        limits = settings_as(
+            settings=settings,
+            model=NestingSettings,
+            code=CODE,
+        ).limits
         if not limits:
             return
         depths = dict.fromkeys(limits, 0)
         for node in file.tree.body:
-            yield from cls._visit(file=file, node=node, depths=depths, limits=limits)
+            yield from cls._visit(
+                file=file,
+                node=node,
+                depths=depths,
+                limits=limits,
+            )
 
     @classmethod
     def _visit(
@@ -88,7 +102,10 @@ class Nesting:
         depths: dict[str, int],
         limits: dict[str, int],
     ) -> Iterator[Violation]:
-        kind = cls._kind(node=node, limits=limits)
+        kind = cls._kind(
+            node=node,
+            limits=limits,
+        )
         if kind is not None:
             depth = depths[kind] + 1
             if depth > limits[kind]:
@@ -102,12 +119,24 @@ class Nesting:
             depths = {**depths, kind: depth}
         for child in cls._children(node=node):
             inner = depths
-            if isinstance(node, ast.If) and cls._elif(node=node, child=child):
+            if isinstance(node, ast.If) and cls._elif(
+                node=node,
+                child=child,
+            ):
                 inner = {**depths, "if": depths["if"] - 1}
-            yield from cls._visit(file=file, node=child, depths=inner, limits=limits)
+            yield from cls._visit(
+                file=file,
+                node=child,
+                depths=inner,
+                limits=limits,
+            )
 
     @staticmethod
-    def _kind(*, node: ast.stmt, limits: dict[str, int]) -> str | None:
+    def _kind(
+        *,
+        node: ast.stmt,
+        limits: dict[str, int],
+    ) -> str | None:
         return next((kind for kind in limits if isinstance(node, KINDS[kind])), None)
 
     @staticmethod
@@ -118,6 +147,10 @@ class Nesting:
             yield from handler.body
 
     @staticmethod
-    def _elif(*, node: ast.If, child: ast.stmt) -> bool:
+    def _elif(
+        *,
+        node: ast.If,
+        child: ast.stmt,
+    ) -> bool:
         """`elif` стоит в той же колонке, что его `if`; написанный `else: if` — нет."""
         return isinstance(child, ast.If) and child.col_offset == node.col_offset

@@ -47,12 +47,27 @@ class SealedImports:
     marker: ClassVar[str] = MARKER
 
     @classmethod
-    def run(cls, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
-        own = settings_as(settings=settings, model=SealedSettings, code=CODE)
+    def run(
+        cls,
+        *,
+        file: ParsedFile,
+        settings: CheckSettings,
+    ) -> Iterator[Violation]:
+        own = settings_as(
+            settings=settings,
+            model=SealedSettings,
+            code=CODE,
+        )
         where = place(file=file)
-        if where is None or not cls._sealed(where=where, zones=own.zones):
+        if where is None or not cls._sealed(
+            where=where,
+            zones=own.zones,
+        ):
             return
-        allowed = cls._allowed(where=where, allow=own.allow)
+        allowed = cls._allowed(
+            where=where,
+            allow=own.allow,
+        )
         for imported in imports(tree=file.tree):
             if imported.stdlib or imported.top in {where.package, *allowed}:
                 continue
@@ -67,10 +82,18 @@ class SealedImports:
             )
 
     @staticmethod
-    def _sealed(*, where: Place, zones: tuple[str, ...]) -> bool:
+    def _sealed(
+        *,
+        where: Place,
+        zones: tuple[str, ...],
+    ) -> bool:
         return any(part in zones for part in where.parts)
 
     @staticmethod
-    def _allowed(*, where: Place, allow: dict[str, tuple[str, ...]]) -> frozenset[str]:
+    def _allowed(
+        *,
+        where: Place,
+        allow: dict[str, tuple[str, ...]],
+    ) -> frozenset[str]:
         """Что можно этому слою: зона у файла одна, а слой внутри неё — свой."""
         return frozenset(package for part in where.parts for package in allow.get(part, ()))

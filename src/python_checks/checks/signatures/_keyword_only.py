@@ -2,43 +2,29 @@
 
 from __future__ import annotations
 
-import ast
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Final
 
+from python_checks.checks.signatures._functions import (
+    Definition,
+    definitions,
+    receiver,
+    signature_end,
+)
 from python_checks.checks.signatures._marker import MARKER
 from python_checks.config import CheckSettings
-from python_checks.core import Edit, Violation
+from python_checks.core import Edit, Violation, column
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from python_checks.checks.signatures._functions import Function
     from python_checks.core import ParsedFile
 
 CODE: Final = "keyword-only-arguments"
 
-type Function = ast.FunctionDef | ast.AsyncFunctionDef
-
-# Единственный способ для метода не получить первый аргумент от интерпретатора.
-STATIC: Final = "staticmethod"
-
 # Дандеры, которые зовёт наш собственный код: их вызов — такой же вызов, как
 # любой другой. Остальные дандеры зовёт интерпретатор, и подпись у них не наша.
 OWN_DUNDERS: Final[frozenset[str]] = frozenset({"__init__", "__new__", "__call__"})
-
-
-@dataclass(frozen=True, slots=True)
-class Definition:
-    """Функция и то, что о ней знает только дерево.
-
-    Первый аргумент метода передаёт интерпретатор, и автор подписи тут ни при
-    чём — но узнаётся это по месту, а не по имени. `self` в обычной функции или
-    в `@staticmethod` — обычный аргумент, и спрашивать его по позиции нельзя.
-    """
-
-    name: str
-    node: Function
-    method: bool
 
 
 class KeywordOnlyArguments:
@@ -64,17 +50,30 @@ class KeywordOnlyArguments:
     Settings: ClassVar[type[CheckSettings]] = CheckSettings
     marker: ClassVar[str] = MARKER
 
-    def run(self, *, file: ParsedFile, settings: CheckSettings) -> Iterator[Violation]:
+    def run(
+        self,
+        *,
+        file: ParsedFile,
+        settings: CheckSettings,
+    ) -> Iterator[Violation]:
         _ = settings
-        for definition in self._definitions(node=file.tree):
+        for definition in definitions(node=file.tree):
             if self._interpreter_dunder(name=definition.name):
                 continue
-            yield from self._violations(definition=definition, file=file)
+            yield from self._violations(
+                definition=definition,
+                file=file,
+            )
 
     @classmethod
-    def _violations(cls, *, definition: Definition, file: ParsedFile) -> Iterator[Violation]:
+    def _violations(
+        cls,
+        *,
+        definition: Definition,
+        file: ParsedFile,
+    ) -> Iterator[Violation]:
         node, name = definition.node, definition.name
-        end_line = cls._signature_end(node=node)
+        end_line = signature_end(node=node)
         if positional := cls._positional(definition=definition):
             yield Violation.from_node(
                 node=node,
@@ -84,7 +83,10 @@ class KeywordOnlyArguments:
                     f"{name} принимает {', '.join(positional)} по позиции; поставь `*` перед ними"
                 ),
                 end_line=end_line,
-                edit=cls._star(definition=definition),
+                edit=cls._star(
+                    definition=definition,
+                    file=file,
+                ),
             )
         if collected := cls._collectors(node=node):
             yield Violation.from_node(
@@ -94,30 +96,6 @@ class KeywordOnlyArguments:
                 message=f"{name} принимает {', '.join(collected)}; перечисли аргументы по имени",
                 end_line=end_line,
             )
-
-    @classmethod
-    def _definitions(
-        cls,
-        *,
-        node: ast.AST,
-        prefix: str = "",
-        method: bool = False,
-    ) -> Iterator[Definition]:
-        """Все функции дерева под именами вида `Класс.метод` или `внешняя.вложенная`.
-
-        Заодно запоминается, тело какого узла мы разбираем: функция в теле
-        класса — метод, а функция внутри метода — уже нет, и первый аргумент ей
-        никто не передаёт.
-        """
-        for child in ast.iter_child_nodes(node):
-            match child:
-                case ast.ClassDef(name=name):
-                    yield from cls._definitions(node=child, prefix=f"{prefix}{name}.", method=True)
-                case ast.FunctionDef(name=name) | ast.AsyncFunctionDef(name=name):
-                    yield Definition(name=f"{prefix}{name}", node=child, method=method)
-                    yield from cls._definitions(node=child, prefix=f"{prefix}{name}.", method=False)
-                case _:
-                    yield from cls._definitions(node=child, prefix=prefix, method=method)
 
     @staticmethod
     def _interpreter_dunder(*, name: str) -> bool:
@@ -129,28 +107,9 @@ class KeywordOnlyArguments:
     @classmethod
     def _positional(cls, *, definition: Definition) -> tuple[str, ...]:
         """Аргументы, которые вызывающий может передать по позиции."""
-        skip = cls._receiver(definition=definition)
+        skip = receiver(definition=definition)
         arguments = [*definition.node.args.posonlyargs, *definition.node.args.args]
         return tuple(argument.arg for argument in arguments[skip:])
-
-    @classmethod
-    def _receiver(cls, *, definition: Definition) -> int:
-        """Сколько первых аргументов передаёт интерпретатор: один у метода, иначе ноль."""
-        if not definition.method or cls._static(node=definition.node):
-            return 0
-        return 1
-
-    @classmethod
-    def _static(cls, *, node: Function) -> bool:
-        return STATIC in tuple(cls._decorator(node=item) for item in node.decorator_list)
-
-    @staticmethod
-    def _decorator(*, node: ast.expr) -> str:
-        match node:
-            case ast.Name(id=name) | ast.Attribute(attr=name):
-                return name
-            case _:
-                return ""
 
     @staticmethod
     def _collectors(*, node: Function) -> tuple[str, ...]:
@@ -159,7 +118,12 @@ class KeywordOnlyArguments:
         return tuple(f"{star}{argument.arg}" for argument, star in stars if argument)
 
     @classmethod
-    def _star(cls, *, definition: Definition) -> Edit | None:
+    def _star(
+        cls,
+        *,
+        definition: Definition,
+        file: ParsedFile,
+    ) -> Edit | None:
         """Правка: `*` перед первым аргументом, который сейчас идёт по позиции.
 
         Не для всех случаев. При `*args` вторая звезда в подписи не встанет, а
@@ -169,11 +133,16 @@ class KeywordOnlyArguments:
         node = definition.node
         if node.args.vararg is not None or node.args.posonlyargs:
             return None
-        first = node.args.args[cls._receiver(definition=definition)]
-        line, column = first.lineno, first.col_offset + 1
-        return Edit(line=line, column=column, end_line=line, end_column=column, text="*, ")
-
-    @staticmethod
-    def _signature_end(*, node: Function) -> int:
-        """Последняя строка подписи: на ней стоит маркер, если подпись в столбик."""
-        return max(node.body[0].lineno - 1, node.lineno)
+        first = node.args.args[receiver(definition=definition)]
+        line = first.lineno
+        at = column(
+            line=file.lines[line - 1],
+            offset=first.col_offset,
+        )
+        return Edit(
+            line=line,
+            column=at,
+            end_line=line,
+            end_column=at,
+            text="*, ",
+        )

@@ -7,7 +7,7 @@
 
 from python_checks.core._constants import EXIT_OK, EXIT_VIOLATION, GROUP
 from python_checks.core._discovery import python_files
-from python_checks.core._edit import Edit, apply
+from python_checks.core._edit import Edit, apply, column
 from python_checks.core._errors import ParseError, UnknownCheckError
 from python_checks.core._fixer import fix
 from python_checks.core._format import reformat
@@ -36,6 +36,7 @@ __all__ = [
     "Violation",
     "apply",
     "available",
+    "column",
     "complaints",
     "fix",
     "get",

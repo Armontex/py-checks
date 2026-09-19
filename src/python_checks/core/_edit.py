@@ -26,7 +26,25 @@ class Edit:
     text: str
 
 
-def apply(*, text: str, edits: Sequence[Edit]) -> str:
+def column(
+    *,
+    line: str,
+    offset: int,
+) -> int:
+    """Колонка правки по смещению из дерева, с единицы.
+
+    `ast` считает `col_offset` в БАЙТАХ utf-8, а правка индексирует строку
+    символами. Совпадает это ровно до первого не-ascii символа в строке: одно
+    русское слово в литерале раньше по строке — и запятая встаёт не туда.
+    """
+    return len(line.encode("utf-8")[:offset].decode("utf-8", errors="ignore")) + 1
+
+
+def apply(
+    *,
+    text: str,
+    edits: Sequence[Edit],
+) -> str:
     """Исходник со всеми правками.
 
     Накладываются с конца файла к началу: тогда позиции ещё не наложенных
@@ -37,9 +55,21 @@ def apply(*, text: str, edits: Sequence[Edit]) -> str:
     starts = _starts(text=text)
     applied = len(text)
     result = text
-    for edit in sorted(edits, key=lambda edit: (edit.line, edit.column), reverse=True):
-        start = _offset(starts=starts, line=edit.line, column=edit.column)
-        end = _offset(starts=starts, line=edit.end_line, column=edit.end_column)
+    for edit in sorted(
+        edits,
+        key=lambda edit: (edit.line, edit.column),
+        reverse=True,
+    ):
+        start = _offset(
+            starts=starts,
+            line=edit.line,
+            column=edit.column,
+        )
+        end = _offset(
+            starts=starts,
+            line=edit.end_line,
+            column=edit.end_column,
+        )
         if end > applied:
             continue
         result = result[:start] + edit.text + result[end:]
@@ -53,5 +83,10 @@ def _starts(*, text: str) -> tuple[int, ...]:
     return (0, *accumulate(lengths))
 
 
-def _offset(*, starts: Sequence[int], line: int, column: int) -> int:
+def _offset(
+    *,
+    starts: Sequence[int],
+    line: int,
+    column: int,
+) -> int:
     return starts[min(line, len(starts)) - 1] + column - 1

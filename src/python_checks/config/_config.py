@@ -24,7 +24,10 @@ class Config(CheckSettings):
     exclude: tuple[str, ...] = DEFAULT_EXCLUDE
     extend_exclude: tuple[str, ...] = ()
     ignore: tuple[str, ...] = ()
-    checks: dict[str, TomlTable] = Field(default_factory=dict, exclude=True)
+    checks: dict[str, TomlTable] = Field(
+        default_factory=dict,
+        exclude=True,
+    )
 
     @property
     def excluded(self) -> tuple[str, ...]:
@@ -38,7 +41,12 @@ class Config(CheckSettings):
     def section(self, *, code: str) -> TomlTable:
         return self.checks.get(code, {})
 
-    def settings_for(self, *, code: str, model: type[CheckSettings]) -> CheckSettings:
+    def settings_for(
+        self,
+        *,
+        code: str,
+        model: type[CheckSettings],
+    ) -> CheckSettings:
         """Настройки проверки: её секция, проверенная её же моделью."""
         try:
             return model.model_validate(self.section(code=code))
