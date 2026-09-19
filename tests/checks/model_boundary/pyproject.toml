@@ -1,0 +1,7 @@
+[tool.python-checks]
+src = "."
+
+[tool.python-checks.model-boundary]
+base = "Base"
+declared = ["infra/database/models"]
+built = ["infra/database/repositories"]
