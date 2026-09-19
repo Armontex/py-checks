@@ -25,6 +25,7 @@ required-class = "python_checks.checks.placement:RequiredClass"
 confined-imports = "python_checks.checks.imports:ConfinedImports"
 keyword-only-arguments = "python_checks.checks.signatures:KeywordOnlyArguments"
 module-length = "python_checks.checks.signatures:ModuleLength"
+nesting = "python_checks.checks.signatures:Nesting"
 sealed-imports = "python_checks.checks.imports:SealedImports"
 
 [dependency-groups]

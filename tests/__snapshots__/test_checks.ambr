@@ -43,6 +43,13 @@
     'bad/too_long.py:11:1: module-length: 13 строк, предел 10',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[nesting]
+  list([
+    'bad/deep.py:6:9: nesting: try вложен на 2, предел 1',
+    'bad/deep.py:17:13: nesting: if вложен на 3, предел 2',
+    'bad/deep.py:27:13: nesting: if вложен на 3, предел 2',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[operation_shape]
   list([
     'bad/application/services/limits.py:5:14: operation-shape: LimitsService держит UnitOfWorkFactory; операции передают то, через что она пишет, а транзакция остаётся вызывающему',
