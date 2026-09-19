@@ -30,11 +30,11 @@
 догадывается за вас, как называется ваш домен.
 
 ```
-src/betting/modules/cashout/application/offer.py:34:9: determinism: uuid4() не детерминирован;
+src/app/modules/cashout/application/offer.py:34:9: determinism: uuid4() не детерминирован;
     идентификатор выдают на краю и передают внутрь
-src/betting/infra/database/models/bet.py:51:5: model-columns: stake — Numeric без ограничений;
+src/app/infra/database/models/bet.py:51:5: model-columns: stake — Numeric без ограничений;
     деньги описывают Numeric(18, 4)
-src/betting/presentation/api/v1/routers/bets.py:22:1: endpoint-declarations: POST /bets
+src/app/presentation/api/v1/routers/bets.py:22:1: endpoint-declarations: POST /bets
     не назвал response_model
 ```
 

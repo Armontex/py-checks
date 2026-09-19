@@ -5,7 +5,7 @@ dependencies = [
     "pydantic>=2.13.5,<3",
     "structlog~=26.1",
     "greenlet==3.5.5",
-    "sportsbook-contracts",
+    "shared-contracts",
     "uvloop>=0.22,<0.23; sys_platform != 'win32'",
 ]
 
@@ -20,7 +20,7 @@ requires = ["hatchling>=1.28,<2"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
-sportsbook-contracts = { git = "ssh://git@github.com/example/contracts", rev = "8dca828" }
+shared-contracts = { git = "ssh://git@github.com/example/contracts", rev = "8dca828" }
 
 [tool.py-checks]
 src = "src"
