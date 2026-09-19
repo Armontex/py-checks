@@ -10,7 +10,7 @@ from rich.table import Table
 
 from python_checks.cli.commands._summary import summary
 from python_checks.config import find_root, load
-from python_checks.core import available
+from python_checks.core import available, available_project
 
 if TYPE_CHECKING:
     import typer
@@ -26,7 +26,8 @@ def list_checks() -> None:
     table.add_column("код")
     table.add_column("состояние")
     table.add_column("что делает")
-    for code, check in sorted(available().items()):
+    listed = {**available(), **available_project()}
+    for code, check in sorted(listed.items()):
         state = "вкл" if config.enabled(code=code) else "выкл"
         table.add_row(code, state, summary(check=check))
     Console().print(table)

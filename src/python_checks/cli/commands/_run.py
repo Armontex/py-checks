@@ -10,10 +10,14 @@ import typer
 from python_checks.config import Config, find_root, load
 from python_checks.core import (
     FileCheck,
+    ProjectCheck,
     Violation,
     available,
+    available_project,
+    examine,
     fix,
     get,
+    get_project,
     inspect,
     python_files,
     reformat,
@@ -48,12 +52,23 @@ def run(  # check-ok: keyword-only-arguments: подпись команды ра
         default=root / config.src,
         exclude=config.excluded,
     )
-    violations = inspect(
-        files=files,
-        checks=checks,
-        config=config,
-        root=root,
-    )
+    violations = [
+        *inspect(
+            files=files,
+            checks=checks,
+            config=config,
+            root=root,
+        ),
+        *examine(
+            checks=_project(
+                select=select,
+                config=config,
+                paths=paths,
+            ),
+            config=config,
+            root=root,
+        ),
+    ]
     if autofix:
         violations = _fixed(violations=violations)
     raise typer.Exit(
@@ -85,6 +100,27 @@ def _chosen(
     if select:
         return [get(code=code) for code in select]
     return [check for code, check in sorted(available().items()) if config.enabled(code=code)]
+
+
+def _project(
+    *,
+    select: list[str] | None,
+    config: Config,
+    paths: list[Path] | None,
+) -> list[ProjectCheck]:
+    """Правила про проект целиком: они судят не файлы, а манифест и репозиторий.
+
+    Названные пути их не касаются — прогон по одному файлу проверяет этот файл,
+    а не проект вокруг него; поэтому с путями они молчат, если их не позвали по
+    имени.
+    """
+    if select:
+        return [get_project(code=code) for code in select if code in available_project()]
+    if paths:
+        return []
+    return [
+        check for code, check in sorted(available_project().items()) if config.enabled(code=code)
+    ]
 
 
 def register(*, app: typer.Typer) -> None:

@@ -1,0 +1,17 @@
+[project]
+name = "floating"
+version = "0"
+dependencies = [
+    "pydantic>=2.13.5",
+    "httpx",
+]
+
+[dependency-groups]
+dev = ["pytest>=9.1", "mypy==1.18.2"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.python-checks]
+src = "src"

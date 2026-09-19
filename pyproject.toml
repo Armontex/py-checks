@@ -8,8 +8,8 @@ requires-python = ">=3.14"
 dependencies = [
     "import-linter>=2.15,<3",
     "libcst>=1.9,<2",
-    "pydantic>=2.13.5",
-    "pydantic-settings>=2.15.0",
+    "pydantic>=2.13.5,<3",
+    "pydantic-settings>=2.15.0,<3",
     "rich>=15.0.0,<16.0.0",
     "typer>=0.27.2,<0.28",
 ]
@@ -43,6 +43,9 @@ module-length = "python_checks.checks.signatures:ModuleLength"
 nesting = "python_checks.checks.signatures:Nesting"
 signature-layout = "python_checks.checks.signatures:SignatureLayout"
 sealed-imports = "python_checks.checks.imports:SealedImports"
+
+[project.entry-points."python_checks.project_checks"]
+dependency-bounds = "python_checks.checks.hygiene:DependencyBounds"
 
 [dependency-groups]
 dev = [

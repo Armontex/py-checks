@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from python_checks.config import CheckSettings, Config
-    from python_checks.core._protocols import FileCheck
+    from python_checks.core._protocols import FileCheck, ProjectCheck
 
 SYNTAX: Final = "syntax"
 
@@ -56,6 +56,30 @@ def inspect(
             )
         )
     return violations
+
+
+def examine(
+    *,
+    checks: Sequence[ProjectCheck],
+    config: Config,
+    root: Path,
+) -> list[Violation]:
+    """Нарушения правил, которым нужен проект целиком.
+
+    Каждое зовётся один раз: что прочитать — манифест, пару файлов, дерево, —
+    решает оно само.
+    """
+    return [
+        violation
+        for check in checks
+        for violation in check.run(
+            root=root,
+            settings=config.settings_for(
+                code=check.code,
+                model=check.Settings,
+            ),
+        )
+    ]
 
 
 def _aliases(*, registered: Mapping[str, FileCheck]) -> dict[str, frozenset[str]]:

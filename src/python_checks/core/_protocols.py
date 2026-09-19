@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
     from python_checks.config import CheckSettings
     from python_checks.core._source import ParsedFile
@@ -36,3 +37,29 @@ class FileCheck(Protocol):
         file: ParsedFile,
         settings: CheckSettings,
     ) -> Iterator[Violation]: ...
+
+
+@runtime_checkable
+class ProjectCheck(Protocol):
+    """Правило, которому одного файла мало.
+
+    Манифест зависимостей, согласие двух файлов репозитория между собой — то,
+    что живёт не в исходнике, а в проекте. Такое правило вызывается один раз за
+    прогон и само решает, что ему прочитать; ядро даёт ему корень и настройки.
+    """
+
+    code: str
+    Settings: type[CheckSettings]
+    marker: str
+
+    def run(
+        self,
+        *,
+        root: Path,
+        settings: CheckSettings,
+    ) -> Iterator[Violation]: ...
+
+
+# Правило — это одно из двух: судящее файл или судящее проект. Там, где важно
+# лишь то, что у него есть код и описание (список, объяснение), годится любое.
+type Check = FileCheck | ProjectCheck

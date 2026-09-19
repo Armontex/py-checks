@@ -1,0 +1,26 @@
+[project]
+name = "bounded"
+version = "0"
+dependencies = [
+    "pydantic>=2.13.5,<3",
+    "structlog~=26.1",
+    "greenlet==3.5.5",
+    "sportsbook-contracts",
+    "uvloop>=0.22,<0.23; sys_platform != 'win32'",
+]
+
+[project.optional-dependencies]
+otel = ["opentelemetry-sdk>=1.40,<2"]
+
+[dependency-groups]
+dev = ["pytest>=9.1,<10"]
+
+[build-system]
+requires = ["hatchling>=1.28,<2"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+sportsbook-contracts = { git = "ssh://git@github.com/example/contracts", rev = "8dca828" }
+
+[tool.python-checks]
+src = "src"
