@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
-from python_checks.contracts._constants import MIGRATIONS, MODULES, VERSIONS
+from python_checks.config import prefix
+from python_checks.contracts._constants import MIGRATIONS, MODULES, SECTION, VERSIONS
 from python_checks.contracts._layout import expressions, migrations, modules, package
 from python_checks.contracts._settings import contracts
 
@@ -15,9 +16,9 @@ if TYPE_CHECKING:
     from python_checks.config import Config
 
 HEADER: Final = """\
-# Контракты импортов. Файл собирает `python-checks sync` из секции
-# [tool.python-checks.contracts] и того, какие слои есть на диске — править его
-# нечего, следующий sync перезапишет. Менять нужно секцию.
+# Контракты импортов. Файл собирает `python-checks sync` из того, какие слои
+# есть на диске, и из секции [{section}] — править его нечего, следующий sync
+# перезапишет. Менять нужно секцию.
 """
 
 
@@ -46,7 +47,10 @@ def render(
         return None
     return "\n".join(
         [
-            HEADER,
+            # Секция зовётся по-разному в манифесте и в своём файле настроек:
+            # написать одно имя значит послать читателя не туда в половине
+            # проектов.
+            HEADER.format(section=f"{prefix(source=config.origin)}{SECTION}"),
             _roots(
                 root=root,
                 package=name,

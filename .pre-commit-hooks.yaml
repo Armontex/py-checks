@@ -1,27 +1,23 @@
+# Хуки, которые публикует библиотека. Всё остальное — ruff, pyright,
+# import-linter, commitizen — проект объявляет сам: у каждого есть свой хук,
+# написанный его же авторами, и о себе они знают больше, чем знали бы мы.
+
 - id: python-checks
   name: проверки соглашений проекта
-  description: все проверки, включённые в [tool.python-checks]
+  description: код следует соглашениям, записанным в настройках проекта
+  # Один хук, а не хук на правило: что включено, решает конфиг проекта, и
+  # список хуков не обязан повторять его вторым голосом. Починить то, что
+  # чинится само, — `args: [--fix]`; позвать одно правило — `args: [--select,
+  # <код>]`. Так же это устроено у ruff.
   entry: python-checks run
-  language: python
-  types: [python]
-
-- id: module-length
-  name: модуль не длиннее лимита
-  description: длинный модуль — это обычно несколько модулей, которые не разъехались вовремя
-  entry: python-checks run --select module-length
-  language: python
-  types: [python]
-
-- id: keyword-only-arguments
-  name: сигнатура записана полностью
-  description: аргумент, переданный по позиции, читается только вместе с сигнатурой
-  entry: python-checks run --select keyword-only-arguments --fix
   language: python
   types: [python]
 
 - id: python-checks-sync
   name: контракты импортов собраны заново
   description: файл контрактов отстаёт от объявленных слоёв или от того, что лежит на диске
+  # Собирается из таблицы слоёв и из того, что лежит на диске, поэтому отстать
+  # может и без правки самого файла — отсюда `always_run`.
   entry: python-checks sync --check
   language: python
   always_run: true

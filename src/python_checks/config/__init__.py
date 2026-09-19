@@ -9,7 +9,7 @@
 """
 
 from python_checks.config._base import CheckSettings
-from python_checks.config._config import Config
+from python_checks.config._config import Config, prefix
 from python_checks.config._constants import DEFAULT_EXCLUDE, PYPROJECT, SECTION, STANDALONE
 from python_checks.config._errors import ConfigError
 from python_checks.config._loader import find_root, load
@@ -27,4 +27,5 @@ __all__ = [
     "TomlValue",
     "find_root",
     "load",
+    "prefix",
 ]
