@@ -89,6 +89,18 @@
     'bad/positional.py:39:9: keyword-only-arguments: Outer.method.inner принимает self по позиции; поставь `*` перед ними',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[model_columns]
+  list([
+    'bad/infra/database/models/bet.py:29:5: model-columns: Decimal говорит вид, а не правило; возьми примитив с его границей',
+    'bad/infra/database/models/bet.py:30:5: model-columns: str говорит вид, а не правило; возьми примитив с его границей',
+    'bad/infra/database/models/bet.py:32:5: model-columns: str говорит вид, а не правило; возьми примитив с его границей',
+    'bad/infra/database/models/bet.py:32:5: model-columns: аннотация и nullable= расходятся; во время работы побеждает то, чего проверяльщик типов не видит',
+    'bad/infra/database/models/bet.py:31:35: model-columns: server_default= заполняет колонку за писателя, который её не написал; передай значение в запросе',
+    'bad/infra/database/models/bet.py:29:44: model-columns: Float дрейфует; состояние точно, используй Numeric',
+    'bad/infra/database/models/bet.py:30:41: model-columns: голый Enum — нативный тип Postgres; используй stored_enum()',
+    'bad/infra/database/models/bet.py:31:49: model-columns: DateTime без timezone=True хранит наивную метку времени; скажи timezone=True',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[module_length]
   list([
     'bad/too_long.py:11:1: module-length: 13 строк, предел 10',
