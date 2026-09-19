@@ -1,4 +1,10 @@
 # serializer version: 1
+# name: test_check_output_matches_the_snapshot[argument_count]
+  list([
+    'bad/settle_bet.py:5:5: argument-count: SettleBetUseCase.execute — аргументов 4, предел 3; передай команду, запрос или DTO',
+    'bad/settle_bet.py:9:5: argument-count: SettleBetUseCase.rounded — аргументов 4, предел 3; передай команду, запрос или DTO',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[class_modules]
   list([
     'bad/application/services/pricing.py:9:1: class-modules: helper — функция; в application/services держат класс',

@@ -1,0 +1,6 @@
+[tool.python-checks]
+src = "."
+
+[[tool.python-checks.argument-count.subjects]]
+suffix = "UseCase"
+max-arguments = 3
