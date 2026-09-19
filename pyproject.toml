@@ -1,7 +1,7 @@
 [project]
 name = "python-checks"
 version = "0.1.0"
-description = "Add your description here"
+description = "Проверки архитектурных соглашений проекта"
 readme = "README.md"
 authors = [{ name = "Armontex", email = "windle1337@gmail.com" }]
 requires-python = ">=3.14"
@@ -46,85 +46,21 @@ sealed-imports = "python_checks.checks.imports:SealedImports"
 signature-layout = "python_checks.checks.signatures:SignatureLayout"
 statement-keys = "python_checks.checks.database:StatementKeys"
 
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"
+
 [dependency-groups]
 dev = [
     "bandit>=1.9.4,<2",
     "commitizen>=4.10,<5",
-    "hypothesmith>=0.3.3,<0.4",
     "pre-commit>=4.6.2,<5",
     "pyright>=1.1.414,<2",
     "pytest>=9.1.1,<10",
     "pytest-cov>=7.1.0,<8",
-    "pytest-examples>=0.0.18,<0.0.19",
     "pytest-mock>=3.15.1,<4",
     "pytest-randomly>=5.0.0,<6",
     "pytest-timeout>=2.4.0,<3",
     "ruff>=0.16.7,<0.17",
     "syrupy>=6.1.1,<7",
 ]
-
-[build-system]
-requires = ["uv_build>=0.12.15,<0.13.0"]
-build-backend = "uv_build"
-
-[tool.commitizen]
-name = "cz_conventional_commits"
-version_provider = "uv"
-tag_format = "v$version"
-major_version_zero = true
-update_changelog_on_bump = true
-
-[tool.python-checks]
-# Таблицы настроек библиотеки — это `dict[str, ...]`, у которых ключ приходит
-# из TOML проекта: путь, имя пакета, код проверки. Ключи здесь и есть данные,
-# то есть ровно тот случай, ради которого у правила существует пометка, — а
-# ставить её тридцать три раза значит написать «это не поля» в каждом файле.
-ignore = ["annotation-shapes"]
-# примеры для проверок нарушают правила намеренно
-extend-exclude = ["tests/checks/*"]
-
-# Библиотека — не сервис: точек входа у неё нет, командная строка и есть край.
-[tool.python-checks.confined-imports.packages]
-typer = ["cli"]
-
-# Слои этой библиотеки: `config` не знает никого, `core` стоит на нём, правила
-# и контракты стоят на ядре, а `cli` собирает всё вместе и потому видит всех.
-[tool.python-checks.contracts.layers]
-config = ["config"]
-core = ["core", "config"]
-checks = ["checks", "core", "config"]
-contracts = ["contracts", "config"]
-sync = ["sync", "contracts", "config"]
-cli = ["cli", "sync", "contracts", "core", "config"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = [
-    "tests/unit",
-    "tests/integrations",
-    "tests/harness",
-    "tests/golden",
-    "tests/perf",
-    "tests/chaos",
-    "tests/e2e",
-]
-python_files = ["*_test.py", "test_*.py"]
-addopts = "--tb=short --strict-markers"
-timeout = 60
-asyncio_mode = "auto"
-markers = [
-    "integration: touches the database on disk",
-    "chaos: needs the disposable LLM fault-injection stand",
-    "harness: exercises several real components through an outside boundary",
-    "perf: performance tests",
-    "end_two_end: e2d tests",
-    "slow: slow tests",
-]
-
-[tool.coverage.run]
-source = ["src/assistant"]
-branch = true
-
-[tool.coverage.report]
-fail_under = 80
-exclude_also = ["if TYPE_CHECKING:", "\\.\\.\\.$"]

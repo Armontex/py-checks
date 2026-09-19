@@ -1,0 +1,8 @@
+[run]
+source = src/python_checks
+branch = True
+
+[report]
+exclude_also =
+    if TYPE_CHECKING:
+    \.\.\.$

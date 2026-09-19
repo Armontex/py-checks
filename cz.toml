@@ -1,0 +1,33 @@
+[tool.commitizen]
+name = "cz_conventional_commits"
+# Версия живёт в `[project] version` манифеста; этот провайдер пишет её туда и
+# держит `uv.lock` в согласии, так что число записано в одном месте.
+version_provider = "uv"
+version_scheme = "semver"
+tag_format = "v$version"
+# Пока проект 0.x, ломающее изменение поднимает минорную, а не режет 1.0.0 —
+# обещание стабильности, которого никто не давал.
+major_version_zero = true
+# Объект с автором, датой и сообщением, а не голый указатель: `git describe` и
+# любой хостинг читают аннотированный тег как релиз.
+annotated_tag = true
+update_changelog_on_bump = true
+# Дописывать новый раздел, а не собирать файл заново: правки, внесённые в
+# CHANGELOG.md руками, переживают следующий релиз.
+changelog_incremental = true
+
+use_shortcuts = true
+# После отклонённого сообщения следующий `cz commit` предлагает уже данные
+# ответы, а не спрашивает всё заново.
+retry_after_failure = true
+# Только строка темы, её и проверяет хук commit-msg.
+message_length_limit = 72
+# Не предел, а перенос: тело переформатируется по этой ширине в `cz commit`.
+body_length_limit = 100
+
+# Заголовки, под которые эти типы попадают в changelog.
+[tool.commitizen.change_type_map]
+feat = "Features"
+fix = "Fixes"
+refactor = "Refactoring"
+perf = "Performance"
