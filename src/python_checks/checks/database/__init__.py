@@ -5,6 +5,7 @@
 на откат, остальное — соглашения проекта.
 """
 
+from python_checks.checks.database._bound_checks import BoundChecks, BoundChecksSettings
 from python_checks.checks.database._confined_calls import (
     Confined,
     ConfinedCalls,
@@ -16,6 +17,8 @@ from python_checks.checks.database._statement_keys import StatementKeys, Stateme
 
 __all__ = [
     "MARKER",
+    "BoundChecks",
+    "BoundChecksSettings",
     "Confined",
     "ConfinedCalls",
     "ConfinedCallsSettings",

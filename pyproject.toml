@@ -18,6 +18,7 @@ dependencies = [
 python-checks = "python_checks.cli:main"
 
 [project.entry-points."python_checks.checks"]
+bound-checks = "python_checks.checks.database:BoundChecks"
 class-modules = "python_checks.checks.placement:ClassModules"
 annotation-shapes = "python_checks.checks.types:AnnotationShapes"
 config-fields = "python_checks.checks.types:ConfigFields"

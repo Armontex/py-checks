@@ -6,6 +6,12 @@
     'bad/loose.py:12:29: annotation-shapes: dict[str, str] читается как набор именованных полей; какие именно — скажет TypedDict или dataclass',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[bound_checks]
+  list([
+    'bad/infra/database/models/bet.py:19:5: bound-checks: stake объявлено как PositiveDecimal, но CHECK не несёт; добавь bound_check(column=stake, primitive=PositiveDecimal) в __table_args__',
+    'bad/infra/database/models/bet.py:20:5: bound-checks: market объявлено как NonEmptyString, а его bound_check называет PositiveDecimal; аннотация и CHECK читают одну границу',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[class_modules]
   list([
     'bad/application/services/pricing.py:9:1: class-modules: helper — функция; в application/services держат класс',
