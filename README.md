@@ -11,6 +11,7 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-FAB040)](#pre-commit)
 [![ruff](https://img.shields.io/badge/linted%20with-ruff-261230)](https://docs.astral.sh/ruff/)
 [![pyright](https://img.shields.io/badge/types-pyright%20strict-1f6feb)](https://microsoft.github.io/pyright/)
+[![license](https://img.shields.io/badge/license-MIT-750014)](LICENSE)
 
 </div>
 
@@ -274,3 +275,7 @@ uv run pytest -q
 которое не выдерживает свой же репозиторий, до чужого доезжать не должно.
 
 Соглашения репозитория — в [`AGENTS.md`](AGENTS.md).
+
+## Лицензия
+
+[MIT](LICENSE) — © 2026 Armontex.
