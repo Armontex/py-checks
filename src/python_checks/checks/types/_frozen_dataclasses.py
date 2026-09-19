@@ -22,7 +22,7 @@ DECORATOR: Final = "dataclass"
 
 class FrozenDataclassesSettings(CheckSettings):
     zones: tuple[str, ...] = ()
-    options: tuple[str, ...] = ("frozen", "slots")
+    options: tuple[str, ...] = ("frozen", "slots", "kw_only")
 
 
 class FrozenDataclasses:
@@ -31,9 +31,10 @@ class FrozenDataclasses:
     Объект дела — это значение: собрали один раз и не меняли, поэтому
     существующий объект не может исподтишка съехать в недопустимое состояние.
     `frozen` это покупает, `slots` не даёт опечатке завести атрибут, которого
-    никто не объявлял.
+    никто не объявлял, а `kw_only` — перепутать местами два поля одного типа:
+    у значения из четырёх строк порядок помнит только автор.
 
-        @dataclass(frozen=True, slots=True)
+        @dataclass(frozen=True, slots=True, kw_only=True)
         class Price: ...
 
     Зона проектная: держать значения неизменяемыми имеет смысл там, где живут

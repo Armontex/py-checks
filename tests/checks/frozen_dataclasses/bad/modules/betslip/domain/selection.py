@@ -14,6 +14,14 @@ class Outcome:
     name: str
 
 
-@dataclass(frozen=False, slots=True)
+@dataclass(frozen=False, slots=True, kw_only=True)
 class Draft:
     name: str
+
+
+@dataclass(frozen=True, slots=True)
+class Ticket:
+    """Два поля одного типа: без `kw_only` их порядок помнит только автор."""
+
+    market: str
+    outcome: str
