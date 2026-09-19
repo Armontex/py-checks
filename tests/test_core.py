@@ -126,6 +126,49 @@ def test_config_rejects_unknown_key(tmp_path: Path) -> None:
         load(root=tmp_path).settings_for(code="module-length", model=Limits)
 
 
+def test_config_is_read_from_a_file_of_its_own(tmp_path: Path) -> None:
+    write(
+        tmp_path,
+        "pychecks.toml",
+        'src = "app"\n\n[module-length]\nmax-lines = 120\n',
+    )
+
+    config = load(root=tmp_path)
+
+    assert config.src == Path("app")
+    assert config.settings_for(code="module-length", model=Limits) == Limits(max_lines=120)
+
+
+def test_a_file_of_its_own_names_the_root(tmp_path: Path) -> None:
+    write(tmp_path, ".python-checks.toml", "")
+    nested = tmp_path / "src" / "deep"
+    nested.mkdir(parents=True)
+
+    assert find_root(start=nested) == tmp_path
+
+
+def test_a_pyproject_without_the_section_is_not_a_second_place(tmp_path: Path) -> None:
+    write(tmp_path, "pyproject.toml", "[project]\nname = 'x'\n")
+    write(tmp_path, "pychecks.toml", 'src = "app"\n')
+
+    assert load(root=tmp_path).src == Path("app")
+
+
+def test_settings_in_two_places_are_an_error(tmp_path: Path) -> None:
+    write(tmp_path, "pyproject.toml", '[tool.python-checks]\nsrc = "app"\n')
+    write(tmp_path, "pychecks.toml", 'src = "lib"\n')
+
+    with pytest.raises(ConfigError, match="нескольких местах"):
+        load(root=tmp_path)
+
+
+def test_the_error_names_the_section_as_the_file_spells_it(tmp_path: Path) -> None:
+    write(tmp_path, "pychecks.toml", "[module-length]\nmax-linez = 10\n")
+
+    with pytest.raises(ConfigError, match=r"^\[module-length\]"):
+        load(root=tmp_path).settings_for(code="module-length", model=Limits)
+
+
 def test_find_root_walks_up(tmp_path: Path) -> None:
     write(tmp_path, "pyproject.toml", "")
     nested = tmp_path / "src" / "deep"

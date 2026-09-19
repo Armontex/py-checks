@@ -7,9 +7,22 @@ from pathlib import Path
 from pydantic import Field, ValidationError
 
 from python_checks.config._base import CheckSettings
-from python_checks.config._constants import DEFAULT_EXCLUDE, SECTION
+from python_checks.config._constants import DEFAULT_EXCLUDE, PYPROJECT, SECTION
 from python_checks.config._errors import ConfigError
 from python_checks.config._toml import TomlTable
+
+
+def prefix(*, source: Path | None) -> str:
+    """Как называется секция проверки в том файле, откуда пришли настройки.
+
+    В `pyproject.toml` инструменты живут под своей приставкой, потому что файл
+    общий; в своём файле приставки нет — весь файл принадлежит одному
+    инструменту. Сообщение об ошибке обязано звать секцию так, как её и правда
+    зовут в этом файле: иначе оно посылает читателя не туда.
+    """
+    if source is None or source.name == PYPROJECT:
+        return f"tool.{SECTION}."
+    return ""
 
 
 class Config(CheckSettings):
@@ -26,6 +39,12 @@ class Config(CheckSettings):
     ignore: tuple[str, ...] = ()
     checks: dict[str, TomlTable] = Field(
         default_factory=dict,
+        exclude=True,
+    )
+    # Файл, из которого настройки прочитаны: он же и место, куда сообщение об
+    # ошибке отправляет читателя.
+    origin: Path | None = Field(
+        default=None,
         exclude=True,
     )
 
@@ -51,7 +70,7 @@ class Config(CheckSettings):
         try:
             return model.model_validate(self.section(code=code))
         except ValidationError as error:
-            raise ConfigError(f"[tool.{SECTION}.{code}]: {error}") from error
+            raise ConfigError(f"[{prefix(source=self.origin)}{code}]: {error}") from error
 
     def enabled(self, *, code: str) -> bool:
         return code not in self.ignore
