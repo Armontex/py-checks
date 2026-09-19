@@ -1,0 +1,94 @@
+name: release
+
+# Версию поднимает `cz bump` на машине автора: он правит манифест, дописывает
+# CHANGELOG и ставит аннотированный тег. Сюда приезжает уже тег — всё, что
+# делает CI, это собрать и разослать.
+on:
+  push:
+    tags: ["v*"]
+
+# Права выдаются по задаче, а не всему файлу: собирает код одна, а подписывать
+# и публиковать умеют другие, и кода они уже не видят.
+permissions: {}
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          # Без кэша: отравленная запись в нём уехала бы в колесо, которое
+          # отсюда уходит людям. Экономить секунды на релизе незачем.
+          enable-cache: false
+          python-version: "3.14"
+      # Тег ставится на то же дерево, что прошло ci, но сборка обязана
+      # получиться и здесь: колесо собирают из репозитория, а не из машины.
+      - run: uv build --out-dir dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
+
+  publish:
+    name: publish
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Окружение с ограничением по ветке и тегу: без него короткоживущий токен
+    # PyPI мог бы попросить любой прогон этого репозитория.
+    environment: release
+    permissions:
+      # Доверенная публикация: PyPI выдаёт одноразовый токен под этот прогон, и
+      # долгоживущего пароля в секретах не заводится вовсе.
+      id-token: write
+    steps:
+      # Исходников тут нет намеренно: задача, которой доверен токен, ничего из
+      # репозитория не выполняет.
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          attestations: true
+
+  announce:
+    name: announce
+    needs: [publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist
+      - name: Релиз на GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Раздел этой версии из CHANGELOG, который уже написал `cz bump`.
+          awk -v tag="$TAG" '
+            $0 ~ "^## " tag "( |$)" { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if [[ -s notes.md ]]; then
+            gh release create "$TAG" dist/* --title "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" dist/* --title "$TAG" --generate-notes
+          fi

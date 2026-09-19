@@ -91,6 +91,27 @@ repos:
         always_run: true
         pass_filenames: false
 
+      # Рабочие процессы. Оба читают всю директорию `.github`, а не файлы,
+      # выбранные pre-commit: процесс проверяется вместе с соседями и вместе с
+      # настройками репозитория, и частичный список даёт частичный вердикт.
+      - id: actionlint
+        name: actionlint
+        description: рабочие процессы синтаксически верны, а их команды — верный shell
+        entry: uv run actionlint
+        language: system
+        files: ^\.github/workflows/
+        pass_filenames: false
+
+      # --offline: ни один тег не разрешается и ни один запрос не уходит, так
+      # что коммит не ждёт сети и не падает без неё.
+      - id: zizmor
+        name: zizmor
+        description: в рабочих процессах нет ни утечки токена, ни подстановки чужого текста в команду
+        entry: uv run zizmor --offline .
+        language: system
+        files: ^\.github/
+        pass_filenames: false
+
       # Дальше — то, что смотрит на проект целиком, а не на изменённые файлы.
 
       # Читает весь проект по своему конфигу, а не список файлов: тип, который

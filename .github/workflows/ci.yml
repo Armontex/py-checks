@@ -1,0 +1,93 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+# Пуш поверх пуша отменяет предыдущий прогон той же ветки: проверять
+# промежуточное состояние незачем, а очередь оно занимает.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Иначе токен задачи остаётся в `.git/config`, и всё, что заархивирует
+          # рабочую директорию, унесёт его с собой. Здесь никто не пушит.
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: true
+          python-version: "3.14"
+      - run: uv sync --locked --all-groups
+
+      - name: Ruff
+        run: uv run ruff check .
+      - name: Ruff format
+        run: uv run ruff format --check .
+      - name: Pyright
+        run: uv run pyright
+      - name: Tests
+        run: uv run pytest -q
+
+      # Библиотека проверяет сама себя. `--all` добавляет правила, которым нужна
+      # живая среда: в хуке на коммит им не место, а здесь им самое место.
+      - name: Проверки соглашений
+        run: uv run py-checks run --all
+      - name: Контракты собраны заново
+        run: uv run py-checks sync --check
+      - name: Импорты не пересекают границы
+        run: uv run lint-imports --no-logo
+
+      # Хуки ещё раз, по всем файлам. Хук работает только на машине, которая
+      # его поставила, и только пока никто не написал --no-verify; здесь он
+      # перестаёт быть добровольным.
+      - name: Хуки
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      # Замок — это и есть сборка: манифест, поправленный без пересборки замка,
+      # ставит зависимости, которых никто не выбирал.
+      - name: Замок согласован с манифестом
+        run: uv lock --check
+
+  commits:
+    name: commits
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Вся история: диапазон ниже достаёт коммиты, которых у мелкого клона нет.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: true
+          python-version: "3.14"
+      - run: uv sync --locked --all-groups
+      # Хук commit-msg локальный: на машине, которая его не ставила, его нет, а
+      # на той, что ставила, его снимает --no-verify. Сюда сообщения приезжают
+      # уже написанными, и обойти проверку нечем.
+      - name: Сообщения коммитов по соглашению
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # Первый пуш ветки сообщает базу из одних нулей: сравнивать не с чем,
+          # поэтому проверяется всё, что приехало.
+          if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]]; then
+            uv run cz check --rev-range "$HEAD"
+          else
+            uv run cz check --rev-range "$BASE..$HEAD"
+          fi
