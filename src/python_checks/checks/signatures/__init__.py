@@ -6,6 +6,7 @@ ruff, вложенный `with` — правилом `SIM117`.
 """
 
 from python_checks.checks.signatures._keyword_only import KeywordOnlyArguments
+from python_checks.checks.signatures._marker import MARKER
 from python_checks.checks.signatures._module_length import ModuleLength, ModuleLengthSettings
 from python_checks.checks.signatures._nesting import Nesting, NestingSettings
 from python_checks.checks.signatures._signature_layout import (
@@ -14,6 +15,7 @@ from python_checks.checks.signatures._signature_layout import (
 )
 
 __all__ = [
+    "MARKER",
     "KeywordOnlyArguments",
     "ModuleLength",
     "ModuleLengthSettings",
