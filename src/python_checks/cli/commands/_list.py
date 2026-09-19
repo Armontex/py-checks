@@ -10,10 +10,13 @@ from rich.table import Table
 
 from python_checks.cli.commands._summary import summary
 from python_checks.config import find_root, load
-from python_checks.core import available
+from python_checks.core import Scope, available
 
 if TYPE_CHECKING:
     import typer
+
+    from python_checks.config import Config
+    from python_checks.core import Check
 
 
 def list_checks() -> None:
@@ -27,9 +30,32 @@ def list_checks() -> None:
     table.add_column("состояние")
     table.add_column("что делает")
     for code, check in sorted(available().listed.items()):
-        state = "вкл" if config.enabled(code=code) else "выкл"
-        table.add_row(code, state, summary(check=check))
+        table.add_row(
+            code,
+            _state(
+                check=check,
+                config=config,
+            ),
+            summary(check=check),
+        )
     Console().print(table)
+
+
+def _state(
+    *,
+    check: Check,
+    config: Config,
+) -> str:
+    """Включено, выключено — или включено, но не в обычном прогоне.
+
+    Правилу, которому нужна живая среда, место в CI, поэтому вместо «вкл» в
+    таблице стоит то, чем его зовут.
+    """
+    if not config.enabled(code=check.code):
+        return "выкл"
+    if check.scope is Scope.ENVIRONMENT:
+        return "--all"
+    return "вкл"
 
 
 def register(*, app: typer.Typer) -> None:

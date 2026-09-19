@@ -59,6 +59,19 @@ class NeedsTree:
         yield
 
 
+class NeedsDatabase:
+    """Правило, которому нужна живая среда: без `--all` его не зовут."""
+
+    code: ClassVar[str] = "needs-database"
+    Settings: ClassVar[type[CheckSettings]] = CheckSettings
+    scope: ClassVar[Scope] = Scope.ENVIRONMENT
+    marker: ClassVar[str] = "# db-ok"
+
+    def run(self, *, root: Path, settings: CheckSettings) -> Iterator[Violation]:
+        _ = settings
+        yield Violation(path=root, line=1, column=1, code=self.code, message="смотрел в базу")
+
+
 @pytest.fixture
 def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (tmp_path / "src").mkdir()
@@ -144,6 +157,19 @@ def test_broken_syntax_is_one_violation_not_a_crash(
 
     assert result.exit_code == 1
     assert "syntax:" in result.output
+
+
+@pytest.mark.usefixtures("project")
+def test_a_rule_that_needs_the_environment_stays_out_of_the_usual_run(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "python_checks.cli.commands._run.available",
+        lambda: Checks(files={}, project={NeedsDatabase.code: NeedsDatabase()}),
+    )
+
+    assert runner.invoke(app, ["run"]).exit_code == 0
+    assert runner.invoke(app, ["run", "--all"]).exit_code == 1
 
 
 @pytest.mark.usefixtures("project")

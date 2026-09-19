@@ -11,3 +11,8 @@
     "pyproject.toml:13:1: dependency-bounds: build-system.requires: у 'hatchling' нет потолка; закрепи (==) или ограничь (>=x,<y), иначе версию выберет решатель",
   ])
 # ---
+# name: test_project_check_output_matches_the_snapshot[schema_drift-schema-drift]
+  list([
+    'migrations/versions:1:1: schema-drift: `alembic upgrade head` вышел с 1',
+  ])
+# ---

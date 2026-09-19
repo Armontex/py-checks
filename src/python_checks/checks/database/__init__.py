@@ -1,8 +1,9 @@
 """База данных.
 
 Граница транзакции, материал колонки, форма запроса. Готового тут почти нет:
-`alembic check` отвечает на расхождение моделей и миграций, `pytest-alembic` —
-на откат, остальное — соглашения проекта.
+`pytest-alembic` отвечает на откат миграции, `alembic check` — на расхождение
+моделей и миграций, но звать его приходится самим: ему нужна живая база,
+поэтому `schema-drift` объявлен `ENVIRONMENT`. Остальное — соглашения проекта.
 """
 
 from python_checks.checks.database._bound_checks import BoundChecks, BoundChecksSettings
@@ -15,6 +16,7 @@ from python_checks.checks.database._marker import MARKER
 from python_checks.checks.database._model_boundary import ModelBoundary, ModelBoundarySettings
 from python_checks.checks.database._model_columns import ModelColumns, ModelColumnsSettings
 from python_checks.checks.database._raw_sql import RawSql, RawSqlSettings
+from python_checks.checks.database._schema_drift import SchemaDrift, SchemaDriftSettings
 from python_checks.checks.database._statement_keys import StatementKeys, StatementKeysSettings
 
 __all__ = [
@@ -30,6 +32,8 @@ __all__ = [
     "ModelColumnsSettings",
     "RawSql",
     "RawSqlSettings",
+    "SchemaDrift",
+    "SchemaDriftSettings",
     "StatementKeys",
     "StatementKeysSettings",
 ]

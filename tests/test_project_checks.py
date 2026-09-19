@@ -18,6 +18,7 @@ PROJECTS = Path(__file__).parent / "projects"
 CASES = (
     ("bounded", "dependency-bounds"),
     ("floating", "dependency-bounds"),
+    ("schema_drift", "schema-drift"),
 )
 
 

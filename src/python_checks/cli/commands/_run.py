@@ -46,19 +46,26 @@ def run(  # check-ok: keyword-only-arguments: подпись команды ра
     """Проверить файлы и вернуть код выхода: 0 — чисто, 1 — есть нарушения."""
     root = find_root(start=Path.cwd())
     config = load(root=root)
-    files = python_files(
-        paths=paths or [],
-        root=root,
-        default=root / config.src,
-        exclude=config.excluded,
+    chosen = _chosen(
+        select=select,
+        config=config,
+        paths=bool(paths),
+        everything=everything,
+    )
+    # Обход дерева нужен только файловым правилам: прогон одного правила про
+    # проект не должен читать список из тысячи файлов, чтобы никому его не дать.
+    files = (
+        python_files(
+            paths=paths or [],
+            root=root,
+            default=root / config.src,
+            exclude=config.excluded,
+        )
+        if chosen.files
+        else []
     )
     violations = survey(
-        chosen=_chosen(
-            select=select,
-            config=config,
-            paths=bool(paths),
-            everything=everything,
-        ),
+        chosen=chosen,
         files=files,
         config=config,
         root=root,
