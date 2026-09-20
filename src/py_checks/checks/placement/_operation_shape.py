@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from py_checks.checks._kind import Kind, declarations
+from py_checks.checks._layout import SECTION, Layout, innermost
 from py_checks.checks._location import place
-from py_checks.checks.placement._layout import SECTION, Layout, innermost
 from py_checks.checks.placement._marker import MARKER
 from py_checks.core import Scope, Violation, settings_as
 
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from py_checks.checks._kind import Declaration
+    from py_checks.checks._layout import Directory
     from py_checks.checks._location import Place
-    from py_checks.checks.placement._layout import Directory
     from py_checks.config import CheckSettings
     from py_checks.core import ParsedFile
 

@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from py_checks.checks._kind import Kind, declarations
+from py_checks.checks._layout import SECTION, Layout, innermost
 from py_checks.checks._location import place
-from py_checks.checks.placement._layout import SECTION, Layout, innermost
 from py_checks.checks.placement._marker import MARKER
 from py_checks.core import Scope, Violation, settings_as
 

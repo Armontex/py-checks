@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, Final
 from py_checks.checks._location import place
 from py_checks.checks._names import walked
 from py_checks.checks.types._marker import MARKER
-from py_checks.config import CheckSettings
+from py_checks.config import OPEN, CheckSettings
 from py_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
@@ -25,7 +25,19 @@ ASIDE: Final[frozenset[str]] = frozenset({"ClassVar", "Final"})
 
 
 class ConfinedTypesSettings(CheckSettings):
-    zones: dict[str, tuple[str, ...]] = {}
+    """Секция `[confined-types]`: адрес — и типы, которых там не бывает.
+
+    Ключи приносит проект, поэтому подтаблицы нет: имя директории и есть
+    настройка, а не значение под её именем.
+    """
+
+    model_config = OPEN
+
+    __pydantic_extra__: dict[str, tuple[str, ...]]  # type: ignore[assignment]
+
+    @property
+    def forbidden(self) -> dict[str, tuple[str, ...]]:
+        return self.__pydantic_extra__
 
 
 class ConfinedTypes:
@@ -47,7 +59,7 @@ class ConfinedTypes:
     этажом ниже. Судятся поля класса; `ClassVar` и `Final` — не поля: они
     принадлежат классу, а не экземпляру.
 
-    Настройка: `zones` — путь (можно с `*`: `modules/*/domain`) и список имён.
+    Настройка: адрес (можно с `*`: `modules/*/domain`) — и список имён.
     """
 
     code: ClassVar[str] = CODE
@@ -66,7 +78,7 @@ class ConfinedTypes:
             settings=settings,
             model=ConfinedTypesSettings,
             code=CODE,
-        ).zones
+        ).forbidden
         where = place(file=file)
         if where is None:
             return

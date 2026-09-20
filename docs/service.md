@@ -90,7 +90,7 @@ shared = ["shared"]
 
 # A package -> the directories allowed to import it. A line here widens a
 # framework's reach through the codebase, so it is added deliberately.
-[confined-imports.packages]
+[confined-imports]
 sqlalchemy = ["infra/database", "ioc"]
 asyncpg = ["infra/database", "ioc"]
 alembic = ["infra/database"]
@@ -170,11 +170,16 @@ required = true
 [layout."infra/database/models"]
 suffix = "Model"
 required = true
+# The home of the ORM models: `model-boundary` reads the same table rather than
+# naming these two directories a second time in one of its own.
+orm = "declared"
 
 [layout."infra/database/repositories"]
 only = ["class"]
 suffix = "Repository"
 required = true
+# Building a model means writing a row, and a row is written here.
+orm = "built"
 
 # The port of a repository and its implementation lawfully live in two places.
 [layout."shared/ports"]
@@ -197,7 +202,7 @@ max-lines = 600
 
 # `with` is deliberately absent: a nested `with` is caught by ruff `SIM117`,
 # with an autofix and a ready answer.
-[nesting.limits]
+[nesting]
 try = 1
 if = 2
 
@@ -214,7 +219,7 @@ options = ["frozen", "slots", "kw_only"]
 
 [constant-annotations]
 
-[confined-types.zones]
+[confined-types]
 # Binary floating point does not hold a price: a rounding error in stored
 # state is money that stops adding up.
 "modules/*/domain" = ["float"]
@@ -236,10 +241,6 @@ float = ["ge", "gt", "le", "lt"]
 str = ["min_length", "pattern"]
 
 # --- The database -----------------------------------------------------------
-
-[model-boundary]
-declared = ["infra/database/models"]
-built = ["infra/database/repositories"]
 
 [model-columns]
 zones = ["infra/database/models"]
@@ -470,7 +471,7 @@ canonical `# check-ok: <code>: <reason>` always works and lifts exactly one.
 #### `confined-imports` — a package is imported outside the places set aside for it
 
 ```toml
-[tool.py-checks.confined-imports.packages]
+[tool.py-checks.confined-imports]
 sqlalchemy = ["infra/database", "ioc"]
 asyncpg = ["infra/database", "ioc"]
 aiosqlite = ["infra/database"]
@@ -529,9 +530,10 @@ only `modules` is sealed there.
 
 ### 5.2 placement — what belongs where
 
-Four rules speak about one and the same thing from four sides: what may live
-here, what lives *only* here, what a module must declare, and what shape an
-operation has. They read one table — `[layout]`, one block per directory:
+Five rules speak about one and the same thing from five sides: what may live
+here, what lives *only* here, what a module must declare, what shape an
+operation has, and which end of the ORM model's boundary this directory is.
+They read one table — `[layout]`, one block per directory:
 
 ```toml
 [layout."application/use_cases"]
@@ -548,6 +550,8 @@ operation = { method = "execute", max-arguments = 3 }
 | `suffix` | `class-placement`, `required-class`, `operation-shape` | the name of the class this directory exists for |
 | `required` | `required-class` | a module here must declare such a class, first and alone |
 | `operation` | `operation-shape` | the shape of the operation kept here |
+| `orm` | `model-boundary` | which end of the model's boundary this is: `"declared"` or `"built"` |
+| `base` | `model-boundary` | the base class the models here are known by |
 
 The heading is an address, not a directory name, and it is matched as
 consecutive pieces of a path: `application/use_cases` is found inside
@@ -769,7 +773,7 @@ reader has to hold all of them. Ruff has no rule for this; in pylint it is
 ```toml
 # `with` is deliberately absent from the table: a nested `with` is caught by
 # ruff `SIM117`, with an autofix and a ready answer — "make it one `with a, b:`".
-[tool.py-checks.nesting.limits]
+[tool.py-checks.nesting]
 try = 1
 if = 2
 ```
@@ -835,7 +839,7 @@ only in parameters and returns — a class field and a variable it does not see.
 #### `confined-types` — a field in this part of the tree is declared with a type banned here
 
 ```toml
-[tool.py-checks.confined-types.zones]
+[tool.py-checks.confined-types]
 # Binary floating point does not hold a price, and a rounding error in stored
 # state is money that stops adding up. In the application a number on its way
 # to a report is arithmetic, and `float` is lawful there.
@@ -939,10 +943,12 @@ from the environment and not in the wiring.
 #### `model-boundary` — an ORM model is declared, built or handed out in the wrong place
 
 ```toml
-[tool.py-checks.model-boundary]
-declared = ["infra/database/models"]
-built = ["infra/database/repositories"]
+[tool.py-checks.layout."infra/database/models"]
+orm = "declared"
 # base defaults to "Base"
+
+[tool.py-checks.layout."infra/database/repositories"]
+orm = "built"
 ```
 
 **Why.** A model is a description of a table, and three rules keep it one.
