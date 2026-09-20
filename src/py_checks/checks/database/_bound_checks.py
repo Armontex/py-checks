@@ -5,15 +5,17 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
+from pydantic import Field
+
 from py_checks.checks._location import ZonedSettings, zoned
 from py_checks.checks._names import name
 from py_checks.checks.database._marker import MARKER
+from py_checks.config import CheckSettings
 from py_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from py_checks.config import CheckSettings
     from py_checks.core import ParsedFile
 
 CODE: Final = "bound-checks"
@@ -21,11 +23,22 @@ CODE: Final = "bound-checks"
 MAPPED: Final = "Mapped"
 
 
-class BoundChecksSettings(ZonedSettings):
-    primitives: tuple[str, ...] = ()
+class Helper(CheckSettings):
+    """Как зовут хелпер проекта и два его аргумента.
+
+    Три голых слова в секции не говорили, что они об одном: `call` —
+    функция, `column` и `primitive` — её аргументы, и прочитать это можно было
+    только из документации. Блок говорит это формой.
+    """
+
     call: str = "bound_check"
     column: str = "column"
     primitive: str = "primitive"
+
+
+class BoundChecksSettings(ZonedSettings):
+    primitives: tuple[str, ...] = ()
+    helper: Helper = Field(default_factory=Helper)
 
 
 class BoundChecks:
@@ -48,7 +61,7 @@ class BoundChecks:
     этого сервиса деньги — `PositiveDecimal`, а доля — `MarginFraction`. Без
     списка правило молчит.
 
-    Настройки: `zones`, `primitives`, `call`, `column`, `primitive`.
+    Настройки: `zones`, `primitives`, `helper`.
     """
 
     code: ClassVar[str] = CODE
@@ -126,14 +139,15 @@ class BoundChecks:
         said: str | None,
         limits: BoundChecksSettings,
     ) -> str:
+        helper = limits.helper
         if said is None:
             return (
                 f"{field} объявлено как {bounded}, но CHECK не несёт; добавь "
-                f"{limits.call}({limits.column}={field}, {limits.primitive}={bounded}) "
+                f"{helper.call}({helper.column}={field}, {helper.primitive}={bounded}) "
                 f"в __table_args__"
             )
         return (
-            f"{field} объявлено как {bounded}, а его {limits.call} называет {said}; "
+            f"{field} объявлено как {bounded}, а его {helper.call} называет {said}; "
             f"аннотация и CHECK читают одну границу"
         )
 
@@ -147,15 +161,15 @@ class BoundChecks:
         """Колонка — тип, по каждому вызову в теле класса."""
         found: dict[str, str] = {}
         for child in ast.walk(node):
-            if not isinstance(child, ast.Call) or name(node=child.func) != limits.call:
+            if not isinstance(child, ast.Call) or name(node=child.func) != limits.helper.call:
                 continue
             column = cls._argument(
                 node=child,
-                named=limits.column,
+                named=limits.helper.column,
             )
             primitive = cls._argument(
                 node=child,
-                named=limits.primitive,
+                named=limits.helper.primitive,
             )
             if column is not None and primitive is not None:
                 found[column] = primitive

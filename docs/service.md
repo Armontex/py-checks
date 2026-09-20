@@ -252,7 +252,7 @@ defaults = [
     "onupdate",
     "server_onupdate",
 ]
-unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
+skip = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
 [model-columns.instead]
@@ -995,7 +995,7 @@ defaults = [
     "onupdate",
     "server_onupdate",
 ]
-unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
+skip = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
 [tool.py-checks.model-columns.instead]
@@ -1028,7 +1028,7 @@ clock, unsigned, compared as though the signature did not matter. The
 annotation and `nullable=` must agree: SQLAlchemy lets them diverge, and then
 pyright reasons by one while the database holds the other.
 
-`UUID`, `datetime`, `date` and `bool` are deliberately absent from `unruled`:
+`UUID`, `datetime`, `date` and `bool` are deliberately absent from `skip`:
 they are exhaustive in themselves, and there is no subset of `bool`.
 
 **The mark.** `# db-ok: model-columns: <reason>`.
@@ -1048,7 +1048,7 @@ primitives = [
     "FiniteDecimal",
     "OfferedPrice",
 ]
-# call defaults to "bound_check", its arguments to "column" and "primitive"
+# helper defaults to { call = "bound_check", column = "column", primitive = "primitive" }
 ```
 
 **Why.** A column declared `Mapped[PositiveDecimal]` promises twice. pyright

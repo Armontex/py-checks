@@ -28,7 +28,7 @@ class ModelColumnsSettings(ZonedSettings):
     instead: dict[str, str] = {}
     wrappers: dict[str, str] = {}
     defaults: tuple[str, ...] = ()
-    unruled: tuple[str, ...] = ()
+    skip: tuple[str, ...] = ()
     aware: tuple[str, ...] = ()
     nullable: bool = True
 
@@ -55,7 +55,7 @@ class ModelColumns:
     аргументе конструктора поймал бы проверяльщик типов, превращается в
     правдоподобную строку.
 
-    `unruled` — встроенные типы в `Mapped[...]`. Такая колонка говорит, какой
+    `skip` — встроенные типы в `Mapped[...]`. Такая колонка говорит, какой
     у значения вид, и ничего — какие значения допустимы, так что правило
     приходится помнить каждому писателю.
 
@@ -66,7 +66,7 @@ class ModelColumns:
     разрешает им разойтись, и тогда аннотация лжёт: pyright рассуждает по ней,
     база держит ключевое слово, и одно из двух неверно на каждой строке.
 
-    Настройки: `zones`, `factories`, `instead`, `wrappers`, `defaults`, `unruled`,
+    Настройки: `zones`, `factories`, `instead`, `wrappers`, `defaults`, `skip`,
     `aware`, `nullable`.
     """
 
@@ -160,7 +160,7 @@ class ModelColumns:
         if inner is None:
             return
         written, optional = inner
-        if written in limits.unruled:
+        if written in limits.skip:
             yield Violation.from_node(
                 node=node,
                 path=file.path,
