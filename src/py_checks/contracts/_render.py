@@ -45,12 +45,15 @@ def render(
     )
     if not blocks:
         return None
+    head = contracts(config=config).header.strip() or HEADER.format(
+        # Секция зовётся по-разному в манифесте и в своём файле настроек:
+        # написать одно имя значит послать читателя не туда в половине
+        # проектов.
+        section=f"{prefix(source=config.origin)}{SECTION}"
+    )
     return "\n".join(
         [
-            # Секция зовётся по-разному в манифесте и в своём файле настроек:
-            # написать одно имя значит послать читателя не туда в половине
-            # проектов.
-            HEADER.format(section=f"{prefix(source=config.origin)}{SECTION}"),
+            f"{head.rstrip()}\n",
             _roots(
                 root=root,
                 package=name,
