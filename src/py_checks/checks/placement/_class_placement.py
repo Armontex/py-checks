@@ -32,7 +32,11 @@ class ClassPlacement:
     `dataclass` не назвал своего дома, он лежит где угодно. Назвал — значит
     перечислены все дома, в том числе доменный: value object тоже dataclass.
 
-    Настройки: `home` и `suffix` в общей таблице `[layout]`.
+    `area` сужает притязание до части дерева: соглашение про `dto` написано
+    про слой приложения, а dataclass в загрузчике или в наблюдаемости — это
+    способ сложить три поля рядом, а не предмет разговора.
+
+    Настройки: `home`, `suffix` и `area` в общей таблице `[layout]`.
     """
 
     code: ClassVar[str] = CODE
@@ -60,6 +64,7 @@ class ClassPlacement:
             homes = claimants(
                 declared=declared,
                 layout=layout,
+                where=where,
             )
             if not homes or any(where.holds(path=home.address) for home in homes):
                 continue
