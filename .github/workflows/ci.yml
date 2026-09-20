@@ -88,10 +88,20 @@ jobs:
           HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          # Первый пуш ветки сообщает базу из одних нулей: сравнивать не с чем,
-          # поэтому проверяется всё, что приехало.
-          if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]]; then
-            uv run cz check --rev-range "$HEAD"
-          else
-            uv run cz check --rev-range "$BASE..$HEAD"
+          # Первый пуш ветки сообщает базу из одних нулей: тогда ею становится
+          # точка расхождения с `develop` — не вся история от начала времён.
+          base="$BASE"
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            base="$(git merge-base origin/develop "$HEAD" 2>/dev/null || true)"
           fi
+          range="$HEAD"
+          if [[ -n "$base" ]]; then
+            range="$base..$HEAD"
+          fi
+          # По первому родителю и без слияний: ветка отвечает за то, что
+          # написала сама, а не за историю, которую влила — чужие сообщения
+          # судил тот запрос, которым они приехали. Сообщение самого слияния
+          # пишет GitHub, и соглашению оно не подчиняется.
+          for sha in $(git rev-list --first-parent --no-merges "$range"); do
+            git log -1 --pretty=%B "$sha" | uv run cz check --commit-msg-file /dev/stdin
+          done
