@@ -46,6 +46,10 @@ jobs:
         run: uv run py-checks run --all
       - name: Контракты собраны заново
         run: uv run py-checks sync --check
+      # И сами настройки: правило без таблицы молчит, а молчание выглядит как
+      # соблюдённое соглашение. В хук это не ставится — здесь читается дерево.
+      - name: Настройки сходятся
+        run: uv run py-checks doctor
       - name: Импорты не пересекают границы
         run: uv run lint-imports --no-logo
 
