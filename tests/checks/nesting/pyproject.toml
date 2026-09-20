@@ -2,6 +2,6 @@
 src = "."
 
 # `with` в таблице нет: вложенный `with` ловит ruff SIM117, с автофиксом.
-[tool.py-checks.nesting.limits]
+[tool.py-checks.nesting]
 try = 1
 if = 2

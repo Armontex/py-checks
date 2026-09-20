@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar, Final
 from py_checks.checks._location import place
 from py_checks.checks.imports._marker import MARKER
 from py_checks.checks.imports._statements import imports
-from py_checks.config import CheckSettings
+from py_checks.config import OPEN, CheckSettings
 from py_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
@@ -22,7 +22,15 @@ CODE: Final = "confined-imports"
 
 
 class ConfinedSettings(CheckSettings):
-    packages: dict[str, tuple[str, ...]] = {}
+    """Секция `[confined-imports]`: пакет — и места, где его можно звать."""
+
+    model_config = OPEN
+
+    __pydantic_extra__: dict[str, tuple[str, ...]]  # type: ignore[assignment]
+
+    @property
+    def packages(self) -> dict[str, tuple[str, ...]]:
+        return self.__pydantic_extra__
 
 
 class ConfinedImports:
@@ -33,12 +41,12 @@ class ConfinedImports:
     `infra/database`, а веб-стек на краю, каждый из них меняется в одном месте.
 
     Где чьё место, знает проект: у сервиса это `infra/database`, у утилиты
-    такого слоя нет вовсе. Список пишется в
-    `[tool.py-checks.confined-imports.packages]`; пустой список значит
-    «нигде» — так держат убранную библиотеку, чтобы она не вернулась. Пакета,
-    которого в списке нет, правило не касается.
+    такого слоя нет вовсе. Имя пакета — ключ в секции, значение — места, где
+    ему можно быть; пустой список значит «нигде» — так держат убранную
+    библиотеку, чтобы она не вернулась. Пакета, которого в секции нет, правило
+    не касается.
 
-    Настройка: `packages`.
+    Настройка: имя пакета — список мест.
     """
 
     code: ClassVar[str] = CODE

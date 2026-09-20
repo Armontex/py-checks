@@ -86,7 +86,7 @@ shared = ["shared"]
 
 # Пакет -> директории, которым разрешено его импортировать. Строка здесь
 # расширяет охват фреймворка по кодовой базе, поэтому добавляется осознанно.
-[confined-imports.packages]
+[confined-imports]
 sqlalchemy = ["infra/database", "ioc"]
 asyncpg = ["infra/database", "ioc"]
 alembic = ["infra/database"]
@@ -167,11 +167,16 @@ required = true
 [layout."infra/database/models"]
 suffix = "Model"
 required = true
+# Дом ORM-моделей: `model-boundary` читает ту же таблицу, вместо того чтобы
+# называть эти две директории второй раз в своей.
+orm = "declared"
 
 [layout."infra/database/repositories"]
 only = ["class"]
 suffix = "Repository"
 required = true
+# Собрать модель — значит записать строку, а строку пишут здесь.
+orm = "built"
 
 # Порт репозитория и его реализация законно лежат в двух местах.
 [layout."shared/ports"]
@@ -194,7 +199,7 @@ max-lines = 600
 
 # `with` намеренно отсутствует: вложенный `with` ловит ruff `SIM117` — с
 # автофиксом и готовым ответом.
-[nesting.limits]
+[nesting]
 try = 1
 if = 2
 
@@ -211,7 +216,7 @@ options = ["frozen", "slots", "kw_only"]
 
 [constant-annotations]
 
-[confined-types.zones]
+[confined-types]
 # Двоичная плавающая точка не держит цену: ошибка округления в сохранённом
 # состоянии — это деньги, которые перестают сходиться.
 "modules/*/domain" = ["float"]
@@ -233,10 +238,6 @@ float = ["ge", "gt", "le", "lt"]
 str = ["min_length", "pattern"]
 
 # --- База данных ------------------------------------------------------------
-
-[model-boundary]
-declared = ["infra/database/models"]
-built = ["infra/database/repositories"]
 
 [model-columns]
 zones = ["infra/database/models"]
@@ -464,7 +465,7 @@ extend-exclude = ["generated"]   # сверх исключений по умол
 #### `confined-imports` — пакет импортируется вне отведённых ему мест
 
 ```toml
-[tool.py-checks.confined-imports.packages]
+[tool.py-checks.confined-imports]
 sqlalchemy = ["infra/database", "ioc"]
 asyncpg = ["infra/database", "ioc"]
 aiosqlite = ["infra/database"]
@@ -523,9 +524,10 @@ application = ["structlog"]
 
 ### 5.2 placement — что где лежит
 
-Четыре правила говорят об одном и том же с четырёх сторон: что здесь может
-лежать, что живёт ТОЛЬКО здесь, что модуль обязан объявить и какой формы тут
-операция. Читают они одну таблицу — `[layout]`, блок на директорию:
+Пять правил говорят об одном и том же с пяти сторон: что здесь может
+лежать, что живёт ТОЛЬКО здесь, что модуль обязан объявить, какой формы тут
+операция и каким концом границы ORM-модели приходится директория. Читают они
+одну таблицу — `[layout]`, блок на директорию:
 
 ```toml
 [layout."application/use_cases"]
@@ -542,6 +544,8 @@ operation = { method = "execute", max-arguments = 3 }
 | `suffix` | `class-placement`, `required-class`, `operation-shape` | как зовут класс, ради которого директория существует |
 | `required` | `required-class` | модуль обязан объявить такой класс, первым и один |
 | `operation` | `operation-shape` | форма операции, которую здесь держат |
+| `orm` | `model-boundary` | каким концом границы модели приходится директория: `"declared"` или `"built"` |
+| `base` | `model-boundary` | базовый класс, по которому узнают здешние модели |
 
 Заголовок — адрес, а не имя директории, и ищется он подряд идущими кусками
 пути: `application/use_cases` находится и внутри `modules/<имя>/`, а `*`
@@ -752,7 +756,7 @@ max-lines = 600
 ```toml
 # `with` в таблице нет намеренно: вложенный `with` ловит ruff `SIM117`, с
 # автофиксом и с готовым ответом — «сделай один `with a, b:`».
-[tool.py-checks.nesting.limits]
+[tool.py-checks.nesting]
 try = 1
 if = 2
 ```
@@ -819,7 +823,7 @@ if = 2
 #### `confined-types` — поле в этой части дерева объявлено запрещённым здесь типом
 
 ```toml
-[tool.py-checks.confined-types.zones]
+[tool.py-checks.confined-types]
 # Двоичная плавающая точка не держит цену, а ошибка округления в хранимом
 # состоянии — это деньги, которые перестают сходиться. В приложении число на
 # пути в отчёт — арифметика, и там `float` законен.
@@ -917,10 +921,12 @@ zones = ["modules"]
 #### `model-boundary` — ORM-модель объявлена, собрана или отдана не там
 
 ```toml
-[tool.py-checks.model-boundary]
-declared = ["infra/database/models"]
-built = ["infra/database/repositories"]
+[tool.py-checks.layout."infra/database/models"]
+orm = "declared"
 # base по умолчанию "Base"
+
+[tool.py-checks.layout."infra/database/repositories"]
+orm = "built"
 ```
 
 **Зачем.** Модель — описание таблицы, и три правила держат её описанием.

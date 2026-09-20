@@ -26,6 +26,7 @@ operation = { method = "execute", max-arguments = 3 }
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import TYPE_CHECKING, Final, Self
 
 from pydantic import Field, model_validator
@@ -40,6 +41,22 @@ if TYPE_CHECKING:
     from py_checks.checks._location import Place
 
 SECTION: Final = "layout"
+
+
+class Orm(StrEnum):
+    """Чем директория приходится ORM-модели.
+
+    Дом модели и место, где её собирают, — два конца одного соглашения, и
+    писать их в отдельной таблице значило бы назвать те же две директории
+    второй раз: раскладка уже знает их по имени.
+    """
+
+    # Здесь модели объявляют: где-то ещё это таблица, которую никто не ждёт по
+    # этому адресу, а autogenerate alembic видит только их пакет.
+    DECLARED = "declared"
+
+    # Здесь модели собирают: собрать модель — значит записать строку.
+    BUILT = "built"
 
 
 class Operation(CheckSettings):
@@ -77,6 +94,8 @@ class Directory(CheckSettings):
     живёт только здесь.
     `required` — модуль обязан объявить такой класс, первым и один.
     `operation` — форма операции, если здесь держат операции.
+    `orm` — чем директория приходится ORM-модели: домом или местом сборки.
+    `base` — базовый класс, по которому модель узнают в доме моделей.
     """
 
     only: tuple[Kind, ...] = ()
@@ -84,6 +103,8 @@ class Directory(CheckSettings):
     suffix: str | None = None
     required: bool = False
     operation: Operation | None = None
+    orm: Orm | None = None
+    base: str | None = None
 
     @model_validator(mode="after")
     def _named(self) -> Self:
@@ -95,6 +116,14 @@ class Directory(CheckSettings):
             raise ValueError(message)
         if self.operation is not None:
             message = "`operation` без `suffix`: непонятно, какой класс здесь операция"
+            raise ValueError(message)
+        return self
+
+    @model_validator(mode="after")
+    def _declares(self) -> Self:
+        """`base` — про дом моделей: в месте сборки узнавать по базе нечего."""
+        if self.base is not None and self.orm is not Orm.DECLARED:
+            message = '`base` без `orm = "declared"`: базу называет дом моделей'
             raise ValueError(message)
         return self
 
@@ -114,6 +143,15 @@ class Layout(CheckSettings):
     @property
     def directories(self) -> dict[str, Directory]:
         return self.__pydantic_extra__
+
+
+def addressed(
+    *,
+    layout: dict[str, Directory],
+    orm: Orm,
+) -> tuple[str, ...]:
+    """Адреса, объявившие себя этим концом соглашения про ORM-модель."""
+    return tuple(address for address, directory in layout.items() if directory.orm is orm)
 
 
 def innermost(

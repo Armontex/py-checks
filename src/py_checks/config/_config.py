@@ -25,6 +25,7 @@ RETIRED: Final[dict[str, str]] = {
     "class-placement": "`home` и `suffix`",
     "required-class": "`required` рядом с `suffix`",
     "operation-shape": "`operation`",
+    "model-boundary": "`orm` и `base`",
 }
 
 

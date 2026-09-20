@@ -25,26 +25,39 @@ def explain(  # check-ok: keyword-only-arguments: подпись команды 
     section = section_of(check=check)
     shared = " (общая)" if section != check.code else ""
     console.print(f"\nнастройки, секция [{section}]{shared}:", markup=False)
-    for name, field in _fields(model=check.Settings).items():
+    fields = _fields(model=check.Settings)
+    for name, field in fields.items():
         key = field.alias or name
         console.print(f"  {key} = {field.get_default(call_default_factory=True)!r}", markup=False)
+    if not fields:
+        console.print(f"  <ключ проекта> = {_shape(model=check.Settings)}", markup=False)
 
 
 def _fields(*, model: type[BaseModel]) -> dict[str, typing.Any]:  # noqa: ANN401
     """Поля модели, а у таблицы с ключами проекта — поля одного её блока.
 
-    Секция, ключи которой приносит проект (адреса директорий), своих полей не
-    имеет: объявлять там нечего, кроме того, из чего состоит блок. Печатать
-    пустой список значит сказать «настроек нет», а они есть.
+    Секция, ключи которой приносит проект (адреса директорий, имена пакетов),
+    своих полей не имеет: объявлять там нечего, кроме того, из чего состоит
+    блок. Печатать пустой список значит сказать «настроек нет», а они есть.
     """
     if model.model_fields:
         return dict(model.model_fields)
-    block = typing.get_type_hints(model).get(EXTRA)
-    values = typing.get_args(block)
-    inner = values[1] if len(values) == 2 else None  # noqa: PLR2004 — ключ и значение
+    inner = _value(model=model)
     if isinstance(inner, type) and issubclass(inner, BaseModel):
         return dict(inner.model_fields)
     return {}
+
+
+def _shape(*, model: type[BaseModel]) -> str:
+    """Чем бывает значение под ключом проекта, когда это не блок, а список."""
+    inner = _value(model=model)
+    return inner.__name__ if isinstance(inner, type) else str(inner)
+
+
+def _value(*, model: type[BaseModel]) -> typing.Any:  # noqa: ANN401
+    """Тип значения в таблице, ключи которой приносит проект."""
+    values = typing.get_args(typing.get_type_hints(model).get(EXTRA))
+    return values[1] if len(values) == 2 else None  # noqa: PLR2004 — ключ и значение
 
 
 def register(*, app: typer.Typer) -> None:

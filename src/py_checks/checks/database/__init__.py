@@ -13,7 +13,7 @@ from py_checks.checks.database._confined_calls import (
     ConfinedCallsSettings,
 )
 from py_checks.checks.database._marker import MARKER
-from py_checks.checks.database._model_boundary import ModelBoundary, ModelBoundarySettings
+from py_checks.checks.database._model_boundary import ModelBoundary
 from py_checks.checks.database._model_columns import ModelColumns, ModelColumnsSettings
 from py_checks.checks.database._raw_sql import RawSql, RawSqlSettings
 from py_checks.checks.database._schema_drift import SchemaDrift, SchemaDriftSettings
@@ -27,7 +27,6 @@ __all__ = [
     "ConfinedCalls",
     "ConfinedCallsSettings",
     "ModelBoundary",
-    "ModelBoundarySettings",
     "ModelColumns",
     "ModelColumnsSettings",
     "RawSql",
