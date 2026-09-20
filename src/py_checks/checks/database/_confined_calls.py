@@ -25,15 +25,18 @@ class Confined(ZonedSettings):
     `owner` — имя модуля без расширения. Правило его не касается: там вызов и
     должен стоять, потому и владелец.
 
-    `outside` — куски зоны, где правило молчит. Имя метода — всё, что видно по
+    `skip` — куски зоны, где правило молчит. Имя метода — всё, что видно по
     одному файлу, и край брокера тому пример: `commit()` у консьюмера
     подтверждает смещение, а не транзакцию базы.
+
+    `because` — причина в отказе: она объясняет, кто владеет этим вызовом, и
+    печатается тому, кто его написал не там.
     """
 
     methods: tuple[str, ...]
-    outside: tuple[str, ...] = ()
+    skip: tuple[str, ...] = ()
     owner: str | None = None
-    said: str = "этим владеет другой модуль"
+    because: str = "этим владеет другой модуль"
 
 
 class ConfinedCallsSettings(CheckSettings):
@@ -98,7 +101,7 @@ class ConfinedCalls:
                 node=node,
                 path=file.path,
                 code=CODE,
-                message=f"{ast.unparse(node.func)}: {rule.said}",
+                message=f"{ast.unparse(node.func)}: {rule.because}",
             )
 
     @staticmethod
@@ -110,6 +113,6 @@ class ConfinedCalls:
     ) -> bool:
         if rule.owner is not None and file.path.stem == rule.owner:
             return False
-        if where.anywhere(zones=rule.outside):
+        if where.anywhere(zones=rule.skip):
             return False
         return where.anywhere(zones=rule.zones)

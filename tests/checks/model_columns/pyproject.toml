@@ -12,5 +12,5 @@ Enum = "голый Enum — нативный тип Postgres; используй
 Float = "Float дрейфует; состояние точно, используй Numeric"
 JSONB = "голый JSONB — форма, которую никто не объявил; заверни в TypeDecorator"
 
-[tool.py-checks.model-columns.homes]
+[tool.py-checks.model-columns.wrappers]
 Enum = "_enum_column"
