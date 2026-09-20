@@ -144,6 +144,9 @@ home = ["port"]
 [layout."application/dto"]
 only = ["dataclass", "alias"]
 home = ["dataclass"]
+# Only inside the application: a dataclass in the bootstrap or in
+# observability is three fields put side by side, not a DTO.
+area = "application"
 
 # A domain value object is a dataclass too: once a kind has a home, it lives
 # only in the blocks that claim it, so every home is named.
@@ -581,6 +584,7 @@ operation = { method = "execute", max-arguments = 3 }
 |---|---|---|
 | `only` | `class-modules` | the kinds allowed in this directory, and nothing else sits beside them |
 | `home` | `class-placement` | the kinds whose only home this is |
+| `area` | `class-placement` | the part of the tree where the claim applies at all |
 | `suffix` | `class-placement`, `required-class`, `operation-shape` | the name of the class this directory exists for |
 | `required` | `required-class` | a module here must declare such a class, first and alone |
 | `operation` | `operation-shape` | the shape of the operation kept here |
