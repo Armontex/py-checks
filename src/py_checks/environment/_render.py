@@ -56,9 +56,12 @@ def render(
             seen=set(),
         )
     ]
+    head = declared.header.strip() or HEADER.format(
+        section=f"{prefix(source=config.origin)}{SECTION}"
+    )
     return root / declared.path, "\n".join(
         [
-            HEADER.format(section=f"{prefix(source=config.origin)}{SECTION}"),
+            f"{head.rstrip()}\n",
             *blocks,
         ]
     )
