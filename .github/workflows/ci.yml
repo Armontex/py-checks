@@ -17,6 +17,14 @@ concurrency:
 jobs:
   gate:
     name: gate
+    # Запрос, головой которого стоит долгоживущая ветка, — это релиз или
+    # возврат из `main`: тот же коммит уже проверен пушем в неё, и второй
+    # прогон только дублирует работу. Открывает такие запросы бот, а прогон,
+    # заведённый не человеком, GitHub держит до подтверждения — жёлтая плашка
+    # на каждом релизе ровно об этом.
+    if: >-
+      github.event_name != 'pull_request'
+      || !contains(fromJSON('["develop", "main"]'), github.head_ref)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -66,6 +74,14 @@ jobs:
 
   commits:
     name: commits
+    # Запрос, головой которого стоит долгоживущая ветка, — это релиз или
+    # возврат из `main`: тот же коммит уже проверен пушем в неё, и второй
+    # прогон только дублирует работу. Открывает такие запросы бот, а прогон,
+    # заведённый не человеком, GitHub держит до подтверждения — жёлтая плашка
+    # на каждом релизе ровно об этом.
+    if: >-
+      github.event_name != 'pull_request'
+      || !contains(fromJSON('["develop", "main"]'), github.head_ref)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
