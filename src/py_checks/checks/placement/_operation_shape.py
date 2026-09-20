@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Final
-
-from pydantic import Field
 
 from py_checks.checks._kind import Kind, declarations
 from py_checks.checks._location import place
+from py_checks.checks.placement._layout import SECTION, Layout, innermost
 from py_checks.checks.placement._marker import MARKER
-from py_checks.config import CheckSettings
 from py_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
@@ -18,6 +17,8 @@ if TYPE_CHECKING:
 
     from py_checks.checks._kind import Declaration
     from py_checks.checks._location import Place
+    from py_checks.checks.placement._layout import Directory
+    from py_checks.config import CheckSettings
     from py_checks.core import ParsedFile
 
 CODE: Final = "operation-shape"
@@ -27,38 +28,15 @@ PRIVATE: Final = "_"
 STATIC: Final = "staticmethod"
 
 
-class Operation(CheckSettings):
-    """Директория с операциями и форма, которую там держат.
+@dataclass(frozen=True, slots=True)
+class Shape:
+    """Форма операции этой директории: имя класса плюс то, что сказано в блоке."""
 
-    `method` — единственная публичная дверь: сценарий просят об одном деле, и
-    второй публичный метод означает вторую операцию, поделившую с первой
-    конструктор. Пусто — значит число дверей не ограничено: у сервиса модуля
-    их столько, сколько переходов у его сущности, и это тот же выбор, а не
-    поблажка.
-
-    `forbids` — имена типов, которых операция не держит: `UnitOfWork` ловится
-    и как `IPlacementUnitOfWork`, и как `UnitOfWorkFactory`, потому что
-    запрещено держать транзакцию, а не писать её имя одним конкретным образом.
-
-    `max_arguments` — сколько аргументов занимает вход. Дверь несёт то, что
-    пришло снаружи, и вход длиннее нескольких полей — вещь с именем: команда,
-    запрос, DTO. Считаются публичные методы: конструктор получает зависимости,
-    а это проводка, не вход, и в счёт он не идёт уже потому, что публичным не
-    является.
-    """
-
-    inside: str
+    address: str
     suffix: str
-    method: str | None = None
-    forbids: tuple[str, ...] = ()
-    max_arguments: int | None = Field(
-        default=None,
-        gt=0,
-    )
-
-
-class OperationShapeSettings(CheckSettings):
-    operations: tuple[Operation, ...] = ()
+    method: str | None
+    forbids: tuple[str, ...]
+    max_arguments: int | None
 
 
 class OperationShape:
@@ -81,11 +59,12 @@ class OperationShape:
     Модуль, не объявивший операции вовсе, — тоже: об этом говорит
     `required-class`, и второе мнение сообщило бы одну ошибку дважды.
 
-    Настройка: `operations`.
+    Настройка: `operation` в общей таблице `[layout]`, рядом с `suffix`.
     """
 
     code: ClassVar[str] = CODE
-    Settings: ClassVar[type[CheckSettings]] = OperationShapeSettings
+    Settings: ClassVar[type[CheckSettings]] = Layout
+    section: ClassVar[str] = SECTION
     scope: ClassVar[Scope] = Scope.FILE
     marker: ClassVar[str] = MARKER
 
@@ -96,17 +75,17 @@ class OperationShape:
         file: ParsedFile,
         settings: CheckSettings,
     ) -> Iterator[Violation]:
-        listed = settings_as(
+        layout = settings_as(
             settings=settings,
-            model=OperationShapeSettings,
+            model=Layout,
             code=CODE,
-        ).operations
+        ).directories
         where = place(file=file)
         if where is None or file.path.stem.startswith(PRIVATE):
             return
         rule = cls._rule(
             where=where,
-            listed=listed,
+            layout=layout,
         )
         if rule is None:
             return
@@ -150,28 +129,42 @@ class OperationShape:
     def _rule(
         *,
         where: Place,
-        listed: tuple[Operation, ...],
-    ) -> Operation | None:
-        """Правило этой директории: самое глубокое, а при равенстве — точное.
+        layout: dict[str, Directory],
+    ) -> Shape | None:
+        """Форма самой внутренней из совпавших директорий.
 
-        Директорий в `inside` у правила может быть несколько, и файл попадает
-        под оба: `use_cases` внутри `application/services` судит то, что
-        названо длиннее и лежит ближе.
+        Блоков, под которые попадает файл, может быть несколько:
+        `application/services` внутри `application` судит то, что названо
+        длиннее и лежит ближе.
         """
-        matched = [
-            (depth, len(one.inside), one)
-            for one in listed
-            if (depth := where.within(directory=one.inside)) is not None
-        ]
-        if not matched:
+        found = innermost(
+            where=where,
+            among=[
+                (address, directory)
+                for address, directory in layout.items()
+                if directory.operation is not None and directory.suffix is not None
+            ],
+        )
+        if found is None:
             return None
-        return max(matched, key=lambda found: found[:2])[2]
+        address, directory = found
+        # Оба поля проверены при отборе выше: блок без них сюда не попадает.
+        operation = directory.operation
+        if operation is None or directory.suffix is None:
+            return None
+        return Shape(
+            address=address,
+            suffix=directory.suffix,
+            method=operation.method,
+            forbids=operation.forbids,
+            max_arguments=operation.max_arguments,
+        )
 
     @staticmethod
     def _subject(
         *,
         declared: list[Declaration],
-        rule: Operation,
+        rule: Shape,
     ) -> Declaration | None:
         """Операция, ради которой существует модуль, — по имени, а не по месту.
 
@@ -191,7 +184,7 @@ class OperationShape:
         file: ParsedFile,
         declared: list[Declaration],
         subject: Declaration | None,
-        rule: Operation,
+        rule: Shape,
     ) -> Iterator[Violation]:
         """Всё, что встало рядом с операцией: второй класс или функция."""
         for one in declared:
@@ -211,7 +204,7 @@ class OperationShape:
                 file=file,
                 declared=one,
                 message=(
-                    f"{one.name} стоит рядом с операцией; в {rule.inside} модуль "
+                    f"{one.name} стоит рядом с операцией; в {rule.address} модуль "
                     f"объявляет один класс и больше ничего"
                 ),
             )
@@ -223,7 +216,7 @@ class OperationShape:
         file: ParsedFile,
         subject: Declaration,
         node: ast.ClassDef,
-        rule: Operation,
+        rule: Shape,
     ) -> Iterator[Violation]:
         """Единственная публичная дверь операции."""
         if rule.method is None:
@@ -260,7 +253,7 @@ class OperationShape:
         file: ParsedFile,
         subject: Declaration,
         node: ast.ClassDef,
-        rule: Operation,
+        rule: Shape,
     ) -> Iterator[Violation]:
         """Сколько аргументов занимает вход."""
         if rule.max_arguments is None:
@@ -307,7 +300,7 @@ class OperationShape:
         file: ParsedFile,
         subject: Declaration,
         node: ast.ClassDef,
-        rule: Operation,
+        rule: Shape,
     ) -> Iterator[Violation]:
         """Тип, которого операция не держит, — в поле или в параметре."""
         for annotation in cls._annotations(node=node):

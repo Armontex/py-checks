@@ -1,16 +1,12 @@
 [tool.py-checks]
 src = "."
 
-[[tool.py-checks.operation-shape.operations]]
-inside = "use_cases"
+[tool.py-checks.layout.use_cases]
 suffix = "UseCase"
-method = "execute"
-max-arguments = 3
-forbids = ["UnitOfWork"]
+operation = { method = "execute", max-arguments = 3, forbids = ["UnitOfWork"] }
 
 # У сервиса дверей столько, сколько переходов у его сущности: одна на переход,
 # потому что вызывающий, которому пришлось бы сделать три вызова, сделает два.
-[[tool.py-checks.operation-shape.operations]]
-inside = "application/services"
+[tool.py-checks.layout."application/services"]
 suffix = "Service"
-forbids = ["UnitOfWork"]
+operation = { forbids = ["UnitOfWork"] }

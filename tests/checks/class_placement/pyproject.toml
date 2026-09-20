@@ -1,31 +1,29 @@
 [tool.py-checks]
 src = "."
 
-# Порядок важен: первое подошедшее правило отвечает за объявление.
-[[tool.py-checks.class-placement.rules]]
-kind = "error"
-inside = ["errors", "exceptions"]
+# Дом объявляется адресом: вид, у которого дом назван, живёт только там.
+# Поэтому домам положено быть перечисленными всем — доменный value object
+# тоже dataclass, и его дом здесь назван наравне с `application/dto`.
+[tool.py-checks.layout.errors]
+home = ["error"]
 
-[[tool.py-checks.class-placement.rules]]
-kind = "port"
-inside = ["ports"]
-area = "application"
+[tool.py-checks.layout.exceptions]
+home = ["error"]
 
-[[tool.py-checks.class-placement.rules]]
+[tool.py-checks.layout."application/ports"]
+home = ["port"]
+
+[tool.py-checks.layout."application/dto"]
+home = ["dataclass"]
+
+[tool.py-checks.layout.domain]
+home = ["dataclass"]
+
+[tool.py-checks.layout."infra/database/repositories"]
 suffix = "Repository"
-inside = ["infra/database/repositories"]
 
-[[tool.py-checks.class-placement.rules]]
-kind = "dataclass"
-inside = ["dto"]
-area = "application"
-
-[[tool.py-checks.class-placement.rules]]
+[tool.py-checks.layout."application/use_cases"]
 suffix = "UseCase"
-inside = ["use_cases"]
-area = "application"
 
-[[tool.py-checks.class-placement.rules]]
+[tool.py-checks.layout."application/services"]
 suffix = "Service"
-inside = ["application/services"]
-area = "application"

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Final
 from py_checks.core import _registry
 from py_checks.core._errors import ParseError
 from py_checks.core._markers import complaints, surviving
+from py_checks.core._protocols import section_of
 from py_checks.core._source import ParsedFile
 from py_checks.core._violation import Violation
 
@@ -64,7 +65,7 @@ def inspect(
     """
     settings = {
         check.code: config.settings_for(
-            code=check.code,
+            code=section_of(check=check),
             model=check.Settings,
         )
         for check in checks
@@ -104,7 +105,7 @@ def examine(
         for violation in check.run(
             root=root,
             settings=config.settings_for(
-                code=check.code,
+                code=section_of(check=check),
                 model=check.Settings,
             ),
         )
