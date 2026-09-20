@@ -1,3 +1,35 @@
+## v0.4.1 (2026-09-21)
+
+### BREAKING CHANGE
+
+- [model-columns] `unruled` -> `skip`; [bound-checks] `call`,
+`column` и `primitive` собраны в блок `helper`.
+- [nesting.limits] -> [nesting]; [confined-imports.packages] ->
+[confined-imports]; [confined-types.zones] -> [confined-types]. Секция
+[model-boundary] убрана: `declared` и `built` стали ключом `orm` в [layout],
+`base` — ключом того же блока.
+- [determinism] `sources` -> `instead`; [model-columns]
+`types` -> `instead`; [raw-sql] `calls` -> `instead`; [statement-keys]
+`calls` -> `sub-queries`.
+- [confined-calls] `outside` -> `skip`, `said` -> `because`;
+[confined-functions] `home` -> `declared-in`; [model-columns] `homes` ->
+`wrappers`.
+- секции [class-modules], [class-placement], [required-class]
+и [operation-shape] заменены общей таблицей [layout]. Оставшаяся в настройках
+секция падает с сообщением, куда её переписать.
+
+### Features
+
+- **cli**: команда doctor судит настройки, а не код
+- **placement**: одна таблица [layout] вместо четырёх секций
+
+### Refactoring
+
+- «не суди это» — одно слово; хелпер — один блок
+- секция сама себе таблица, model-boundary читает раскладку
+- «запрещённое -> чем заменить» зовётся одним словом
+- настройки зовут вещи одними словами
+
 ## v0.3.2 (2026-09-20)
 
 ### Docs

@@ -1,19 +1,79 @@
 name: release
 
-# Версию поднимает `cz bump` на машине автора: он правит манифест, дописывает
-# CHANGELOG и ставит аннотированный тег. Сюда приезжает уже тег — всё, что
-# делает CI, это собрать и разослать.
+# Версию поднимает `cz bump --no-tag` на машине автора: он правит манифест и
+# дописывает CHANGELOG. Тег ставит отсюда первая задача — на тот коммит `main`,
+# который и вышел: слияние переписывает SHA, и тег, поставленный на ветке,
+# указывал бы на коммит, которого в `main` нет.
+#
+# Поэтому и триггер — ветка, а не тег: тег, созданный токеном задачи, чужих
+# процессов не запускает, так что «поставить тег» и «выпустить» обязаны жить в
+# одном файле.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
 
 # Права выдаются по задаче, а не всему файлу: собирает код одна, а подписывать
 # и публиковать умеют другие, и кода они уже не видят.
 permissions: {}
 
 jobs:
+  tag:
+    name: tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.named.outputs.version }}
+      fresh: ${{ steps.named.outputs.fresh }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: false
+          python-version: "3.14"
+      # Версия в манифесте — единственный признак релиза: в `main` приезжает и
+      # то, что версии не меняет, и такое слияние ничего не выпускает.
+      - name: Версия и была ли она уже выпущена
+        id: named
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(uv version --short)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$version" >/dev/null 2>&1; then
+            echo "fresh=false" >> "$GITHUB_OUTPUT"
+            echo "v$version уже выпущена — выпускать нечего"
+          else
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+          fi
+      # Объект с автором, датой и сообщением, а не голый указатель: `git
+      # describe` и хостинг читают аннотированный тег как релиз. Через API, а не
+      # `git push`: пушить нечего, а токен тогда не оседает в `.git/config`.
+      - name: Тег на этот коммит
+        if: steps.named.outputs.fresh == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.named.outputs.version }}
+        run: |
+          set -euo pipefail
+          object="$(gh api -X POST "repos/$GITHUB_REPOSITORY/git/tags" \
+            -f tag="v$VERSION" \
+            -f message="v$VERSION" \
+            -f object="$GITHUB_SHA" \
+            -f type=commit \
+            --jq .sha)"
+          gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/v$VERSION" \
+            -f sha="$object"
+
   build:
     name: build
+    needs: [tag]
+    if: needs.tag.outputs.fresh == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -22,14 +82,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           # Без кэша: отравленная запись в нём уехала бы в колесо, которое
           # отсюда уходит людям. Экономить секунды на релизе незачем.
           enable-cache: false
           python-version: "3.14"
-      # Тег ставится на то же дерево, что прошло ci, но сборка обязана
-      # получиться и здесь: колесо собирают из репозитория, а не из машины.
+      # Дерево то же, что прошло ci, но сборка обязана получиться и здесь:
+      # колесо собирают из репозитория, а не из машины.
       - run: uv build --out-dir dist
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -62,7 +122,7 @@ jobs:
 
   announce:
     name: announce
-    needs: [publish]
+    needs: [tag, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -78,7 +138,7 @@ jobs:
       - name: Релиз на GitHub
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: v${{ needs.tag.outputs.version }}
         run: |
           set -euo pipefail
           # Раздел этой версии из CHANGELOG, который уже написал `cz bump`.

@@ -27,7 +27,7 @@ CALLS: Final[dict[str, str]] = {
 
 
 class RawSqlSettings(CheckSettings):
-    calls: dict[str, str] = CALLS
+    instead: dict[str, str] = CALLS
 
 
 class RawSql:
@@ -58,7 +58,7 @@ class RawSql:
     права импортировать те самые константы, поэтому её SQL выписан словами и
     заморожен в день рождения. Это `exclude` проекта, а не дело правила.
 
-    Настройка: `calls`.
+    Настройка: `instead`.
     """
 
     code: ClassVar[str] = CODE
@@ -73,16 +73,16 @@ class RawSql:
         file: ParsedFile,
         settings: CheckSettings,
     ) -> Iterator[Violation]:
-        calls = settings_as(
+        instead = settings_as(
             settings=settings,
             model=RawSqlSettings,
             code=CODE,
-        ).calls
+        ).instead
         for node in ast.walk(file.tree):
             if not isinstance(node, ast.Call) or not node.args:
                 continue
             written = name(node=node.func)
-            if written not in calls or not cls._sql(node=node.args[0]):
+            if written not in instead or not cls._sql(node=node.args[0]):
                 continue
             yield Violation.from_node(
                 node=node,
@@ -90,7 +90,7 @@ class RawSql:
                 code=CODE,
                 # Пометка снимается с любой строки самого вызова.
                 end_line=node.end_lineno or node.lineno,
-                message=f"{written}(...) со строкой SQL; вместо неё — {calls[written]}",
+                message=f"{written}(...) со строкой SQL; вместо неё — {instead[written]}",
             )
 
     @staticmethod

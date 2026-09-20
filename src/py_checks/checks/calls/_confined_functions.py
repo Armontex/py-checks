@@ -21,7 +21,7 @@ CODE: Final = "confined-functions"
 
 class ConfinedFunctionsSettings(CheckSettings):
     calls: dict[str, tuple[str, ...]] = {}  # noqa: RUF012 — pydantic копирует значение сам
-    home: str | None = None
+    declared_in: str | None = None
 
 
 class ConfinedFunctions:
@@ -36,10 +36,10 @@ class ConfinedFunctions:
     Место — кусок пути, а не файл: край — это место в замысле, и файл, который
     разделили надвое, краем быть не перестал.
 
-    `home` — модуль, где функция объявлена: там она написана, а не позвана, и
+    `declared-in` — модуль, где функция объявлена: там она написана, а не позвана, и
     правило его не трогает.
 
-    Настройки: `calls`, `home`.
+    Настройки: `calls`, `declared-in`.
     """
 
     code: ClassVar[str] = CODE
@@ -62,7 +62,7 @@ class ConfinedFunctions:
         where = place(file=file)
         if where is None or not limits.calls:
             return
-        if limits.home is not None and where.holds(path=limits.home):
+        if limits.declared_in is not None and where.holds(path=limits.declared_in):
             return
         for node in ast.walk(file.tree):
             if not isinstance(node, ast.Call):

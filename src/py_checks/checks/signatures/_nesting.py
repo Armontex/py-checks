@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, ClassVar, Final, Self
 from pydantic import model_validator
 
 from py_checks.checks.signatures._marker import MARKER
-from py_checks.config import CheckSettings
+from py_checks.config import OPEN, CheckSettings
 from py_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
@@ -35,7 +35,15 @@ BRANCHES: Final[tuple[str, ...]] = ("body", "orelse", "finalbody")
 
 
 class NestingSettings(CheckSettings):
-    limits: dict[str, int] = {}
+    """Секция `[nesting]`: конструкция — и её предел вложенности."""
+
+    model_config = OPEN
+
+    __pydantic_extra__: dict[str, int]  # type: ignore[assignment]
+
+    @property
+    def limits(self) -> dict[str, int]:
+        return self.__pydantic_extra__
 
     @model_validator(mode="after")
     def _known(self) -> Self:
@@ -63,7 +71,7 @@ class Nesting:
     Вложенный `with` в таблицу лучше не класть: его ловит ruff `SIM117`, с
     автофиксом и с ответом на месте.
 
-    Настройка: `limits`.
+    Настройка: имя конструкции — предел: `try = 1`.
     """
 
     code: ClassVar[str] = CODE

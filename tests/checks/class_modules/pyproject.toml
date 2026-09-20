@@ -1,9 +1,17 @@
 [tool.py-checks]
 src = "."
 
-[tool.py-checks.class-modules.policies]
-use_cases = ["class"]
-"application/services" = ["class"]
-ports = ["port", "alias"]
-dto = ["dataclass", "alias"]
-errors = ["error"]
+[tool.py-checks.layout.use_cases]
+only = ["class"]
+
+[tool.py-checks.layout."application/services"]
+only = ["class"]
+
+[tool.py-checks.layout.ports]
+only = ["port", "alias"]
+
+[tool.py-checks.layout.dto]
+only = ["dataclass", "alias"]
+
+[tool.py-checks.layout.errors]
+only = ["error"]

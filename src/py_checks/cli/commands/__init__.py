@@ -8,6 +8,7 @@
 from typing import Final
 
 from py_checks.cli._protocols import Registrar
+from py_checks.cli.commands._doctor import register as register_doctor
 from py_checks.cli.commands._explain import register as register_explain
 from py_checks.cli.commands._list import register as register_list
 from py_checks.cli.commands._run import register as register_run
@@ -18,6 +19,7 @@ REGISTRARS: Final[tuple[Registrar, ...]] = (
     register_list,
     register_explain,
     register_sync,
+    register_doctor,
 )
 
 __all__ = ["REGISTRARS", "Registrar"]

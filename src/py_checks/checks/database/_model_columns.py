@@ -25,10 +25,10 @@ NULLABLE: Final = "nullable"
 
 class ModelColumnsSettings(ZonedSettings):
     factories: tuple[str, ...] = ("mapped_column", "Column")
-    types: dict[str, str] = {}
-    homes: dict[str, str] = {}
+    instead: dict[str, str] = {}
+    wrappers: dict[str, str] = {}
     defaults: tuple[str, ...] = ()
-    unruled: tuple[str, ...] = ()
+    skip: tuple[str, ...] = ()
     aware: tuple[str, ...] = ()
     nullable: bool = True
 
@@ -38,7 +38,7 @@ class ModelColumns:
 
     Пять правил на одну таблицу настроек.
 
-    `types` — материал, которому в колонке не место, и что писать вместо.
+    `instead` — материал, которому в колонке не место, и что писать вместо.
     Голый `Enum` — нативный тип Postgres: каждый новый член требует `ALTER
     TYPE`, а словари здесь чужие и расти будут. `Float` не держит цену точно, а
     колонка — это состояние, и ошибка округления копится с каждой записью.
@@ -46,7 +46,7 @@ class ModelColumns:
     получит каждый читатель, а разбор, поймавший бы пропущенный ключ, случается
     в каждом отдельно или нигде.
 
-    `homes` — модуль, которому этот материал называть можно: там живёт обёртка
+    `wrappers` — модуль, которому этот материал называть можно: там живёт обёртка
     над ним, и правило его не касается.
 
     `defaults` — все способы, которыми колонка заполняет себя сама. Значение по
@@ -55,7 +55,7 @@ class ModelColumns:
     аргументе конструктора поймал бы проверяльщик типов, превращается в
     правдоподобную строку.
 
-    `unruled` — встроенные типы в `Mapped[...]`. Такая колонка говорит, какой
+    `skip` — встроенные типы в `Mapped[...]`. Такая колонка говорит, какой
     у значения вид, и ничего — какие значения допустимы, так что правило
     приходится помнить каждому писателю.
 
@@ -66,7 +66,7 @@ class ModelColumns:
     разрешает им разойтись, и тогда аннотация лжёт: pyright рассуждает по ней,
     база держит ключевое слово, и одно из двух неверно на каждой строке.
 
-    Настройки: `zones`, `factories`, `types`, `homes`, `defaults`, `unruled`,
+    Настройки: `zones`, `factories`, `instead`, `wrappers`, `defaults`, `skip`,
     `aware`, `nullable`.
     """
 
@@ -117,11 +117,11 @@ class ModelColumns:
     ) -> Iterator[Violation]:
         """Материал и то, чем колонка заполняет себя сама."""
         written = name(node=node.func)
-        if written in limits.types and limits.homes.get(written) != file.path.stem:
+        if written in limits.instead and limits.wrappers.get(written) != file.path.stem:
             yield cls._says(
                 file=file,
                 node=node,
-                message=limits.types[written],
+                message=limits.instead[written],
             )
         if written in limits.aware and not cls._said(
             node=node,
@@ -160,7 +160,7 @@ class ModelColumns:
         if inner is None:
             return
         written, optional = inner
-        if written in limits.unruled:
+        if written in limits.skip:
             yield Violation.from_node(
                 node=node,
                 path=file.path,

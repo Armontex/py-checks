@@ -28,15 +28,314 @@
 
 | Раздел | |
 |---|---|
-| [1. Где лежат настройки](#1-где-лежат-настройки) | одно место, не два |
-| [2. Кто что проверяет](#2-кто-что-проверяет) | ruff, pyright, import-linter, мы |
-| [3. Хуки](#3-хуки) | что приезжает с библиотекой, что объявляет проект |
-| [4. Правила](#4-правила) | все двадцать восемь, по группам |
-| [5. Собираемые файлы](#5-собираемые-файлы) | контракты и `.env.example` |
-| [6. Что отдано другим](#6-что-отдано-другим) | ruff, pyright, pytest-alembic, симлинки |
-| [7. Весь конфиг](#7-весь-конфиг) | один блок, чтобы скопировать |
+| [1. Сервис целиком](#1-сервис-целиком) | весь конфиг сервиса, строка за строкой |
+| [2. Где лежат настройки](#2-где-лежат-настройки) | одно место, не два |
+| [3. Кто что проверяет](#3-кто-что-проверяет) | ruff, pyright, import-linter, мы |
+| [4. Хуки](#4-хуки) | что приезжает с библиотекой, что объявляет проект |
+| [5. Правила](#5-правила) | все двадцать восемь, по группам |
+| [6. Собираемые файлы](#6-собираемые-файлы) | контракты и `.env.example` |
+| [7. Что отдано другим](#7-что-отдано-другим) | ruff, pyright, pytest-alembic, симлинки |
 
-## 1. Где лежат настройки
+## 1. Сервис целиком
+
+Прежде чем разбирать правила по одному — вот всё сразу: `parcels`, выдуманный
+сервис доставки. Три модуля (`orders`, `pricing`, `tracking`), Postgres за
+SQLAlchemy, Kafka на краю, FastAPI сверху. Его раскладка:
+
+```
+src/parcels/
+├── bootstrap/        приложение, консьюмер, пробы
+├── config/           настройки, класс на источник
+├── entrypoints/      команды исполняемого файла
+├── infra/database/   модели, репозитории, единица работы
+├── ioc/              контейнер и его провайдеры
+├── modules/
+│   ├── orders/{domain,application}
+│   ├── pricing/{domain,application}
+│   └── tracking/{domain,application}
+├── observability/    логи, метрики, трассы
+├── presentation/     HTTP-край и консьюмеры
+└── shared/           примитивы, порты, словарь событий
+```
+
+И весь его `py-checks.toml`, с причиной на каждой таблице. Ничего из этого
+библиотека не приносит: библиотека везёт правила, этот файл везёт архитектуру.
+
+```toml
+# Где лежит наш код. Всё остальное — тесты, миграции, сгенерированное — судят
+# инструменты, которым оно принадлежит.
+src = "src"
+
+# --- Импорты и границы ------------------------------------------------------
+
+[contracts]
+# Связать слои — вся их работа, поэтому им можно видеть всех.
+composition-root = ["ioc", "bootstrap", "entrypoints"]
+
+# Зависимости смотрят внутрь. `presentation` намеренно не видит `domain`: край
+# переводит во входящие DTO приложения и обратно, а роутер, читающий доменный
+# объект, привязывает форму внешнего мира к форме правил.
+[contracts.layers]
+domain = ["domain", "shared"]
+application = ["domain", "application", "shared"]
+infra = ["domain", "application", "infra", "shared", "config"]
+presentation = ["application", "presentation", "shared", "config"]
+observability = ["observability", "shared", "config"]
+config = ["config", "shared"]
+shared = ["shared"]
+
+# Пакет -> директории, которым разрешено его импортировать. Строка здесь
+# расширяет охват фреймворка по кодовой базе, поэтому добавляется осознанно.
+[confined-imports]
+sqlalchemy = ["infra/database", "ioc"]
+asyncpg = ["infra/database", "ioc"]
+alembic = ["infra/database"]
+aiokafka = ["infra/kafka", "ioc"]
+fastapi = ["presentation", "bootstrap"]
+starlette = ["presentation", "bootstrap"]
+dishka = ["ioc", "bootstrap", "presentation"]
+uvicorn = ["entrypoints"]
+typer = ["entrypoints"]
+prometheus_client = ["observability"]
+sentry_sdk = ["observability"]
+
+[sealed-imports]
+# Правила и интерфейсы вокруг них: DTO здесь — dataclass, а не модель
+# фреймворка. `shared` запечатан вместе с ними, потому что его импортирует
+# домен каждого модуля: фреймворк, дотянувшийся до него, оказывается внутри
+# всех запечатанных слоёв разом.
+zones = ["modules", "shared"]
+
+[sealed-imports.allow]
+# Сценарий ведёт и потому вправе сказать, что произошло; правила истинны
+# независимо от того, слушает ли их кто-нибудь.
+application = ["structlog"]
+
+# --- Раскладка: блок на директорию ------------------------------------------
+
+# `only` — что здесь можно объявлять; `home` — что можно объявлять ТОЛЬКО
+# здесь; `suffix` — класс, ради которого директория существует; `required` —
+# модуль здесь обязан его объявить; `operation` — форма операции.
+
+[layout."application/use_cases"]
+only = ["class"]
+suffix = "UseCase"
+required = true
+# Одна публичная дверь и три поля в неё. То, что пришло снаружи и заняло
+# четыре, — это вещь с именем: команда, запрос, DTO.
+operation = { method = "execute", max-arguments = 3, forbids = ["UnitOfWork"] }
+
+[layout."application/services"]
+only = ["class"]
+suffix = "Service"
+required = true
+# У сервиса столько дверей, сколько переходов у его сущности, поэтому
+# `method` не задан: вызывающий, которому пришлось бы сделать три вызова,
+# сделает два.
+operation = { forbids = ["UnitOfWork"] }
+
+[layout."application/ports"]
+only = ["port", "alias"]
+home = ["port"]
+
+[layout."application/dto"]
+only = ["dataclass", "alias"]
+home = ["dataclass"]
+
+# Доменный value object — тоже dataclass: как только у вида появился дом, он
+# живёт только в блоках, которые его назвали, — поэтому названы все дома.
+[layout."modules/*/domain"]
+home = ["dataclass"]
+
+# Схема, объявленная рядом с маршрутом, нечаянно становится общей, поэтому
+# запрос и ответ живут врозь: один класс на оба конца — это запрос, отрастивший
+# поле, которого ответ не хотел.
+[layout."presentation/schemas/requests"]
+only = ["model", "alias"]
+home = ["model"]
+
+[layout."presentation/schemas/responses"]
+only = ["model", "alias"]
+home = ["model"]
+
+# Настройки — тоже модель, и вот их дом.
+[layout.config]
+home = ["model"]
+suffix = "Settings"
+required = true
+
+[layout."infra/database/models"]
+suffix = "Model"
+required = true
+# Дом ORM-моделей: `model-boundary` читает ту же таблицу, вместо того чтобы
+# называть эти две директории второй раз в своей.
+orm = "declared"
+
+[layout."infra/database/repositories"]
+only = ["class"]
+suffix = "Repository"
+required = true
+# Собрать модель — значит записать строку, а строку пишут здесь.
+orm = "built"
+
+# Порт репозитория и его реализация законно лежат в двух местах.
+[layout."shared/ports"]
+only = ["port", "alias"]
+
+[layout.errors]
+only = ["error", "alias"]
+home = ["error"]
+
+[layout.exceptions]
+home = ["error"]
+
+# --- Длина, глубина, форма --------------------------------------------------
+
+[function-length]
+max-lines = 50
+
+[module-length]
+max-lines = 600
+
+# `with` намеренно отсутствует: вложенный `with` ловит ruff `SIM117` — с
+# автофиксом и готовым ответом.
+[nesting]
+try = 1
+if = 2
+
+[signature-layout]
+calls = true
+
+# --- Типы -------------------------------------------------------------------
+
+[frozen-dataclasses]
+zones = ["modules"]
+options = ["frozen", "slots", "kw_only"]
+
+[annotation-shapes]
+
+[constant-annotations]
+
+[confined-types]
+# Двоичная плавающая точка не держит цену: ошибка округления в сохранённом
+# состоянии — это деньги, которые перестают сходиться.
+"modules/*/domain" = ["float"]
+# `int` говорит, что версия может быть −10000, `str` — что тег может быть
+# пустым. Ни то, ни другое не верно про бизнес, а тип — последнее место, где
+# это говорится один раз, а не перепроверяется глазами.
+domain = ["str", "int", "float", "Decimal"]
+shared = ["str", "int", "float", "Decimal"]
+
+[config-fields]
+zones = ["config"]
+# Поле называет переменную, из которой читается, — и `.env.example` собирается
+# ровно из этого.
+alias = "validation_alias"
+
+[config-fields.bounds]
+int = ["ge", "gt", "le", "lt"]
+float = ["ge", "gt", "le", "lt"]
+str = ["min_length", "pattern"]
+
+# --- База данных ------------------------------------------------------------
+
+[model-columns]
+zones = ["infra/database/models"]
+defaults = [
+    "default",
+    "insert_default",
+    "default_factory",
+    "server_default",
+    "onupdate",
+    "server_onupdate",
+]
+skip = ["str", "int", "float", "Decimal", "dict", "Any"]
+aware = ["DateTime"]
+
+[model-columns.instead]
+Enum = "голый Enum — нативный тип Postgres; возьми stored_enum()"
+Float = "колонка Float дрейфует; состояние точное, возьми Numeric"
+JSONB = "голый JSONB — форма, которую никто не объявил; заверни в TypeDecorator"
+
+[model-columns.wrappers]
+# Модуль, где живёт обёртка над материалом: там его называть можно — это
+# единственное место, которое превращает его в другое.
+Enum = "_enum_column"
+
+[bound-checks]
+zones = ["infra/database/models"]
+primitives = [
+    "PositiveDecimal",
+    "NonNegativeDecimal",
+    "PositiveInt",
+    "NonEmptyString",
+    "Weight",
+]
+
+[raw-sql]
+
+[statement-keys]
+zones = ["infra/database/repositories"]
+
+[[confined-calls.rules]]
+methods = ["commit", "rollback", "begin", "begin_nested"]
+zones = ["modules", "presentation", "infra/database"]
+# Край брокера: `commit()` консьюмера подтверждает офсет, а не транзакцию.
+skip = ["presentation/consumers"]
+owner = "unit_of_work"
+because = "границей транзакции владеет unit_of_work"
+
+# --- Эффекты ----------------------------------------------------------------
+
+[determinism]
+zones = ["modules", "repositories"]
+
+[determinism.instead]
+"datetime.now" = "возьми порт Clock и позови его"
+"date.today" = "возьми порт Clock и позови его"
+"time.monotonic" = "возьми порт Clock и позови его"
+"uuid4" = "выдай идентификатор из IdGenerator и передай внутрь"
+"uuid7" = "выдай идентификатор из IdGenerator и передай внутрь"
+"random.*" = "прими значение аргументом"
+# Тот же источник через SQL: `func.<имя>()` — вызов, который делает БАЗА.
+"func.now" = "время строки приходит из порта Clock, а не из базы"
+"func.gen_random_uuid" = "идентификатор строки даёт тот, кто её собрал"
+
+[log-events]
+enum = "LogEvent"
+
+# --- Край ------------------------------------------------------------------
+
+[endpoint-declarations]
+methods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"]
+required = ["path", "status_code", "summary", "responses"]
+body = "response_model"
+bodiless = [204, 205, 304]
+exempt = "include_in_schema"
+
+[confined-functions]
+# У конвертации одна реализация, и её места вызова перечислимы.
+declared-in = "shared/money"
+
+[confined-functions.calls]
+to_eur = ["modules/pricing/application", "modules/orders/application/use_cases/quote"]
+in_cents = ["modules/pricing/application"]
+
+[dependency-bounds]
+
+# --- Что собирается, а не проверяется ---------------------------------------
+
+[env-example]
+settings = ["parcels.config.settings:Settings"]
+```
+
+Прочитанный сверху вниз, файл говорит, что это за сервис: три модуля с
+запечатанными правилами, одна граница транзакции, база, колонки которой
+сделаны из ограниченных примитивов, HTTP-край, объявляющий свои ответы, и
+часы, приезжающие через порт. В этом и смысл того, что таблица принадлежит
+проекту: у библиотеки нет мнения ни о чём из этого, пока этот файл не скажет.
+
+## 2. Где лежат настройки
 
 Всё ниже написано секциями `[tool.py-checks.<код>]` — это вид для
 `pyproject.toml`. У настроек есть и свой файл: `py-checks.toml` или
@@ -67,7 +366,7 @@ ignore = ["schema-drift"]        # правила, которые этот пр�
 extend-exclude = ["generated"]   # сверх исключений по умолчанию
 ```
 
-## 2. Кто что проверяет
+## 3. Кто что проверяет
 
 Правила ниже существуют потому, что готового для них нет. Где готовое есть,
 работа остаётся за ним: второе мнение стоит второй конфигурации, а две
@@ -113,7 +412,7 @@ extend-exclude = ["generated"]   # сверх исключений по умол
 внутри ruff. В четырёх сервисах он стоял рядом с ruff как вторая зависимость
 и второй хук — при переезде выкидывается.
 
-## 3. Хуки
+## 4. Хуки
 
 Библиотека публикует только свои:
 
@@ -153,7 +452,41 @@ extend-exclude = ["generated"]   # сверх исключений по умол
 разу не импортируем, а тащить чужой инструмент всем, кто нас поставил, —
 значит решать за проект, чем ему проверять импорты.
 
-## 4. Правила
+### `doctor` — судят настройки, а не код
+
+Правило без таблицы молчит, и это молчание выглядит ровно как соглашение,
+которое никто не нарушает. `py-checks doctor` читает сами настройки и говорит,
+откуда взялась тишина:
+
+```
+$ py-checks doctor
+py-checks.toml
+
+  опечатка в имени секции
+    [class-lenght] — такой секции нет; ближайшие: module-length, function-length
+
+  правило включено, но молчит
+    [statement-keys] — зон не названо: судить негде
+    [layout] — секция пуста, а умолчаний у правила нет
+
+  адрес, которого нет на диске
+    [layout] — 'application/handlers' не нашлось в src
+
+замечаний — 3
+```
+
+Четыре вопроса, и все — про файл, а не про дерево: имя секции, которую никто
+не читает (иначе опечатка проглатывается молча — секцию, которой никто не
+объявлял, никто и не ищет), `ignore`, называющий несуществующее правило,
+правило, которому таблица не оставила о чём судить, и адрес, которому на диске
+ничего не отвечает. Последнее — самое медленное: директорию переименовали,
+блок остался, и правило продолжает смотреть туда, где ничего нет.
+
+Место ему в CI рядом с `run`, а не в хуках: чтобы ответить на последний
+вопрос, он читает дерево `src` целиком, и о коммитимом файле ему сказать
+нечего. Выходит с кодом `1`, если замечания есть.
+
+## 5. Правила
 
 Девять групп. У каждой группы есть короткое слово, снимающее со строки любое
 её правило — `# import-ok`, `# placement-ok`, `# signature-ok`, `# type-ok`,
@@ -161,12 +494,12 @@ extend-exclude = ["generated"]   # сверх исключений по умол
 каноническое `# check-ok: <код>: <причина>` работает всегда и снимает ровно
 одно.
 
-### 4.1 imports — какой пакет где разрешён
+### 5.1 imports — какой пакет где разрешён
 
 #### `confined-imports` — пакет импортируется вне отведённых ему мест
 
 ```toml
-[tool.py-checks.confined-imports.packages]
+[tool.py-checks.confined-imports]
 sqlalchemy = ["infra/database", "ioc"]
 asyncpg = ["infra/database", "ioc"]
 aiosqlite = ["infra/database"]
@@ -223,21 +556,56 @@ application = ["structlog"]
 
 **Пометка.** `# import-ok: sealed-imports: <причина>`.
 
-### 4.2 placement — что где лежит
+### 5.2 placement — что где лежит
+
+Пять правил говорят об одном и том же с пяти сторон: что здесь может
+лежать, что живёт ТОЛЬКО здесь, что модуль обязан объявить, какой формы тут
+операция и каким концом границы ORM-модели приходится директория. Читают они
+одну таблицу — `[layout]`, блок на директорию:
+
+```toml
+[layout."application/use_cases"]
+only = ["class"]        # кроме классов здесь не объявляют ничего
+suffix = "UseCase"      # они зовутся *UseCase — и *UseCase не лежит больше нигде
+required = true         # модуль обязан объявить такой класс, первым и один
+operation = { method = "execute", max-arguments = 3 }
+```
+
+| Ключ | Кто читает | Что говорит |
+|---|---|---|
+| `only` | `class-modules` | виды, которым здесь место, и ничего другого рядом не садится |
+| `home` | `class-placement` | виды, которым место только здесь |
+| `suffix` | `class-placement`, `required-class`, `operation-shape` | как зовут класс, ради которого директория существует |
+| `required` | `required-class` | модуль обязан объявить такой класс, первым и один |
+| `operation` | `operation-shape` | форма операции, которую здесь держат |
+| `orm` | `model-boundary` | каким концом границы модели приходится директория: `"declared"` или `"built"` |
+| `base` | `model-boundary` | базовый класс, по которому узнают здешние модели |
+
+Заголовок — адрес, а не имя директории, и ищется он подряд идущими кусками
+пути: `application/use_cases` находится и внутри `modules/<имя>/`, а `*`
+подходит любому одному куску (`modules/*/domain`). Директории, о которой
+раскладка молчит, правило не касается.
+
+**Названный дом — перечисленный дом.** Как только у вида появился `home`, он
+живёт ТОЛЬКО в блоках, которые его назвали, — поэтому перечисляются все
+законные дома:
+
+```toml
+[layout."application/dto"]
+home = ["dataclass"]
+
+# Доменный value object — тоже dataclass, и вот его дом.
+[layout."modules/*/domain"]
+home = ["dataclass"]
+```
+
+Это не повинность, а смысл таблицы: файл сам отвечает на вопрос «где в этом
+сервисе живут dataclass-ы», вместо того чтобы читатель выводил ответ из
+отсутствия правила.
 
 #### `class-modules` — в модуле лежит то, чего его директория не допускает
 
-```toml
-[tool.py-checks.class-modules.policies]
-use_cases = ["class"]
-"application/services" = ["class"]
-repositories = ["class"]
-tools = ["class", "port"]
-ports = ["port", "alias"]
-dto = ["dataclass", "alias"]
-schemas = ["model", "alias"]
-errors = ["error", "alias"]
-```
+Читает `only`.
 
 **Зачем.** Директория — это обещание о том, что внутри. Порт, объявленный
 рядом со сценарием, — порт, которого никто не найдёт, а dataclass в `ports/`
@@ -252,92 +620,30 @@ errors = ["error", "alias"]
 и докстринг разрешены везде.
 
 Исключение узнаётся и по базе `Exception`, и по имени базы:
-`class NotFound(OrderError)` наследуется от своего же корня, а не от
-`Exception`, но имя корня кончается так же. Поэтому весь словарь отказов
-пакета собирается в `errors/` или `exceptions.py`, и читатель находит его в
-одном месте.
+`class NotFound(OrderError)` наследуется от своего же корня, но имя корня
+кончается так же. Поэтому весь словарь отказов пакета собирается в `errors/`
+или `exceptions.py`, и читатель находит его в одном месте.
 
 **Пометка.** `# placement-ok: class-modules: <причина>`.
 
 #### `class-placement` — класс лежит не там, где лежат классы его вида
 
-Обратная таблица: `class-modules` говорит, что можно держать в директории,
-`class-placement` — куда обязан лечь класс, откуда бы его ни начали писать.
+Читает `home` и `suffix`.
 
-```toml
-[[tool.py-checks.class-placement.rules]]
-kind = "error"
-inside = ["errors", "exceptions"]
+**Зачем.** Директория называет вид, и читатель находит порт, не открывая
+файла. `dataclass` внутри `application` обязан лежать в `dto/` — а доменный
+value object тоже dataclass, и потому домен стоит в списке его домов, а не
+выведен из-под правила.
 
-[[tool.py-checks.class-placement.rules]]
-kind = "port"
-inside = ["ports"]
-area = "application"
-
-[[tool.py-checks.class-placement.rules]]
-suffix = "Repository"
-inside = ["infra/database/repositories", "ports"]
-
-[[tool.py-checks.class-placement.rules]]
-kind = "dataclass"
-inside = ["dto"]
-area = "application"
-
-[[tool.py-checks.class-placement.rules]]
-suffix = "UseCase"
-inside = ["use_cases"]
-area = "application"
-
-[[tool.py-checks.class-placement.rules]]
-suffix = "Service"
-inside = ["application/services"]
-area = "application"
-
-[[tool.py-checks.class-placement.rules]]
-kind = "model"
-inside = ["schemas/requests", "schemas/responses"]
-area = "presentation"
-```
-
-**Зачем.** Правило говорит о виде (`kind`) или о суффиксе имени (`suffix`) —
-ровно об одном из двух. Порядок значим: отвечает первое подошедшее правило,
-поэтому исключение остаётся исключением, даже если его имя кончается на
-`Service`.
-
-`area` сужает правило до части дерева и держит на себе половину смысла.
-`dataclass` обязан лежать в `dto/` только внутри `application`: доменный value
-object — тоже dataclass, и живёт он в домене. Область ищется подряд идущими
-кусками адреса, поэтому `application` находится и в модульном сервисе, где
-путь начинается с `modules/<имя>/`.
-
-Последняя строка — вход HTTP: схема, объявленная рядом с маршрутом, случайно
-оказывается общей, поэтому запрос и ответ живут в `schemas`. Две половины, а
-не одна: модель прямо в `schemas` — это модель, направление которой читатель
-угадывает по имени, а один класс на оба конца — запрос, отрастивший поле,
-которого не хотел ответ.
-
-`inside` перечисляет равноправные адреса, и адрес включает имя модуля:
-`errors` подходит и как директория, и как файл `exceptions.py`.
-
-**Где сервисы разошлись.** В B и D половин нет, там адреса — `requests` и
-`schemas`. У D порт репозитория называется `IOutboxRepository` и лежит в
-`shared/ports`, поэтому в его таблице `ports` стоит рядом с
-`infra/database/repositories` — реализация и интерфейс одного суффикса
-законно лежат в двух местах.
+Несколько адресов у одного предмета читаются как равные: порт репозитория и
+его реализация законно лежат в двух местах, а словарь отказов — и в `errors/`,
+и в `exceptions.py`.
 
 **Пометка.** `# placement-ok: class-placement: <причина>`.
 
 #### `required-class` — модуль не объявил класс, ради которого лежит в этой директории
 
-```toml
-[tool.py-checks.required-class.suffixes]
-use_cases = "UseCase"
-"application/services" = "Service"
-repositories = "Repository"
-config = "Settings"
-models = "Model"
-tools = "Tool"
-```
+Читает `required` рядом с `suffix`.
 
 **Зачем.** Файл в `use_cases` существует ради сценария, файл в `repositories`
 — ради репозитория. Класс идёт первым и идёт один: имя файла — это то, как
@@ -352,35 +658,20 @@ tools = "Tool"
 
 Правило не касается `__init__.py` (переэкспорт, а не объявление), пустого
 модуля и модуля с подчёркиванием: `_base.py` держит машинерию своей
-директории, а не один из её классов. Подчёркивание — единственная форма этой
-поблажки, списка голых имён нет.
+директории, а не один из её классов.
 
-Ключ — путь: побеждает самая внутренняя из совпавших директорий, при равной
-глубине — более длинный ключ. Поэтому `application/services` требует класс, а
+Когда подошло несколько блоков, побеждает самый внутренний, при равной
+глубине — более длинный адрес: `application/services` требует класс, а
 `domain/services` не требует ничего.
-
-**Где сервисы разошлись.** В B и D по три модуля в `models/` названы
-`base.py`, `bound_check.py`, `enum_column.py` — это ровно тот случай, и
-переименование в `_base.py` и есть ответ.
 
 **Пометка.** `# placement-ok: required-class: <причина>`.
 
 #### `operation-shape` — операция устроена не как операция
 
-```toml
-[[tool.py-checks.operation-shape.operations]]
-inside = "use_cases"
-suffix = "UseCase"
-method = "execute"
-max-arguments = 3
+Читает `operation` рядом с `suffix`.
 
-# Дверей у сервиса столько, сколько переходов у его сущности: `IBetWriter`
-# держит шесть, по одной на переход, потому что переход — это один вызов, и
-# вызывающий, которому пришлось бы сделать три, сделает два.
-[[tool.py-checks.operation-shape.operations]]
-inside = "application/services"
-suffix = "Service"
-forbids = ["UnitOfWork"]
+```toml
+operation = { method = "execute", max-arguments = 3, forbids = ["UnitOfWork"] }
 ```
 
 **Зачем.** Сценарий просят об одном деле: один публичный метод, и он
@@ -389,16 +680,17 @@ forbids = ["UnitOfWork"]
 обеих. Приватных методов сколько угодно: длинная операция, разложившая себя
 на `_begun`, `_judged` и `_risked`, остаётся одной операцией.
 
+Пустой `method` означает, что число дверей не ограничено: у сервиса модуля их
+столько, сколько переходов у его сущности, и это тот же выбор, а не поблажка.
+
 Вход этой двери — три поля, не больше. То, что пришло снаружи и заняло
 четыре, — это вещь с именем: команда, запрос, DTO. Считаются публичные
 методы, поэтому конструктор в счёт не идёт сам собой: через него приходят
-зависимости, а это проводка, не вход. Первый аргумент метода определяется по
-месту, а не по имени — `self` в `@staticmethod` считается как любой другой.
+зависимости, а это проводка, не вход.
 
 Рядом с операцией не стоит ничего: ни второй класс, ни функция — ни выше, ни
-ниже. Константы и алиасы стоять могут, перечисление — нет, в отличие от
-других директорий: словарь — это класс, и операция, которой он понадобился,
-называет то, чем её модуль не владеет.
+ниже. Константы и алиасы стоять могут, перечисление — нет: словарь это класс,
+и операция, которой он понадобился, называет то, чем её модуль не владеет.
 
 `forbids` ловит имя типа подстрокой, поэтому `UnitOfWork`, `IAuthUnitOfWork` и
 `AuthUnitOfWorkFactory` отвергаются одинаково — запрещено держать транзакцию,
@@ -414,7 +706,7 @@ forbids = ["UnitOfWork"]
 
 **Пометка.** `# placement-ok: operation-shape: <причина>`.
 
-### 4.3 signatures — длина, глубина, форма вызова
+### 5.3 signatures — длина, глубина, форма вызова
 
 #### `keyword-only-arguments` — подпись записана не полностью
 
@@ -498,7 +790,7 @@ max-lines = 600
 ```toml
 # `with` в таблице нет намеренно: вложенный `with` ловит ruff `SIM117`, с
 # автофиксом и с готовым ответом — «сделай один `with a, b:`».
-[tool.py-checks.nesting.limits]
+[tool.py-checks.nesting]
 try = 1
 if = 2
 ```
@@ -518,7 +810,7 @@ if = 2
 
 **Пометка.** `# signature-ok: nesting: <причина>`.
 
-### 4.4 types — границы, формы, неизменяемость
+### 5.4 types — границы, формы, неизменяемость
 
 #### `annotation-shapes` — форма названа так, что поля в ней безымянные
 
@@ -565,7 +857,7 @@ if = 2
 #### `confined-types` — поле в этой части дерева объявлено запрещённым здесь типом
 
 ```toml
-[tool.py-checks.confined-types.zones]
+[tool.py-checks.confined-types]
 # Двоичная плавающая точка не держит цену, а ошибка округления в хранимом
 # состоянии — это деньги, которые перестают сходиться. В приложении число на
 # пути в отчёт — арифметика, и там `float` законен.
@@ -601,7 +893,7 @@ shared = ["str", "int", "float", "Decimal"]
 [tool.py-checks.config-fields]
 zones = ["config"]
 # factory по умолчанию "Field"
-# alias = "validation_alias" — см. §5, без него не собрать `.env.example`
+# alias = "validation_alias" — см. §6, без него не собрать `.env.example`
 
 [tool.py-checks.config-fields.bounds]
 int = ["ge", "gt", "le", "lt"]
@@ -658,15 +950,17 @@ zones = ["modules"]
 
 **Пометка.** `# type-ok: frozen-dataclasses: <причина>`.
 
-### 4.5 database — модель, колонка, запрос
+### 5.5 database — модель, колонка, запрос
 
 #### `model-boundary` — ORM-модель объявлена, собрана или отдана не там
 
 ```toml
-[tool.py-checks.model-boundary]
-declared = ["infra/database/models"]
-built = ["infra/database/repositories"]
+[tool.py-checks.layout."infra/database/models"]
+orm = "declared"
 # base по умолчанию "Base"
+
+[tool.py-checks.layout."infra/database/repositories"]
+orm = "built"
 ```
 
 **Зачем.** Модель — описание таблицы, и три правила держат её описанием.
@@ -713,16 +1007,16 @@ defaults = [
     "onupdate",
     "server_onupdate",
 ]
-unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
+skip = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
-[tool.py-checks.model-columns.types]
+[tool.py-checks.model-columns.instead]
 Enum = "голый Enum — нативный тип Postgres; используй stored_enum()"
 Float = "Float дрейфует; состояние точно, используй Numeric"
 JSONB = "голый JSONB — форма, которую никто не объявил; заверни в TypeDecorator"
 JSON = "голый JSON — форма, которую никто не объявил; заверни в TypeDecorator"
 
-[tool.py-checks.model-columns.homes]
+[tool.py-checks.model-columns.wrappers]
 # Модуль, где живёт обёртка над материалом: там его называть можно.
 # В A и C он `_enum_column`, в B и D — `enum_column`.
 Enum = "_enum_column"
@@ -746,7 +1040,7 @@ Enum = "_enum_column"
 `nullable=` обязаны совпадать: SQLAlchemy разрешает им разойтись, и тогда
 pyright рассуждает по одной, а база держит другое.
 
-`UUID`, `datetime`, `date` и `bool` в `unruled` отсутствуют намеренно: они
+`UUID`, `datetime`, `date` и `bool` в `skip` отсутствуют намеренно: они
 исчерпывающи сами по себе, и подмножества у `bool` не бывает.
 
 **Пометка.** `# db-ok: model-columns: <причина>`.
@@ -766,7 +1060,7 @@ primitives = [
     "FiniteDecimal",
     "OfferedPrice",
 ]
-# call по умолчанию "bound_check", аргументы — "column" и "primitive"
+# helper по умолчанию { call = "bound_check", column = "column", primitive = "primitive" }
 ```
 
 **Зачем.** Колонка, объявленная `Mapped[PositiveDecimal]`, обещает дважды.
@@ -826,7 +1120,7 @@ WHOLE))` — оно состоит из атрибута, который pyright
 [tool.py-checks.statement-keys]
 zones = ["infra/database/repositories"]
 # lists по умолчанию ["index_elements"], mappings — ["set_"],
-# calls — ["from_select"], loops — ["execute"]
+# sub-queries — ["from_select"], loops — ["execute"]
 ```
 
 **Зачем.** Строки собираются через модели, поэтому список колонок держит
@@ -855,9 +1149,9 @@ pyright: пропущенная колонка — пропущенный арг
 methods = ["commit", "rollback", "begin", "begin_nested"]
 zones = ["modules", "presentation", "infra/database"]
 # Край брокера: `commit()` у консьюмера подтверждает смещение, а не транзакцию.
-outside = ["presentation/consumers"]
+skip = ["presentation/consumers"]
 owner = "unit_of_work"
-said = "границей транзакции владеет unit_of_work"
+because = "границей транзакции владеет unit_of_work"
 ```
 
 **Зачем.** Ставка — это одна транзакция: списать деньги, записать ставку,
@@ -925,7 +1219,7 @@ py-checks run --all
 
 **Пометка.** `# db-ok: schema-drift: <причина>`.
 
-### 4.6 effects — часы, случайность, лог
+### 5.6 effects — часы, случайность, лог
 
 #### `determinism` — код сам читает часы, случайность или новый идентификатор
 
@@ -933,7 +1227,7 @@ py-checks run --all
 [tool.py-checks.determinism]
 zones = ["modules", "repositories"]
 
-[tool.py-checks.determinism.sources]
+[tool.py-checks.determinism.instead]
 "datetime.now" = "возьми порт Clock и позови его"
 "datetime.utcnow" = "возьми порт Clock и позови его"
 "date.today" = "возьми порт Clock и позови его"
@@ -1025,7 +1319,7 @@ logger.info(LogEvent.CONSUMER_STARTED, topics=...)  # требуется
 
 **Пометка.** `# effect-ok: log-events: не наш логгер`.
 
-### 4.7 api — что объявляет маршрут
+### 5.7 api — что объявляет маршрут
 
 #### `endpoint-declarations` — маршрут не сказал, чем он отвечает
 
@@ -1074,13 +1368,13 @@ Consumer правило не достаёт: у подписчика нет ни
 
 **Пометка.** `# api-ok: endpoint-declarations: <причина>`.
 
-### 4.8 calls — откуда функцию можно звать
+### 5.8 calls — откуда функцию можно звать
 
 #### `confined-functions` — названная функция позвана не оттуда, откуда ей можно
 
 ```toml
 [tool.py-checks.confined-functions]
-home = "shared/money"
+declared-in = "shared/money"
 
 [tool.py-checks.confined-functions.calls]
 to_eur = [
@@ -1115,12 +1409,12 @@ in_cents = [
 рано, — округление, которого арифметика не просила.
 
 Место — кусок пути, а не файл: край это место в замысле, а файл, который
-разделили надвое, краем быть не перестал. `home` выводит из-под правила
+разделили надвое, краем быть не перестал. `declared-in` выводит из-под правила
 модуль, где функция объявлена: там она написана, а не позвана.
 
 **Пометка.** `# call-ok: confined-functions: <причина>`.
 
-### 4.9 hygiene — манифест
+### 5.9 hygiene — манифест
 
 #### `dependency-bounds` — зависимость может уехать на версию, которую никто не запускал
 
@@ -1156,7 +1450,7 @@ in_cents = [
 
 **Пометка.** `# hygiene-ok: dependency-bounds: <причина>`.
 
-## 5. Собираемые файлы
+## 6. Собираемые файлы
 
 Два файла в репозитории не пишут руками и не проверяют — их собирает
 `py-checks sync` из того, из чего они выводятся. Хук `py-checks-sync`
@@ -1227,7 +1521,7 @@ settings = ["myservice.config.settings:Settings"]
 объявленное `default_factory`, — исключение: это вложенная секция, а не
 значение, и переменные читают её собственные поля.
 
-## 6. Что отдано другим
+## 7. Что отдано другим
 
 ### ruff
 
@@ -1352,221 +1646,3 @@ Windows и некоторые редакторы.
 Настройки лежат там, где их ищет mutmut, — `[tool.mutmut]` в `pyproject.toml`
 или `[mutmut]` в `setup.cfg`, если проект держит настройки инструментов
 отдельными файлами.
-
-## 7. Весь конфиг
-
-Один блок, всё вышенаписанное, готовое к копированию в `py-checks.toml` —
-имена слоёв, зон и директорий здесь те, что были у типового сервиса; под свои
-их меняют.
-
-```toml
-src = "src"
-
-[contracts]
-composition-root = ["ioc", "bootstrap", "entrypoints"]
-
-[contracts.layers]
-domain = ["domain", "shared"]
-application = ["domain", "application", "shared"]
-infra = ["domain", "application", "infra", "shared", "config"]
-presentation = ["application", "presentation", "shared", "config"]
-observability = ["observability", "shared", "config"]
-config = ["config", "shared"]
-shared = ["shared"]
-
-[confined-imports.packages]
-sqlalchemy = ["infra/database", "ioc"]
-asyncpg = ["infra/database", "ioc"]
-alembic = ["infra/database"]
-fastapi = ["presentation", "bootstrap"]
-starlette = ["presentation", "bootstrap"]
-starlette_exporter = ["bootstrap"]
-dishka = ["ioc", "bootstrap", "presentation"]
-uvicorn = ["entrypoints"]
-typer = ["entrypoints"]
-sentry_sdk = ["observability"]
-prometheus_client = ["observability", "bootstrap", "infra"]
-opentelemetry = ["observability", "bootstrap", "infra"]
-
-[sealed-imports]
-zones = ["modules", "shared"]
-
-[sealed-imports.allow]
-application = ["structlog"]
-
-[class-modules.policies]
-use_cases = ["class"]
-"application/services" = ["class"]
-repositories = ["class"]
-ports = ["port", "alias"]
-dto = ["dataclass", "alias"]
-schemas = ["model", "alias"]
-errors = ["error", "alias"]
-
-[[class-placement.rules]]
-kind = "error"
-inside = ["errors", "exceptions"]
-
-[[class-placement.rules]]
-kind = "port"
-inside = ["ports"]
-area = "application"
-
-[[class-placement.rules]]
-suffix = "Repository"
-inside = ["infra/database/repositories", "ports"]
-
-[[class-placement.rules]]
-kind = "dataclass"
-inside = ["dto"]
-area = "application"
-
-[[class-placement.rules]]
-suffix = "UseCase"
-inside = ["use_cases"]
-area = "application"
-
-[[class-placement.rules]]
-suffix = "Service"
-inside = ["application/services"]
-area = "application"
-
-[[class-placement.rules]]
-kind = "model"
-inside = ["schemas/requests", "schemas/responses"]
-area = "presentation"
-
-[required-class.suffixes]
-use_cases = "UseCase"
-"application/services" = "Service"
-repositories = "Repository"
-config = "Settings"
-models = "Model"
-
-[[operation-shape.operations]]
-inside = "use_cases"
-suffix = "UseCase"
-method = "execute"
-max-arguments = 3
-
-[[operation-shape.operations]]
-inside = "application/services"
-suffix = "Service"
-forbids = ["UnitOfWork"]
-
-[function-length]
-max-lines = 50
-
-[module-length]
-max-lines = 600
-
-[nesting.limits]
-try = 1
-if = 2
-
-[signature-layout]
-calls = true
-
-[frozen-dataclasses]
-zones = ["modules"]
-options = ["frozen", "slots", "kw_only"]
-
-[annotation-shapes]
-
-[constant-annotations]
-
-[confined-types.zones]
-"modules/*/domain" = ["float"]
-domain = ["str", "int", "float", "Decimal"]
-shared = ["str", "int", "float", "Decimal"]
-
-[config-fields]
-zones = ["config"]
-alias = "validation_alias"
-
-[config-fields.bounds]
-int = ["ge", "gt", "le", "lt"]
-float = ["ge", "gt", "le", "lt"]
-str = ["min_length", "pattern"]
-
-[model-boundary]
-declared = ["infra/database/models"]
-built = ["infra/database/repositories"]
-
-[model-columns]
-zones = ["infra/database/models"]
-defaults = [
-    "default",
-    "insert_default",
-    "default_factory",
-    "server_default",
-    "onupdate",
-    "server_onupdate",
-]
-unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
-aware = ["DateTime"]
-
-[model-columns.types]
-Enum = "голый Enum — нативный тип Postgres; используй stored_enum()"
-Float = "Float дрейфует; состояние точно, используй Numeric"
-JSONB = "голый JSONB — форма, которую никто не объявил; заверни в TypeDecorator"
-JSON = "голый JSON — форма, которую никто не объявил; заверни в TypeDecorator"
-
-[model-columns.homes]
-Enum = "_enum_column"
-
-[bound-checks]
-zones = ["infra/database/models"]
-primitives = [
-    "PositiveDecimal",
-    "NonNegativeDecimal",
-    "PositiveInt",
-    "NonNegativeInt",
-    "NonEmptyString",
-]
-
-[raw-sql]
-
-[statement-keys]
-zones = ["infra/database/repositories"]
-
-[[confined-calls.rules]]
-methods = ["commit", "rollback", "begin", "begin_nested"]
-zones = ["modules", "presentation", "infra/database"]
-outside = ["presentation/consumers"]
-owner = "unit_of_work"
-said = "границей транзакции владеет unit_of_work"
-
-[determinism]
-zones = ["modules", "repositories"]
-
-[determinism.sources]
-"datetime.now" = "возьми порт Clock и позови его"
-"datetime.utcnow" = "возьми порт Clock и позови его"
-"date.today" = "возьми порт Clock и позови его"
-"time.monotonic" = "возьми порт Clock и позови его"
-"time.perf_counter" = "возьми порт Clock и позови его"
-"uuid4" = "выдай идентификатор из IdGenerator и передай его"
-"uuid7" = "выдай идентификатор из IdGenerator и передай его"
-"random.*" = "прими значение аргументом"
-"secrets.token_urlsafe" = "прими значение аргументом"
-"secrets.token_hex" = "прими значение аргументом"
-"secrets.randbelow" = "прими значение аргументом"
-"func.now" = "время строки — из порта Clock, а не из базы"
-"func.gen_random_uuid" = "идентификатор строки выдаёт тот, кто её собрал"
-
-[log-events]
-enum = "LogEvent"
-
-[endpoint-declarations]
-methods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"]
-required = ["path", "status_code", "summary", "responses"]
-body = "response_model"
-bodiless = [204, 205, 304]
-exempt = "include_in_schema"
-
-[dependency-bounds]
-
-[env-example]
-settings = ["myservice.config.settings:Settings"]
-```

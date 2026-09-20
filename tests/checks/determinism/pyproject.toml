@@ -4,7 +4,7 @@ src = "."
 [tool.py-checks.determinism]
 zones = ["modules", "repositories"]
 
-[tool.py-checks.determinism.sources]
+[tool.py-checks.determinism.instead]
 "datetime.now" = "возьми порт Clock и позови его"
 "datetime.utcnow" = "возьми порт Clock и позови его"
 "date.today" = "возьми порт Clock и позови его"

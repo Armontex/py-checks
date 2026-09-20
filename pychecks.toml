@@ -10,7 +10,7 @@ ignore = ["annotation-shapes"]
 extend-exclude = ["tests/checks/*"]
 
 # Библиотека — не сервис: точек входа у неё нет, командная строка и есть край.
-[confined-imports.packages]
+[confined-imports]
 typer = ["cli"]
 
 # Слои этой библиотеки: `config` не знает никого, `core` стоит на нём, правила

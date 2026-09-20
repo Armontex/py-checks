@@ -20,7 +20,7 @@ CODE: Final = "determinism"
 
 
 class DeterminismSettings(ZonedSettings):
-    sources: dict[str, str] = {}  # noqa: RUF012 — pydantic копирует значение по умолчанию
+    instead: dict[str, str] = {}  # noqa: RUF012 — pydantic копирует значение по умолчанию
 
 
 class Determinism:
@@ -42,7 +42,7 @@ class Determinism:
     Имя сверяется с хвостом: `datetime.now` подходит и записи
     `datetime.datetime.now`, а `random.*` — любому вызову модуля целиком.
 
-    Настройки: `zones`, `sources`.
+    Настройки: `zones`, `instead`.
     """
 
     code: ClassVar[str] = CODE
@@ -66,7 +66,7 @@ class Determinism:
             file=file,
             zones=limits.zones,
         )
-        if where is None or not limits.sources:
+        if where is None or not limits.instead:
             return
         for node in ast.walk(file.tree):
             if not isinstance(node, ast.Call):
@@ -74,7 +74,7 @@ class Determinism:
             called = ast.unparse(node.func)
             said = cls._source(
                 called=called,
-                sources=limits.sources,
+                instead=limits.instead,
             )
             if said is None:
                 continue
@@ -89,13 +89,13 @@ class Determinism:
     def _source(
         *,
         called: str,
-        sources: dict[str, str],
+        instead: dict[str, str],
     ) -> str | None:
         """Причина, по которой такой вызов запрещён, если он в таблице."""
         return next(
             (
                 said
-                for pattern, said in sources.items()
+                for pattern, said in instead.items()
                 if matches(
                     called=called,
                     pattern=pattern,

@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Final
 
+from py_checks.checks._layout import SECTION, Layout, Orm, addressed
 from py_checks.checks._location import place
 from py_checks.checks._names import name, walked
 from py_checks.checks.database._marker import MARKER
-from py_checks.config import CheckSettings
 from py_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from py_checks.checks._layout import Directory
     from py_checks.checks._location import Place
+    from py_checks.config import CheckSettings
     from py_checks.core import ParsedFile
 
 CODE: Final = "model-boundary"
@@ -23,11 +26,17 @@ PRIVATE: Final = "_"
 DOT: Final = "."
 SEPARATOR: Final = "/"
 
+# Как зовут базовый класс моделей, если дом не сказал иначе.
+BASE: Final = "Base"
 
-class ModelBoundarySettings(CheckSettings):
-    base: str = "Base"
-    declared: tuple[str, ...] = ()
-    built: tuple[str, ...] = ()
+
+@dataclass(frozen=True, slots=True)
+class Boundary:
+    """Два конца соглашения про модель, прочитанные из раскладки."""
+
+    declared: tuple[str, ...]
+    built: tuple[str, ...]
+    base: str
 
 
 class ModelBoundary:
@@ -55,11 +64,14 @@ class ModelBoundary:
     по базе `Base`, использование — по импорту из пакета моделей. Имя ни при
     чём: `SettingsModel` в настройках и `DeviceModel` в домене — не таблицы.
 
-    Настройки: `base`, `declared`, `built`.
+    Настройки: `orm` в общей таблице `[layout]` — `"declared"` у дома моделей
+    и `"built"` там, где их собирают; `base` рядом с домом, если базовый класс
+    зовут не `Base`.
     """
 
     code: ClassVar[str] = CODE
-    Settings: ClassVar[type[CheckSettings]] = ModelBoundarySettings
+    Settings: ClassVar[type[CheckSettings]] = Layout
+    section: ClassVar[str] = SECTION
     scope: ClassVar[Scope] = Scope.FILE
     marker: ClassVar[str] = MARKER
 
@@ -70,10 +82,12 @@ class ModelBoundary:
         file: ParsedFile,
         settings: CheckSettings,
     ) -> Iterator[Violation]:
-        limits = settings_as(
-            settings=settings,
-            model=ModelBoundarySettings,
-            code=CODE,
+        limits = cls._boundary(
+            layout=settings_as(
+                settings=settings,
+                model=Layout,
+                code=CODE,
+            ).directories
         )
         where = place(file=file)
         if where is None or not limits.declared:
@@ -103,13 +117,33 @@ class ModelBoundary:
         ]
         yield from sorted(found, key=lambda violation: (violation.line, violation.column))
 
+    @staticmethod
+    def _boundary(*, layout: dict[str, Directory]) -> Boundary:
+        """Дом моделей, место сборки и имя базы — всё из блоков раскладки."""
+        declared = addressed(
+            layout=layout,
+            orm=Orm.DECLARED,
+        )
+        named = next(
+            (layout[address].base for address in declared if layout[address].base is not None),
+            None,
+        )
+        return Boundary(
+            declared=declared,
+            built=addressed(
+                layout=layout,
+                orm=Orm.BUILT,
+            ),
+            base=named or BASE,
+        )
+
     @classmethod
     def _declared(
         cls,
         *,
         file: ParsedFile,
         where: Place,
-        limits: ModelBoundarySettings,
+        limits: Boundary,
     ) -> Iterator[Violation]:
         """Модель, объявленная не в доме моделей."""
         if where.anywhere(
@@ -137,7 +171,7 @@ class ModelBoundary:
         *,
         file: ParsedFile,
         where: Place,
-        limits: ModelBoundarySettings,
+        limits: Boundary,
         models: frozenset[str],
     ) -> Iterator[Violation]:
         """Модель, собранная там, где нечем записать строку."""
@@ -166,7 +200,7 @@ class ModelBoundary:
         *,
         file: ParsedFile,
         where: Place,
-        limits: ModelBoundarySettings,
+        limits: Boundary,
         models: frozenset[str],
     ) -> Iterator[Violation]:
         """Модель, отданная наружу публичным методом репозитория."""
@@ -201,7 +235,7 @@ class ModelBoundary:
         cls,
         *,
         file: ParsedFile,
-        limits: ModelBoundarySettings,
+        limits: Boundary,
     ) -> frozenset[str]:
         """Имена, пришедшие импортом из пакета моделей."""
         names: set[str] = set()

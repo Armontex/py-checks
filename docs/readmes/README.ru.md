@@ -72,11 +72,11 @@ max-lines = 300
 # Правила, зависящие от места, работают только в названных зонах.
 [model-columns]
 zones = ["infra/database/models"]
-types = { Numeric = "деньги описывают Numeric(18, 4)" }
+instead = { Float = "колонка Float дрейфует; состояние точное, возьми Numeric" }
 
 [determinism]
 zones = ["modules/*/domain", "modules/*/application"]
-sources = { "datetime.now" = "часы берут портом", "uuid4" = "идентификатор выдают на краю" }
+instead = { "datetime.now" = "часы берут портом", "uuid4" = "идентификатор выдают на краю" }
 ```
 
 и запустите:
@@ -85,6 +85,7 @@ sources = { "datetime.now" = "часы берут портом", "uuid4" = "ид
 py-checks run          # проверить `src`
 py-checks run --fix    # и починить то, что чинится само
 py-checks list         # какие правила есть и что включено
+py-checks doctor       # и сходятся ли сами настройки
 py-checks explain determinism   # что правило требует и какие у него настройки
 ```
 
@@ -307,6 +308,7 @@ no-print = "myproject_checks:NoPrint"
 | `py-checks list` | все правила: код, состояние, строка описания |
 | `py-checks explain <код>` | что правило требует и какие у него настройки |
 | `py-checks sync [--check]` | собрать контракты импортов и `.env.example` |
+| `py-checks doctor` | проверить сами настройки: опечатки, мёртвые адреса, молчащие правила |
 
 ## Разработка
 

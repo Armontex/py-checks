@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Final
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -24,3 +26,9 @@ class CheckSettings(BaseModel):
         extra="forbid",
         frozen=True,
     )
+
+
+# Таблица, ключи которой приносит проект: имя директории, пакета, конструкции.
+# Такое имя — данные, а не поле модели, поэтому `extra` открыт, но значение под
+# ним проверяется: модель объявляет `__pydantic_extra__` своим типом.
+OPEN: Final[ConfigDict] = CheckSettings.model_config | {"extra": "allow"}

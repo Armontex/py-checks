@@ -85,11 +85,11 @@ max-lines = 300
 # Rules that depend on place only work in the zones you name.
 [model-columns]
 zones = ["infra/database/models"]
-types = { Numeric = "money is described by Numeric(18, 4)" }
+instead = { Float = "a Float column drifts; state is exact, use Numeric" }
 
 [determinism]
 zones = ["modules/*/domain", "modules/*/application"]
-sources = { "datetime.now" = "take the clock as a port", "uuid4" = "hand the id out at the edge" }
+instead = { "datetime.now" = "take the clock as a port", "uuid4" = "hand the id out at the edge" }
 ```
 
 and run:
@@ -99,6 +99,7 @@ py-checks run          # check `src`
 py-checks run --fix    # and repair what repairs itself
 py-checks list         # which rules exist and which are on
 py-checks explain determinism   # what a rule asks for and what it can be told
+py-checks doctor       # and whether the config itself holds together
 ```
 
 The settings can also live in a `[tool.py-checks]` section of
@@ -326,6 +327,7 @@ obeys `ignore`, and is lifted by a mark.
 | `py-checks list` | every rule: code, state, one line of description |
 | `py-checks explain <code>` | what a rule asks for and what it can be told |
 | `py-checks sync [--check]` | build the import contracts and `.env.example` |
+| `py-checks doctor` | check the config itself: typos, dead addresses, rules that say nothing |
 
 ## Development
 

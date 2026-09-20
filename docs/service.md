@@ -30,15 +30,316 @@ Every rule is written to the same shape:
 
 | Section | |
 |---|---|
-| [1. Where the settings live](#1-where-the-settings-live) | one file, not two |
-| [2. Who checks what](#2-who-checks-what) | ruff, pyright, import-linter, us |
-| [3. The hooks](#3-the-hooks) | what ships with the library, what the project declares |
-| [4. The rules](#4-the-rules) | all twenty-eight, by group |
-| [5. The generated files](#5-the-generated-files) | contracts and `.env.example` |
-| [6. What is handed to others](#6-what-is-handed-to-others) | ruff, pyright, pytest-alembic, symlinks |
-| [7. The whole config](#7-the-whole-config) | one block to copy |
+| [1. One service, whole](#1-one-service-whole) | the entire config of a service, read line by line |
+| [2. Where the settings live](#2-where-the-settings-live) | one file, not two |
+| [3. Who checks what](#3-who-checks-what) | ruff, pyright, import-linter, us |
+| [4. The hooks](#4-the-hooks) | what ships with the library, what the project declares |
+| [5. The rules](#5-the-rules) | all twenty-eight, by group |
+| [6. The generated files](#6-the-generated-files) | contracts and `.env.example` |
+| [7. What is handed to others](#7-what-is-handed-to-others) | ruff, pyright, pytest-alembic, symlinks |
 
-## 1. Where the settings live
+## 1. One service, whole
+
+Before the rules one by one, here is the whole thing at once: `parcels`, an
+invented delivery service — three modules (`orders`, `pricing`, `tracking`),
+Postgres behind SQLAlchemy, Kafka at the edge, FastAPI on top. Its layout:
+
+```
+src/parcels/
+├── bootstrap/        the application, the consumer, the probes
+├── config/           settings, one class per source
+├── entrypoints/      the commands of the executable
+├── infra/database/   models, repositories, the unit of work
+├── ioc/              the container and its providers
+├── modules/
+│   ├── orders/{domain,application}
+│   ├── pricing/{domain,application}
+│   └── tracking/{domain,application}
+├── observability/    logs, metrics, traces
+├── presentation/     the HTTP edge and the consumers
+└── shared/           primitives, ports, the event vocabulary
+```
+
+And its entire `py-checks.toml`, with the reason on every table. Nothing in it
+comes from the library: the library brings rules, this file brings the
+architecture.
+
+```toml
+# Where our own code is. Everything else — tests, migrations, generated code —
+# is judged by the tools that own it.
+src = "src"
+
+# --- Imports and boundaries -------------------------------------------------
+
+[contracts]
+# Tying the layers together is the whole of their work, so they may see all.
+composition-root = ["ioc", "bootstrap", "entrypoints"]
+
+# Dependencies point inwards. `presentation` deliberately does not see
+# `domain`: the edge translates into the application's DTOs and back, and a
+# router reading a domain object ties the shape of the outside world to the
+# shape of the rules.
+[contracts.layers]
+domain = ["domain", "shared"]
+application = ["domain", "application", "shared"]
+infra = ["domain", "application", "infra", "shared", "config"]
+presentation = ["application", "presentation", "shared", "config"]
+observability = ["observability", "shared", "config"]
+config = ["config", "shared"]
+shared = ["shared"]
+
+# A package -> the directories allowed to import it. A line here widens a
+# framework's reach through the codebase, so it is added deliberately.
+[confined-imports]
+sqlalchemy = ["infra/database", "ioc"]
+asyncpg = ["infra/database", "ioc"]
+alembic = ["infra/database"]
+aiokafka = ["infra/kafka", "ioc"]
+fastapi = ["presentation", "bootstrap"]
+starlette = ["presentation", "bootstrap"]
+dishka = ["ioc", "bootstrap", "presentation"]
+uvicorn = ["entrypoints"]
+typer = ["entrypoints"]
+prometheus_client = ["observability"]
+sentry_sdk = ["observability"]
+
+[sealed-imports]
+# The rules and the interfaces around them: a DTO here is a dataclass, not a
+# framework's model. `shared` is sealed with them because every module's
+# domain imports it — a framework that reaches it is inside every sealed layer
+# at once.
+zones = ["modules", "shared"]
+
+[sealed-imports.allow]
+# A use case leads and may therefore say what happened; the rules are true
+# whether or not anybody is listening.
+application = ["structlog"]
+
+# --- The layout: one block per directory ------------------------------------
+
+# `only` — what may be declared here; `home` — what may be declared ONLY here;
+# `suffix` — the class this directory exists for; `required` — a module here
+# must declare one; `operation` — the shape of an operation kept here.
+
+[layout."application/use_cases"]
+only = ["class"]
+suffix = "UseCase"
+required = true
+# One public door, and three fields through it. What came from outside and
+# filled four is a thing with a name: a command, a query, a DTO.
+operation = { method = "execute", max-arguments = 3, forbids = ["UnitOfWork"] }
+
+[layout."application/services"]
+only = ["class"]
+suffix = "Service"
+required = true
+# A service has as many doors as its entity has transitions, so `method` is
+# not set: a caller who would have to make three calls will make two.
+operation = { forbids = ["UnitOfWork"] }
+
+[layout."application/ports"]
+only = ["port", "alias"]
+home = ["port"]
+
+[layout."application/dto"]
+only = ["dataclass", "alias"]
+home = ["dataclass"]
+
+# A domain value object is a dataclass too: once a kind has a home, it lives
+# only in the blocks that claim it, so every home is named.
+[layout."modules/*/domain"]
+home = ["dataclass"]
+
+# A schema declared next to a route accidentally becomes shared, so request
+# and response live apart: one class for both ends is a request that grew a
+# field the response never wanted.
+[layout."presentation/schemas/requests"]
+only = ["model", "alias"]
+home = ["model"]
+
+[layout."presentation/schemas/responses"]
+only = ["model", "alias"]
+home = ["model"]
+
+# Settings are a model as well, and this is their home.
+[layout.config]
+home = ["model"]
+suffix = "Settings"
+required = true
+
+[layout."infra/database/models"]
+suffix = "Model"
+required = true
+# The home of the ORM models: `model-boundary` reads the same table rather than
+# naming these two directories a second time in one of its own.
+orm = "declared"
+
+[layout."infra/database/repositories"]
+only = ["class"]
+suffix = "Repository"
+required = true
+# Building a model means writing a row, and a row is written here.
+orm = "built"
+
+# The port of a repository and its implementation lawfully live in two places.
+[layout."shared/ports"]
+only = ["port", "alias"]
+
+[layout.errors]
+only = ["error", "alias"]
+home = ["error"]
+
+[layout.exceptions]
+home = ["error"]
+
+# --- Length, depth, shape ---------------------------------------------------
+
+[function-length]
+max-lines = 50
+
+[module-length]
+max-lines = 600
+
+# `with` is deliberately absent: a nested `with` is caught by ruff `SIM117`,
+# with an autofix and a ready answer.
+[nesting]
+try = 1
+if = 2
+
+[signature-layout]
+calls = true
+
+# --- Types ------------------------------------------------------------------
+
+[frozen-dataclasses]
+zones = ["modules"]
+options = ["frozen", "slots", "kw_only"]
+
+[annotation-shapes]
+
+[constant-annotations]
+
+[confined-types]
+# Binary floating point does not hold a price: a rounding error in stored
+# state is money that stops adding up.
+"modules/*/domain" = ["float"]
+# `int` says the version may be −10000, `str` that the tag may be empty. None
+# of that is true of the business, and the type is the last place to say it
+# once instead of re-checking by eye.
+domain = ["str", "int", "float", "Decimal"]
+shared = ["str", "int", "float", "Decimal"]
+
+[config-fields]
+zones = ["config"]
+# The field names the variable it is read from — and `.env.example` is built
+# out of exactly that.
+alias = "validation_alias"
+
+[config-fields.bounds]
+int = ["ge", "gt", "le", "lt"]
+float = ["ge", "gt", "le", "lt"]
+str = ["min_length", "pattern"]
+
+# --- The database -----------------------------------------------------------
+
+[model-columns]
+zones = ["infra/database/models"]
+defaults = [
+    "default",
+    "insert_default",
+    "default_factory",
+    "server_default",
+    "onupdate",
+    "server_onupdate",
+]
+skip = ["str", "int", "float", "Decimal", "dict", "Any"]
+aware = ["DateTime"]
+
+[model-columns.instead]
+Enum = "a bare Enum is a native Postgres type; use stored_enum()"
+Float = "a Float column drifts; state is exact, use Numeric"
+JSONB = "a bare JSONB is a shape nobody declared; wrap it in a TypeDecorator"
+
+[model-columns.wrappers]
+# The module where the wrapper over the material lives: naming it there is
+# allowed, because that is the one place that turns it into something else.
+Enum = "_enum_column"
+
+[bound-checks]
+zones = ["infra/database/models"]
+primitives = [
+    "PositiveDecimal",
+    "NonNegativeDecimal",
+    "PositiveInt",
+    "NonEmptyString",
+    "Weight",
+]
+
+[raw-sql]
+
+[statement-keys]
+zones = ["infra/database/repositories"]
+
+[[confined-calls.rules]]
+methods = ["commit", "rollback", "begin", "begin_nested"]
+zones = ["modules", "presentation", "infra/database"]
+# The broker's edge: a consumer's `commit()` acknowledges an offset, not a
+# transaction.
+skip = ["presentation/consumers"]
+owner = "unit_of_work"
+because = "unit_of_work owns the transaction boundary"
+
+# --- Effects ----------------------------------------------------------------
+
+[determinism]
+zones = ["modules", "repositories"]
+
+[determinism.instead]
+"datetime.now" = "take the Clock port and call it"
+"date.today" = "take the Clock port and call it"
+"time.monotonic" = "take the Clock port and call it"
+"uuid4" = "hand the identifier out of IdGenerator and pass it in"
+"uuid7" = "hand the identifier out of IdGenerator and pass it in"
+"random.*" = "take the value as an argument"
+# The same source through SQL: `func.<name>()` is a call the DATABASE makes.
+"func.now" = "the row's time comes from the Clock port, not from the database"
+"func.gen_random_uuid" = "the row's identifier comes from whoever built it"
+
+[log-events]
+enum = "LogEvent"
+
+# --- The edge ---------------------------------------------------------------
+
+[endpoint-declarations]
+methods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"]
+required = ["path", "status_code", "summary", "responses"]
+body = "response_model"
+bodiless = [204, 205, 304]
+exempt = "include_in_schema"
+
+[confined-functions]
+# Conversion has one implementation, and its call sites can be listed.
+declared-in = "shared/money"
+
+[confined-functions.calls]
+to_eur = ["modules/pricing/application", "modules/orders/application/use_cases/quote"]
+in_cents = ["modules/pricing/application"]
+
+[dependency-bounds]
+
+# --- What is built rather than checked --------------------------------------
+
+[env-example]
+settings = ["parcels.config.settings:Settings"]
+```
+
+Read top to bottom, the file says what kind of service this is: three modules
+with sealed rules, one transaction boundary, a database whose columns are made
+of bounded primitives, an HTTP edge that declares its answers, and a clock
+that arrives through a port. That is the whole point of the table being the
+project's: the library has no opinion about any of it until this file says so.
+
+## 2. Where the settings live
 
 Everything below is written as `[tool.py-checks.<code>]` sections — that is
 the `pyproject.toml` view. The settings also have a file of their own:
@@ -70,7 +371,7 @@ ignore = ["schema-drift"]        # rules this project does not run
 extend-exclude = ["generated"]   # on top of the default exclusions
 ```
 
-## 2. Who checks what
+## 3. Who checks what
 
 The rules below exist because nothing off the shelf covers them. Where
 something does, it keeps the job — a second opinion costs a second
@@ -116,7 +417,7 @@ A separate bandit is then unnecessary: the `S` rules are bandit, rewritten
 inside ruff. On the four services it stood next to ruff as a second dependency
 and a second hook — the move throws it out.
 
-## 3. The hooks
+## 4. The hooks
 
 The library publishes only its own:
 
@@ -158,19 +459,53 @@ For the same reason import-linter is not a dependency of the library: we never
 import it, and handing a third-party tool to everyone who installed us would
 be deciding, on the project's behalf, what checks its imports.
 
-## 4. The rules
+### `doctor` — the config judged instead of the code
+
+A rule with no table says nothing, and that silence looks exactly like a
+convention nobody breaks. `py-checks doctor` is the command that reads the
+config itself and says where the quiet comes from:
+
+```
+$ py-checks doctor
+py-checks.toml
+
+  опечатка в имени секции
+    [class-lenght] — такой секции нет; ближайшие: module-length, function-length
+
+  правило включено, но молчит
+    [statement-keys] — зон не названо: судить негде
+    [layout] — секция пуста, а умолчаний у правила нет
+
+  адрес, которого нет на диске
+    [layout] — 'application/handlers' не нашлось в src
+
+замечаний — 3
+```
+
+Four questions, all of them about the file rather than the tree: a section
+name nobody reads (a typo is silently ignored otherwise — nothing looks for a
+section nobody declared), `ignore` naming a rule that does not exist, a rule
+whose table leaves it with nothing to judge, and an address no directory or
+module answers to. The last one is the slow one: a directory gets renamed, the
+block stays, and the rule goes on looking where nothing is.
+
+It belongs in CI beside `run`, not in the hooks: it reads the whole tree of
+`src` to answer the last question, and it has nothing to say about the file
+that is being committed. It exits `1` when it has complaints.
+
+## 5. The rules
 
 Nine groups. Each group has a short word that lifts any rule in it from a
 line — `# import-ok`, `# placement-ok`, `# signature-ok`, `# type-ok`,
 `# db-ok`, `# effect-ok`, `# api-ok`, `# call-ok`, `# hygiene-ok` — and the
 canonical `# check-ok: <code>: <reason>` always works and lifts exactly one.
 
-### 4.1 imports — which package is allowed where
+### 5.1 imports — which package is allowed where
 
 #### `confined-imports` — a package is imported outside the places set aside for it
 
 ```toml
-[tool.py-checks.confined-imports.packages]
+[tool.py-checks.confined-imports]
 sqlalchemy = ["infra/database", "ioc"]
 asyncpg = ["infra/database", "ioc"]
 aiosqlite = ["infra/database"]
@@ -227,21 +562,57 @@ only `modules` is sealed there.
 
 **The mark.** `# import-ok: sealed-imports: <reason>`.
 
-### 4.2 placement — what belongs where
+### 5.2 placement — what belongs where
+
+Five rules speak about one and the same thing from five sides: what may live
+here, what lives *only* here, what a module must declare, what shape an
+operation has, and which end of the ORM model's boundary this directory is.
+They read one table — `[layout]`, one block per directory:
+
+```toml
+[layout."application/use_cases"]
+only = ["class"]        # nothing but classes is declared here
+suffix = "UseCase"      # they are named *UseCase — and *UseCase lives nowhere else
+required = true         # a module here must declare one, first and alone
+operation = { method = "execute", max-arguments = 3 }
+```
+
+| Key | Read by | Says |
+|---|---|---|
+| `only` | `class-modules` | the kinds allowed in this directory, and nothing else sits beside them |
+| `home` | `class-placement` | the kinds whose only home this is |
+| `suffix` | `class-placement`, `required-class`, `operation-shape` | the name of the class this directory exists for |
+| `required` | `required-class` | a module here must declare such a class, first and alone |
+| `operation` | `operation-shape` | the shape of the operation kept here |
+| `orm` | `model-boundary` | which end of the model's boundary this is: `"declared"` or `"built"` |
+| `base` | `model-boundary` | the base class the models here are known by |
+
+The heading is an address, not a directory name, and it is matched as
+consecutive pieces of a path: `application/use_cases` is found inside
+`modules/<name>/` as well, and a `*` matches any one piece
+(`modules/*/domain`). A directory the layout says nothing about is nobody's
+business.
+
+**A home claimed is a home enumerated.** The moment a kind gets a `home`, it
+lives *only* in the blocks that claim it — so every legitimate home is on the
+list:
+
+```toml
+[layout."application/dto"]
+home = ["dataclass"]
+
+# A domain value object is a dataclass too, and this is where it lives.
+[layout."modules/*/domain"]
+home = ["dataclass"]
+```
+
+That is the point of the table rather than a chore: the file answers "where do
+dataclasses live in this service" by itself, instead of the reader inferring it
+from the absence of a rule.
 
 #### `class-modules` — a module holds what its directory does not allow
 
-```toml
-[tool.py-checks.class-modules.policies]
-use_cases = ["class"]
-"application/services" = ["class"]
-repositories = ["class"]
-tools = ["class", "port"]
-ports = ["port", "alias"]
-dto = ["dataclass", "alias"]
-schemas = ["model", "alias"]
-errors = ["error", "alias"]
-```
+Reads `only`.
 
 **Why.** A directory is a promise about what is inside it. A port declared
 next to a use case is a port nobody will find, and a dataclass in `ports/` is
@@ -265,83 +636,22 @@ finds it in one place.
 
 #### `class-placement` — a class lies somewhere other than where its kind lives
 
-The reverse table: `class-modules` says what a directory may hold,
-`class-placement` says where a class must land, wherever somebody started
-writing it.
+Reads `home` and `suffix`.
 
-```toml
-[[tool.py-checks.class-placement.rules]]
-kind = "error"
-inside = ["errors", "exceptions"]
+**Why.** The directory names the kind, and the reader finds the port without
+opening a file. A `dataclass` in `application` must be in `dto/` — and a
+domain value object is a dataclass as well, which is why the domain is on the
+list of its homes rather than exempt from the rule.
 
-[[tool.py-checks.class-placement.rules]]
-kind = "port"
-inside = ["ports"]
-area = "application"
-
-[[tool.py-checks.class-placement.rules]]
-suffix = "Repository"
-inside = ["infra/database/repositories", "ports"]
-
-[[tool.py-checks.class-placement.rules]]
-kind = "dataclass"
-inside = ["dto"]
-area = "application"
-
-[[tool.py-checks.class-placement.rules]]
-suffix = "UseCase"
-inside = ["use_cases"]
-area = "application"
-
-[[tool.py-checks.class-placement.rules]]
-suffix = "Service"
-inside = ["application/services"]
-area = "application"
-
-[[tool.py-checks.class-placement.rules]]
-kind = "model"
-inside = ["schemas/requests", "schemas/responses"]
-area = "presentation"
-```
-
-**Why.** A rule speaks of a kind (`kind`) or of a name's suffix (`suffix`) —
-exactly one of the two. Order matters: the first matching rule answers, so an
-exception stays an exception even if its name ends in `Service`.
-
-`area` narrows a rule to a part of the tree and carries half the meaning. A
-`dataclass` must lie in `dto/` only inside `application`: a domain value
-object is a dataclass too, and it lives in the domain. The area is matched as
-consecutive pieces of the address, so `application` is found in a modular
-service as well, where the path starts with `modules/<name>/`.
-
-The last line is the HTTP entry: a schema declared next to a route
-accidentally becomes shared, so request and response live in `schemas`. Two
-halves rather than one: a model directly in `schemas` is a model whose
-direction the reader guesses from its name, and one class for both ends is a
-request that grew a field the response never wanted.
-
-`inside` lists addresses of equal standing, and an address includes a module's
-name: `errors` matches both a directory and a file `exceptions.py`.
-
-**Where the services differed.** B and D have no halves — their addresses are
-`requests` and `schemas`. D's repository port is `IOutboxRepository` and lives
-in `shared/ports`, so its table has `ports` next to
-`infra/database/repositories`: an implementation and an interface sharing a
-suffix lawfully live in two places.
+Several addresses for one subject read as equals: a repository port and its
+implementation lawfully live in two places, and the refusal vocabulary lives
+in `errors/` or in `exceptions.py`.
 
 **The mark.** `# placement-ok: class-placement: <reason>`.
 
 #### `required-class` — a module did not declare the class its directory exists for
 
-```toml
-[tool.py-checks.required-class.suffixes]
-use_cases = "UseCase"
-"application/services" = "Service"
-repositories = "Repository"
-config = "Settings"
-models = "Model"
-tools = "Tool"
-```
+Reads `required` beside `suffix`.
 
 **Why.** A file in `use_cases` exists for a use case; a file in `repositories`
 exists for a repository. The class comes first and comes alone: the file name
@@ -359,32 +669,18 @@ an empty module and a module with a leading underscore: `_base.py` holds its
 directory's machinery rather than one of its classes. The underscore is the
 only form of that relief; there is no list of bare names.
 
-The key is a path: the innermost matching directory wins, and at equal depth
-the longer key. So `application/services` requires a class while
-`domain/services` requires nothing.
-
-**Where the services differed.** B and D have three modules in `models/`
-called `base.py`, `bound_check.py` and `enum_column.py` — exactly that case,
-and renaming them to `_base.py` is the answer.
+When several blocks match, the innermost wins, and at equal depth the longer
+address: `application/services` requires a class while `domain/services`
+requires nothing.
 
 **The mark.** `# placement-ok: required-class: <reason>`.
 
 #### `operation-shape` — an operation is not shaped like an operation
 
-```toml
-[[tool.py-checks.operation-shape.operations]]
-inside = "use_cases"
-suffix = "UseCase"
-method = "execute"
-max-arguments = 3
+Reads `operation` beside `suffix`.
 
-# A service has as many doors as its entity has transitions: `IBetWriter`
-# holds six, one per transition, because a transition is one call, and a
-# caller who would have to make three will make two.
-[[tool.py-checks.operation-shape.operations]]
-inside = "application/services"
-suffix = "Service"
-forbids = ["UnitOfWork"]
+```toml
+operation = { method = "execute", max-arguments = 3, forbids = ["UnitOfWork"] }
 ```
 
 **Why.** A use case is asked for one thing: one public method, and it is
@@ -392,6 +688,10 @@ called `execute`. A second public method is a second operation sharing a
 constructor with the first, and a caller who needs one drags in the
 dependencies of both. Private methods are unlimited: a long operation broken
 into `_begun`, `_judged` and `_risked` is still one operation.
+
+An empty `method` means the number of doors is not limited: a module's service
+has as many as its entity has transitions, and that is the same decision
+rather than a concession.
 
 The door takes three fields, no more. What came from outside and filled four
 is a thing with a name: a command, a query, a DTO. Public methods are counted,
@@ -420,7 +720,7 @@ there the ban is on services only.
 
 **The mark.** `# placement-ok: operation-shape: <reason>`.
 
-### 4.3 signatures — length, depth, the shape of a call
+### 5.3 signatures — length, depth, the shape of a call
 
 #### `keyword-only-arguments` — a signature is not written out in full
 
@@ -507,7 +807,7 @@ reader has to hold all of them. Ruff has no rule for this; in pylint it is
 ```toml
 # `with` is deliberately absent from the table: a nested `with` is caught by
 # ruff `SIM117`, with an autofix and a ready answer — "make it one `with a, b:`".
-[tool.py-checks.nesting.limits]
+[tool.py-checks.nesting]
 try = 1
 if = 2
 ```
@@ -527,7 +827,7 @@ chain that D actually has.
 
 **The mark.** `# signature-ok: nesting: <reason>`.
 
-### 4.4 types — bounds, shapes, immutability
+### 5.4 types — bounds, shapes, immutability
 
 #### `annotation-shapes` — a shape is named such that its fields have no names
 
@@ -573,7 +873,7 @@ only in parameters and returns — a class field and a variable it does not see.
 #### `confined-types` — a field in this part of the tree is declared with a type banned here
 
 ```toml
-[tool.py-checks.confined-types.zones]
+[tool.py-checks.confined-types]
 # Binary floating point does not hold a price, and a rounding error in stored
 # state is money that stops adding up. In the application a number on its way
 # to a report is arithmetic, and `float` is lawful there.
@@ -612,7 +912,7 @@ bare.
 [tool.py-checks.config-fields]
 zones = ["config"]
 # factory defaults to "Field"
-# alias = "validation_alias" — see §5, the `.env.example` builder needs it
+# alias = "validation_alias" — see §6, the `.env.example` builder needs it
 
 [tool.py-checks.config-fields.bounds]
 int = ["ge", "gt", "le", "lt"]
@@ -672,15 +972,17 @@ from the environment and not in the wiring.
 
 **The mark.** `# type-ok: frozen-dataclasses: <reason>`.
 
-### 4.5 database — the model, the column, the statement
+### 5.5 database — the model, the column, the statement
 
 #### `model-boundary` — an ORM model is declared, built or handed out in the wrong place
 
 ```toml
-[tool.py-checks.model-boundary]
-declared = ["infra/database/models"]
-built = ["infra/database/repositories"]
+[tool.py-checks.layout."infra/database/models"]
+orm = "declared"
 # base defaults to "Base"
+
+[tool.py-checks.layout."infra/database/repositories"]
+orm = "built"
 ```
 
 **Why.** A model is a description of a table, and three rules keep it one.
@@ -727,16 +1029,16 @@ defaults = [
     "onupdate",
     "server_onupdate",
 ]
-unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
+skip = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
-[tool.py-checks.model-columns.types]
+[tool.py-checks.model-columns.instead]
 Enum = "a bare Enum is a native Postgres type; use stored_enum()"
 Float = "a Float column drifts; state is exact, use Numeric"
 JSONB = "a bare JSONB is a shape nobody declared; wrap it in a TypeDecorator"
 JSON = "a bare JSON is a shape nobody declared; wrap it in a TypeDecorator"
 
-[tool.py-checks.model-columns.homes]
+[tool.py-checks.model-columns.wrappers]
 # The module where the wrapper over the material lives: naming it there is
 # allowed. In A and C that is `_enum_column`, in B and D `enum_column`.
 Enum = "_enum_column"
@@ -760,7 +1062,7 @@ clock, unsigned, compared as though the signature did not matter. The
 annotation and `nullable=` must agree: SQLAlchemy lets them diverge, and then
 pyright reasons by one while the database holds the other.
 
-`UUID`, `datetime`, `date` and `bool` are deliberately absent from `unruled`:
+`UUID`, `datetime`, `date` and `bool` are deliberately absent from `skip`:
 they are exhaustive in themselves, and there is no subset of `bool`.
 
 **The mark.** `# db-ok: model-columns: <reason>`.
@@ -780,7 +1082,7 @@ primitives = [
     "FiniteDecimal",
     "OfferedPrice",
 ]
-# call defaults to "bound_check", its arguments to "column" and "primitive"
+# helper defaults to { call = "bound_check", column = "column", primitive = "primitive" }
 ```
 
 **Why.** A column declared `Mapped[PositiveDecimal]` promises twice. pyright
@@ -842,7 +1144,7 @@ gives 94 hits, 52 of them in `migrations/versions` alone.
 [tool.py-checks.statement-keys]
 zones = ["infra/database/repositories"]
 # lists default to ["index_elements"], mappings to ["set_"],
-# calls to ["from_select"], loops to ["execute"]
+# sub-queries to ["from_select"], loops to ["execute"]
 ```
 
 **Why.** Rows are assembled through models, so pyright holds the column list:
@@ -871,9 +1173,9 @@ methods = ["commit", "rollback", "begin", "begin_nested"]
 zones = ["modules", "presentation", "infra/database"]
 # The broker's edge: a consumer's `commit()` acknowledges an offset, not a
 # transaction.
-outside = ["presentation/consumers"]
+skip = ["presentation/consumers"]
 owner = "unit_of_work"
-said = "unit_of_work owns the transaction boundary"
+because = "unit_of_work owns the transaction boundary"
 ```
 
 **Why.** A bet is one transaction: take the money, write the bet, write the
@@ -944,7 +1246,7 @@ already exists.
 
 **The mark.** `# db-ok: schema-drift: <reason>`.
 
-### 4.6 effects — the clock, the dice, the log
+### 5.6 effects — the clock, the dice, the log
 
 #### `determinism` — the code reads the clock, the dice or a new identifier itself
 
@@ -952,7 +1254,7 @@ already exists.
 [tool.py-checks.determinism]
 zones = ["modules", "repositories"]
 
-[tool.py-checks.determinism.sources]
+[tool.py-checks.determinism.instead]
 "datetime.now" = "take the Clock port and call it"
 "datetime.utcnow" = "take the Clock port and call it"
 "date.today" = "take the Clock port and call it"
@@ -1046,7 +1348,7 @@ through, and third-party loggers inside the service are still called directly.
 
 **The mark.** `# effect-ok: log-events: not our logger`.
 
-### 4.7 api — what a route declares
+### 5.7 api — what a route declares
 
 #### `endpoint-declarations` — a route did not say what it answers with
 
@@ -1097,13 +1399,13 @@ instead.
 
 **The mark.** `# api-ok: endpoint-declarations: <reason>`.
 
-### 4.8 calls — where a function may be called from
+### 5.8 calls — where a function may be called from
 
 #### `confined-functions` — a named function was called from somewhere it may not be
 
 ```toml
 [tool.py-checks.confined-functions]
-home = "shared/money"
+declared-in = "shared/money"
 
 [tool.py-checks.confined-functions.calls]
 to_eur = [
@@ -1140,13 +1442,13 @@ it is the second place where an exact quantity stops being exact, and a
 quantity rounded early is a rounding the arithmetic never asked for.
 
 A place is a piece of a path, not a file: an edge is a place in the design,
-and a file split in two has not stopped being an edge. `home` takes the module
+and a file split in two has not stopped being an edge. `declared-in` takes the module
 where the function is declared out of the rule's reach: there it is written,
 not called.
 
 **The mark.** `# call-ok: confined-functions: <reason>`.
 
-### 4.9 hygiene — the manifest
+### 5.9 hygiene — the manifest
 
 #### `dependency-bounds` — a dependency may move to a version nobody has ever run
 
@@ -1182,7 +1484,7 @@ it is handed the root, and it is called once per run along with the rest —
 
 **The mark.** `# hygiene-ok: dependency-bounds: <reason>`.
 
-## 5. The generated files
+## 6. The generated files
 
 Two files in the repository are not written by hand and not checked either —
 they are built, by `py-checks sync`, from what they are derived from. The hook
@@ -1257,7 +1559,7 @@ name and a prefix — and there is nothing to build `.env.example` out of. A
 field declared with `default_factory` is the exception: that is a nested
 section, not a value, and the variables are read by its own fields.
 
-## 6. What is handed to others
+## 7. What is handed to others
 
 ### ruff
 
@@ -1382,221 +1684,3 @@ testing needs the test suite, several minutes and a list of what already
 survives. Its config lives where mutmut looks for it — `[tool.mutmut]` in
 `pyproject.toml`, or `[mutmut]` in `setup.cfg` if the project keeps its tool
 settings in separate files.
-
-## 7. The whole config
-
-One block, everything above, ready to copy into `py-checks.toml` — the names
-of layers, zones and directories are the ones a typical service had; change
-them for yours.
-
-```toml
-src = "src"
-
-[contracts]
-composition-root = ["ioc", "bootstrap", "entrypoints"]
-
-[contracts.layers]
-domain = ["domain", "shared"]
-application = ["domain", "application", "shared"]
-infra = ["domain", "application", "infra", "shared", "config"]
-presentation = ["application", "presentation", "shared", "config"]
-observability = ["observability", "shared", "config"]
-config = ["config", "shared"]
-shared = ["shared"]
-
-[confined-imports.packages]
-sqlalchemy = ["infra/database", "ioc"]
-asyncpg = ["infra/database", "ioc"]
-alembic = ["infra/database"]
-fastapi = ["presentation", "bootstrap"]
-starlette = ["presentation", "bootstrap"]
-starlette_exporter = ["bootstrap"]
-dishka = ["ioc", "bootstrap", "presentation"]
-uvicorn = ["entrypoints"]
-typer = ["entrypoints"]
-sentry_sdk = ["observability"]
-prometheus_client = ["observability", "bootstrap", "infra"]
-opentelemetry = ["observability", "bootstrap", "infra"]
-
-[sealed-imports]
-zones = ["modules", "shared"]
-
-[sealed-imports.allow]
-application = ["structlog"]
-
-[class-modules.policies]
-use_cases = ["class"]
-"application/services" = ["class"]
-repositories = ["class"]
-ports = ["port", "alias"]
-dto = ["dataclass", "alias"]
-schemas = ["model", "alias"]
-errors = ["error", "alias"]
-
-[[class-placement.rules]]
-kind = "error"
-inside = ["errors", "exceptions"]
-
-[[class-placement.rules]]
-kind = "port"
-inside = ["ports"]
-area = "application"
-
-[[class-placement.rules]]
-suffix = "Repository"
-inside = ["infra/database/repositories", "ports"]
-
-[[class-placement.rules]]
-kind = "dataclass"
-inside = ["dto"]
-area = "application"
-
-[[class-placement.rules]]
-suffix = "UseCase"
-inside = ["use_cases"]
-area = "application"
-
-[[class-placement.rules]]
-suffix = "Service"
-inside = ["application/services"]
-area = "application"
-
-[[class-placement.rules]]
-kind = "model"
-inside = ["schemas/requests", "schemas/responses"]
-area = "presentation"
-
-[required-class.suffixes]
-use_cases = "UseCase"
-"application/services" = "Service"
-repositories = "Repository"
-config = "Settings"
-models = "Model"
-
-[[operation-shape.operations]]
-inside = "use_cases"
-suffix = "UseCase"
-method = "execute"
-max-arguments = 3
-
-[[operation-shape.operations]]
-inside = "application/services"
-suffix = "Service"
-forbids = ["UnitOfWork"]
-
-[function-length]
-max-lines = 50
-
-[module-length]
-max-lines = 600
-
-[nesting.limits]
-try = 1
-if = 2
-
-[signature-layout]
-calls = true
-
-[frozen-dataclasses]
-zones = ["modules"]
-options = ["frozen", "slots", "kw_only"]
-
-[annotation-shapes]
-
-[constant-annotations]
-
-[confined-types.zones]
-"modules/*/domain" = ["float"]
-domain = ["str", "int", "float", "Decimal"]
-shared = ["str", "int", "float", "Decimal"]
-
-[config-fields]
-zones = ["config"]
-alias = "validation_alias"
-
-[config-fields.bounds]
-int = ["ge", "gt", "le", "lt"]
-float = ["ge", "gt", "le", "lt"]
-str = ["min_length", "pattern"]
-
-[model-boundary]
-declared = ["infra/database/models"]
-built = ["infra/database/repositories"]
-
-[model-columns]
-zones = ["infra/database/models"]
-defaults = [
-    "default",
-    "insert_default",
-    "default_factory",
-    "server_default",
-    "onupdate",
-    "server_onupdate",
-]
-unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
-aware = ["DateTime"]
-
-[model-columns.types]
-Enum = "a bare Enum is a native Postgres type; use stored_enum()"
-Float = "a Float column drifts; state is exact, use Numeric"
-JSONB = "a bare JSONB is a shape nobody declared; wrap it in a TypeDecorator"
-JSON = "a bare JSON is a shape nobody declared; wrap it in a TypeDecorator"
-
-[model-columns.homes]
-Enum = "_enum_column"
-
-[bound-checks]
-zones = ["infra/database/models"]
-primitives = [
-    "PositiveDecimal",
-    "NonNegativeDecimal",
-    "PositiveInt",
-    "NonNegativeInt",
-    "NonEmptyString",
-]
-
-[raw-sql]
-
-[statement-keys]
-zones = ["infra/database/repositories"]
-
-[[confined-calls.rules]]
-methods = ["commit", "rollback", "begin", "begin_nested"]
-zones = ["modules", "presentation", "infra/database"]
-outside = ["presentation/consumers"]
-owner = "unit_of_work"
-said = "unit_of_work owns the transaction boundary"
-
-[determinism]
-zones = ["modules", "repositories"]
-
-[determinism.sources]
-"datetime.now" = "take the Clock port and call it"
-"datetime.utcnow" = "take the Clock port and call it"
-"date.today" = "take the Clock port and call it"
-"time.monotonic" = "take the Clock port and call it"
-"time.perf_counter" = "take the Clock port and call it"
-"uuid4" = "hand the identifier out of IdGenerator and pass it in"
-"uuid7" = "hand the identifier out of IdGenerator and pass it in"
-"random.*" = "take the value as an argument"
-"secrets.token_urlsafe" = "take the value as an argument"
-"secrets.token_hex" = "take the value as an argument"
-"secrets.randbelow" = "take the value as an argument"
-"func.now" = "the row's time comes from the Clock port, not from the database"
-"func.gen_random_uuid" = "the row's identifier comes from whoever built it"
-
-[log-events]
-enum = "LogEvent"
-
-[endpoint-declarations]
-methods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"]
-required = ["path", "status_code", "summary", "responses"]
-body = "response_model"
-bodiless = [204, 205, 304]
-exempt = "include_in_schema"
-
-[dependency-bounds]
-
-[env-example]
-settings = ["myservice.config.settings:Settings"]
-```

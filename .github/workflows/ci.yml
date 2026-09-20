@@ -25,7 +25,7 @@ jobs:
           # Иначе токен задачи остаётся в `.git/config`, и всё, что заархивирует
           # рабочую директорию, унесёт его с собой. Здесь никто не пушит.
           persist-credentials: false
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           enable-cache: true
           python-version: "3.14"
@@ -46,6 +46,10 @@ jobs:
         run: uv run py-checks run --all
       - name: Контракты собраны заново
         run: uv run py-checks sync --check
+      # И сами настройки: правило без таблицы молчит, а молчание выглядит как
+      # соблюдённое соглашение. В хук это не ставится — здесь читается дерево.
+      - name: Настройки сходятся
+        run: uv run py-checks doctor
       - name: Импорты не пересекают границы
         run: uv run lint-imports --no-logo
 
@@ -70,7 +74,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           enable-cache: true
           python-version: "3.14"
@@ -84,10 +88,20 @@ jobs:
           HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          # Первый пуш ветки сообщает базу из одних нулей: сравнивать не с чем,
-          # поэтому проверяется всё, что приехало.
-          if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]]; then
-            uv run cz check --rev-range "$HEAD"
-          else
-            uv run cz check --rev-range "$BASE..$HEAD"
+          # Первый пуш ветки сообщает базу из одних нулей: тогда ею становится
+          # точка расхождения с `develop` — не вся история от начала времён.
+          base="$BASE"
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            base="$(git merge-base origin/develop "$HEAD" 2>/dev/null || true)"
           fi
+          range="$HEAD"
+          if [[ -n "$base" ]]; then
+            range="$base..$HEAD"
+          fi
+          # По первому родителю и без слияний: ветка отвечает за то, что
+          # написала сама, а не за историю, которую влила — чужие сообщения
+          # судил тот запрос, которым они приехали. Сообщение самого слияния
+          # пишет GitHub, и соглашению оно не подчиняется.
+          for sha in $(git rev-list --first-parent --no-merges "$range"); do
+            git log -1 --pretty=%B "$sha" | uv run cz check --commit-msg-file /dev/stdin
+          done

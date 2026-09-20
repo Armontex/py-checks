@@ -5,16 +5,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from py_checks.checks._kind import Kind, declarations
+from py_checks.checks._layout import SECTION, Layout, innermost
 from py_checks.checks._location import place
 from py_checks.checks.placement._marker import MARKER
-from py_checks.config import CheckSettings
 from py_checks.core import Scope, Violation, settings_as
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from py_checks.checks._kind import Declaration
-    from py_checks.checks._location import Place
+    from py_checks.config import CheckSettings
     from py_checks.core import ParsedFile
 
 CODE: Final = "required-class"
@@ -24,10 +24,6 @@ CODE: Final = "required-class"
 # выполняется в момент объявления, поэтому имена, которые требуемый класс
 # называет у себя внутри, ниже него написать нельзя.
 VOCABULARY: Final[frozenset[Kind]] = frozenset({Kind.ALIAS, Kind.ENUM})
-
-
-class RequiredClassSettings(CheckSettings):
-    suffixes: dict[str, str] = {}
 
 
 class RequiredClass:
@@ -51,11 +47,12 @@ class RequiredClass:
     ничего не обещал; модуль с подчёркиванием (`_base.py`) держит машинерию
     своей директории, а не один из её классов. Эти трое правилу не подсудны.
 
-    Настройка: `suffixes`.
+    Настройки: `required` и `suffix` в общей таблице `[layout]`.
     """
 
     code: ClassVar[str] = CODE
-    Settings: ClassVar[type[CheckSettings]] = RequiredClassSettings
+    Settings: ClassVar[type[CheckSettings]] = Layout
+    section: ClassVar[str] = SECTION
     scope: ClassVar[Scope] = Scope.FILE
     marker: ClassVar[str] = MARKER
 
@@ -66,19 +63,21 @@ class RequiredClass:
         file: ParsedFile,
         settings: CheckSettings,
     ) -> Iterator[Violation]:
-        suffixes = settings_as(
+        layout = settings_as(
             settings=settings,
-            model=RequiredClassSettings,
+            model=Layout,
             code=CODE,
-        ).suffixes
+        ).directories
         where = place(file=file)
         if where is None or file.path.stem.startswith("_"):
             return
-        suffix = cls._suffix(
+        found = innermost(
             where=where,
-            suffixes=suffixes,
+            among=[
+                (address, directory) for address, directory in layout.items() if directory.required
+            ],
         )
-        if suffix is None:
+        if found is None or (suffix := found[1].suffix) is None:
             return
         declared = list(declarations(tree=file.tree))
         if not declared:
@@ -145,20 +144,6 @@ class RequiredClass:
             if one.kind not in VOCABULARY:
                 return one
         return None
-
-    @staticmethod
-    def _suffix(
-        *,
-        where: Place,
-        suffixes: dict[str, str],
-    ) -> str | None:
-        """Суффикс самой внутренней из совпавших директорий."""
-        matched = [
-            (depth, len(directory), suffix)
-            for directory, suffix in suffixes.items()
-            if (depth := where.within(directory=directory)) is not None
-        ]
-        return max(matched)[2] if matched else None
 
     @staticmethod
     def _says(

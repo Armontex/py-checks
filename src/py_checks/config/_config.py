@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING, Final
 
 from pydantic import Field, ValidationError
 
@@ -10,6 +11,39 @@ from py_checks.config._base import CheckSettings
 from py_checks.config._constants import DEFAULT_EXCLUDE, PYPROJECT, SECTION
 from py_checks.config._errors import ConfigError
 from py_checks.config._toml import TomlTable
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+
+# Секции, которые больше не читаются: четыре правила про раскладку говорили об
+# одной и той же директории с четырёх сторон, и один факт приходилось писать
+# четыре раза. Молчать о них нельзя — незнакомая секция выглядит как
+# работающая настройка, а на деле правило судит по пустой таблице.
+RETIRED: Final[dict[str, str]] = {
+    "class-modules": "`only`",
+    "class-placement": "`home` и `suffix`",
+    "required-class": "`required` рядом с `suffix`",
+    "operation-shape": "`operation`",
+    "model-boundary": "`orm` и `base`",
+}
+
+
+def retired(
+    *,
+    checks: Mapping[str, object],
+    source: Path | None,
+) -> None:
+    """Падает, если в настройках остались секции, которые слились в `[layout]`."""
+    found = [name for name in RETIRED if name in checks]
+    if not found:
+        return
+    named = prefix(source=source)
+    listed = ", ".join(f"[{named}{name}] -> {RETIRED[name]}" for name in sorted(found))
+    raise ConfigError(
+        f"эти секции слились в общую таблицу [{named}layout], блок на директорию: "
+        f"{listed}. Одна директория — один блок, а не четыре строки в четырёх таблицах"
+    )
 
 
 def prefix(*, source: Path | None) -> str:

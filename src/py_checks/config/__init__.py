@@ -8,7 +8,7 @@
 настройки падает сразу и с понятным текстом.
 """
 
-from py_checks.config._base import CheckSettings
+from py_checks.config._base import OPEN, CheckSettings
 from py_checks.config._config import Config, prefix
 from py_checks.config._constants import DEFAULT_EXCLUDE, PYPROJECT, SECTION, STANDALONE
 from py_checks.config._errors import ConfigError
@@ -17,6 +17,7 @@ from py_checks.config._toml import TomlTable, TomlValue
 
 __all__ = [
     "DEFAULT_EXCLUDE",
+    "OPEN",
     "PYPROJECT",
     "SECTION",
     "STANDALONE",

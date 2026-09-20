@@ -1,0 +1,59 @@
+name: backmerge
+
+# Всё, что попало в `main`, обязано вернуться в `develop`: иначе ветки
+# расходятся, и следующий релизный запрос конфликтует по файлам, в которых
+# настоящего расхождения нет.
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  propose:
+    name: propose
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Вся история: считать, чего в `develop` нет, по мелкому клону нечем.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Чего в develop ещё нет
+        id: behind
+        run: |
+          set -euo pipefail
+          count="$(git rev-list --count origin/develop..origin/main)"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "коммитов в main, которых нет в develop: $count"
+
+      # Автослияние здесь уместно ровно потому, что наружу ничего не уходит:
+      # содержимое уже выпущено, и это возврат истории, а не публикация. Запрос
+      # всё равно ждёт `gate` и `commits` — те самые, что уже прошли на `main`,
+      # потому что `ci.yml` слушает и пуш в него.
+      - name: Запрос на возврат в develop
+        if: steps.behind.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > body.md <<'MD'
+          Всё, что попало в `main`, возвращается в `develop`: иначе ветки
+          расходятся, и следующий релизный запрос конфликтует по файлам, в
+          которых настоящего расхождения нет.
+
+          Наружу отсюда ничего не уходит — содержимое уже выпущено, — поэтому
+          запрос сливается сам, как только сойдутся проверки.
+          MD
+          if ! gh pr list --base develop --head main --state open --json number --jq '.[0].number // empty' | grep -q .; then
+            gh pr create --base develop --head main \
+              --title "chore: возврат main в develop" \
+              --body-file body.md
+          fi
+          number="$(gh pr list --base develop --head main --state open --json number --jq '.[0].number')"
+          gh pr merge "$number" --auto --merge

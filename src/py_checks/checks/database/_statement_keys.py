@@ -24,7 +24,7 @@ SAID: Final = "называет колонку строкой; маппед-ат
 class StatementKeysSettings(ZonedSettings):
     lists: tuple[str, ...] = ("index_elements",)
     mappings: tuple[str, ...] = ("set_",)
-    calls: tuple[str, ...] = ("from_select",)
+    sub_queries: tuple[str, ...] = ("from_select",)
     loops: tuple[str, ...] = ("execute",)
 
 
@@ -49,7 +49,7 @@ class StatementKeys:
     одного запроса, говорящего то же самое, не существует, — поэтому правило
     снимается пометкой на строке цикла или самого вызова, а не отсутствует.
 
-    Настройки: `zones`, `lists`, `mappings`, `calls`, `loops`.
+    Настройки: `zones`, `lists`, `mappings`, `sub-queries`, `loops`.
     """
 
     code: ClassVar[str] = CODE
@@ -110,7 +110,7 @@ class StatementKeys:
                     written=keyword.arg,
                     nodes=cls._keyed(node=keyword.value),
                 )
-        if name(node=node.func) in limits.calls and node.args:
+        if name(node=node.func) in limits.sub_queries and node.args:
             yield from cls._strings(
                 file=file,
                 written=name(node=node.func),
