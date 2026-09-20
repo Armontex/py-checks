@@ -1,5 +1,5 @@
 [project]
-name = "py-checks"
+name = "python-checks"
 version = "0.0.0"
 description = "Проверки архитектурных соглашений проекта"
 readme = "README.md"
@@ -47,6 +47,11 @@ schema-drift = "py_checks.checks.database:SchemaDrift"
 sealed-imports = "py_checks.checks.imports:SealedImports"
 signature-layout = "py_checks.checks.signatures:SignatureLayout"
 statement-keys = "py_checks.checks.database:StatementKeys"
+
+# Дистрибутив зовётся иначе, чем пакет: имя `py-checks` на PyPI занял сосед.
+# Сборщик выводит модуль из имени дистрибутива, поэтому имя пакета названо тут.
+[tool.uv.build-backend]
+module-name = "py_checks"
 
 [build-system]
 requires = ["uv_build>=0.12.15,<0.13.0"]

@@ -49,8 +49,11 @@ src/app/presentation/api/v1/routers/bets.py:22:1: endpoint-declarations: POST /b
 ## Установка
 
 ```bash
-uv add --dev py-checks
+uv add --dev python-checks
 ```
+
+Ставится как `python-checks`, зовётся `py-checks`: на PyPI живёт сосед по
+имени, а команда, секция настроек и пакет остались прежними.
 
 Нужен Python 3.14+. Зависимости: `libcst`, `pydantic`, `pydantic-settings`, `rich`, `typer`.
 
