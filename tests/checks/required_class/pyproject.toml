@@ -1,7 +1,14 @@
 [tool.py-checks]
 src = "."
 
-[tool.py-checks.required-class.suffixes]
-use_cases = "UseCase"
-repositories = "Repository"
-config = "Settings"
+[tool.py-checks.layout.use_cases]
+suffix = "UseCase"
+required = true
+
+[tool.py-checks.layout.repositories]
+suffix = "Repository"
+required = true
+
+[tool.py-checks.layout.config]
+suffix = "Settings"
+required = true

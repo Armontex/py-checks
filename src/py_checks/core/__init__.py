@@ -12,7 +12,7 @@ from py_checks.core._errors import ParseError, UnknownCheckError
 from py_checks.core._fixer import fix
 from py_checks.core._format import reformat
 from py_checks.core._markers import MARKER, Marker, complaints, markers, surviving
-from py_checks.core._protocols import Check, FileCheck, ProjectCheck, Scope
+from py_checks.core._protocols import Check, FileCheck, ProjectCheck, Scope, section_of
 from py_checks.core._registry import Checks, available, get
 from py_checks.core._report import report
 from py_checks.core._runner import SYNTAX, examine, inspect, survey
@@ -50,6 +50,7 @@ __all__ = [
     "python_files",
     "reformat",
     "report",
+    "section_of",
     "settings_as",
     "survey",
     "surviving",

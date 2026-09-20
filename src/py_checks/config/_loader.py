@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Final
 
 from pydantic import ValidationError
 
-from py_checks.config._config import Config, prefix
+from py_checks.config._config import Config, prefix, retired
 from py_checks.config._constants import PYPROJECT, SECTION, STANDALONE
 from py_checks.config._errors import ConfigError
 
@@ -97,6 +97,10 @@ def _build(
     source: Path,
 ) -> Config:
     own, checks = _split(section=section)
+    retired(
+        checks=checks,
+        source=source,
+    )
     named = prefix(source=source)
     # В своём файле секции нет — называть в сообщении нечего, кроме файла.
     where = f" [{named.rstrip('.')}]" if named else ""
