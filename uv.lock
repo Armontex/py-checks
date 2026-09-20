@@ -696,7 +696,7 @@ wheels = [
 
 [[package]]
 name = "python-checks"
-version = "0.0.0"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "libcst" },
