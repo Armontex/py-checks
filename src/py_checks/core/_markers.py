@@ -49,33 +49,73 @@ class Marker:
     column: int
 
 
-def read(
+def markers(
     *,
     line: str,
     aliases: Mapping[str, frozenset[str]],
-) -> Marker | None:
-    """Маркер из строки, если он там есть.
+) -> tuple[Marker, ...]:
+    """Маркеры строки: их может быть несколько.
+
+    Подпись в столбик собирает пометки в одну строку — `# signature-ok: так
+    зовёт библиотека  # type-ok: сырой ввод`, — и снимать они должны обе.
 
     Разбор нарочно не падает на кривой записи: маркер без кода или без причины
     читается и попадает в `complaints`, иначе о нём никто бы не узнал.
     """
-    if MARKER in line:
-        codes, _, reason = line.split(MARKER, maxsplit=1)[1].partition(":")
-        if not _named(text=codes):
-            return None
-        return Marker(
-            codes=frozenset(_codes(text=codes)),
-            reason=reason.strip(),
-            column=line.index(MARKER) + 1,
+    found = sorted(
+        _starts(
+            line=line,
+            aliases=aliases,
         )
-    for text, codes in aliases.items():
-        if text in line:
-            return Marker(
-                codes=codes,
-                reason=line.split(text, maxsplit=1)[1].removeprefix(":").strip(),
-                column=line.index(text) + 1,
+    )
+    bounds = [*(start for start, _ in found), len(line)]
+    return tuple(
+        marker
+        for number, (start, word) in enumerate(found)
+        if (
+            marker := _marker(
+                text=line[start : bounds[number + 1]],
+                word=word,
+                aliases=aliases,
+                column=start + 1,
             )
-    return None
+        )
+    )
+
+
+def _starts(
+    *,
+    line: str,
+    aliases: Mapping[str, frozenset[str]],
+) -> Iterator[tuple[int, str]]:
+    for word in (MARKER, *aliases):
+        start = line.find(word)
+        if start != -1:
+            yield start, word
+
+
+def _marker(
+    *,
+    text: str,
+    word: str,
+    aliases: Mapping[str, frozenset[str]],
+    column: int,
+) -> Marker | None:
+    tail = text.removeprefix(word)
+    if word != MARKER:
+        return Marker(
+            codes=aliases[word],
+            reason=tail.removeprefix(":").strip(),
+            column=column,
+        )
+    codes, _, reason = tail.partition(":")
+    if not _named(text=codes):
+        return None
+    return Marker(
+        codes=frozenset(_codes(text=codes)),
+        reason=reason.strip(),
+        column=column,
+    )
 
 
 def surviving(
@@ -109,18 +149,16 @@ def complaints(
     нарушение.
     """
     for number, line in enumerate(file.lines, start=1):
-        marker = read(
+        for marker in markers(
             line=line,
             aliases=aliases,
-        )
-        if marker is None:
-            continue
-        yield from _wrong(
-            marker=marker,
-            path=file.path,
-            line=number,
-            known=known,
-        )
+        ):
+            yield from _wrong(
+                marker=marker,
+                path=file.path,
+                line=number,
+                known=known,
+            )
 
 
 def _named(*, text: str) -> bool:
@@ -146,17 +184,17 @@ def _covered(
     file: ParsedFile,
     aliases: Mapping[str, frozenset[str]],
 ) -> bool:
-    for line in _span(
-        violation=violation,
-        file=file,
-    ):
-        marker = read(
+    return any(
+        violation.code in marker.codes
+        for line in _span(
+            violation=violation,
+            file=file,
+        )
+        for marker in markers(
             line=line,
             aliases=aliases,
         )
-        if marker is not None and violation.code in marker.codes:
-            return True
-    return False
+    )
 
 
 def _span(

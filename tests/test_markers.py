@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from py_checks.core import MARKER, ParsedFile, Violation, complaints, read, surviving
+from py_checks.core import MARKER, ParsedFile, Violation, complaints, markers, surviving
 
 ALIASES = {"# signature-ok": frozenset({"keyword-only-arguments", "module-length"})}
 
@@ -21,23 +21,37 @@ def violation(*, line: int, end_line: int | None = None, code: str = "keyword-on
 
 
 def test_marker_reads_codes_and_reason() -> None:
-    marker = read(line=f"def f(a): ...  {MARKER} a-rule, b-rule: так зовёт библиотека", aliases={})
+    (marker,) = markers(
+        line=f"def f(a): ...  {MARKER} a-rule, b-rule: так зовёт библиотека",
+        aliases={},
+    )
 
-    assert marker is not None
     assert marker.codes == {"a-rule", "b-rule"}
     assert marker.reason == "так зовёт библиотека"
 
 
 def test_the_word_of_a_group_covers_every_check_in_it() -> None:
-    marker = read(line="def f(a): ...  # signature-ok: sqlalchemy", aliases=ALIASES)
+    (marker,) = markers(line="def f(a): ...  # signature-ok: sqlalchemy", aliases=ALIASES)
 
-    assert marker is not None
     assert marker.codes == {"keyword-only-arguments", "module-length"}
     assert marker.reason == "sqlalchemy"
 
 
-def test_a_line_without_a_marker_is_none() -> None:
-    assert read(line="def f(a): ...  # просто комментарий", aliases=ALIASES) is None
+def test_a_line_carries_as_many_markers_as_it_needs() -> None:
+    first, second = markers(
+        line="    ) -> object:  # signature-ok: так зовёт библиотека  # type-ok: сырой ввод",
+        aliases={**ALIASES, "# type-ok": frozenset({"confined-types"})},
+    )
+
+    assert (first.codes, first.reason) == (
+        frozenset({"keyword-only-arguments", "module-length"}),
+        "так зовёт библиотека",
+    )
+    assert (second.codes, second.reason) == (frozenset({"confined-types"}), "сырой ввод")
+
+
+def test_a_line_without_a_marker_has_none() -> None:
+    assert markers(line="def f(a): ...  # просто комментарий", aliases=ALIASES) == ()
 
 
 def test_marker_removes_the_violation_it_names() -> None:
@@ -86,4 +100,4 @@ def test_marker_without_a_reason_is_a_violation() -> None:
 
 
 def test_the_shape_written_in_a_docstring_is_not_a_marker() -> None:
-    assert read(line=f"Пишется так: `{MARKER} <код>: <причина>`", aliases={}) is None
+    assert markers(line=f"Пишется так: `{MARKER} <код>: <причина>`", aliases={}) == ()
