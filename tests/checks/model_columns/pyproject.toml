@@ -7,7 +7,7 @@ defaults = ["default", "server_default", "onupdate"]
 unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
-[tool.py-checks.model-columns.types]
+[tool.py-checks.model-columns.instead]
 Enum = "голый Enum — нативный тип Postgres; используй stored_enum()"
 Float = "Float дрейфует; состояние точно, используй Numeric"
 JSONB = "голый JSONB — форма, которую никто не объявил; заверни в TypeDecorator"

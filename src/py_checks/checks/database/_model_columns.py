@@ -25,7 +25,7 @@ NULLABLE: Final = "nullable"
 
 class ModelColumnsSettings(ZonedSettings):
     factories: tuple[str, ...] = ("mapped_column", "Column")
-    types: dict[str, str] = {}
+    instead: dict[str, str] = {}
     wrappers: dict[str, str] = {}
     defaults: tuple[str, ...] = ()
     unruled: tuple[str, ...] = ()
@@ -38,7 +38,7 @@ class ModelColumns:
 
     Пять правил на одну таблицу настроек.
 
-    `types` — материал, которому в колонке не место, и что писать вместо.
+    `instead` — материал, которому в колонке не место, и что писать вместо.
     Голый `Enum` — нативный тип Postgres: каждый новый член требует `ALTER
     TYPE`, а словари здесь чужие и расти будут. `Float` не держит цену точно, а
     колонка — это состояние, и ошибка округления копится с каждой записью.
@@ -66,7 +66,7 @@ class ModelColumns:
     разрешает им разойтись, и тогда аннотация лжёт: pyright рассуждает по ней,
     база держит ключевое слово, и одно из двух неверно на каждой строке.
 
-    Настройки: `zones`, `factories`, `types`, `wrappers`, `defaults`, `unruled`,
+    Настройки: `zones`, `factories`, `instead`, `wrappers`, `defaults`, `unruled`,
     `aware`, `nullable`.
     """
 
@@ -117,11 +117,11 @@ class ModelColumns:
     ) -> Iterator[Violation]:
         """Материал и то, чем колонка заполняет себя сама."""
         written = name(node=node.func)
-        if written in limits.types and limits.wrappers.get(written) != file.path.stem:
+        if written in limits.instead and limits.wrappers.get(written) != file.path.stem:
             yield cls._says(
                 file=file,
                 node=node,
-                message=limits.types[written],
+                message=limits.instead[written],
             )
         if written in limits.aware and not cls._said(
             node=node,
