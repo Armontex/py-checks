@@ -1,6 +1,6 @@
 [project]
 name = "py-checks"
-version = "0.1.0"
+version = "0.0.0"
 description = "Проверки архитектурных соглашений проекта"
 readme = "README.md"
 license = "MIT"
