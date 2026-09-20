@@ -249,7 +249,7 @@ defaults = [
     "onupdate",
     "server_onupdate",
 ]
-unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
+skip = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
 [model-columns.instead]
@@ -973,7 +973,7 @@ defaults = [
     "onupdate",
     "server_onupdate",
 ]
-unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
+skip = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
 [tool.py-checks.model-columns.instead]
@@ -1006,7 +1006,7 @@ Enum = "_enum_column"
 `nullable=` обязаны совпадать: SQLAlchemy разрешает им разойтись, и тогда
 pyright рассуждает по одной, а база держит другое.
 
-`UUID`, `datetime`, `date` и `bool` в `unruled` отсутствуют намеренно: они
+`UUID`, `datetime`, `date` и `bool` в `skip` отсутствуют намеренно: они
 исчерпывающи сами по себе, и подмножества у `bool` не бывает.
 
 **Пометка.** `# db-ok: model-columns: <причина>`.
@@ -1026,7 +1026,7 @@ primitives = [
     "FiniteDecimal",
     "OfferedPrice",
 ]
-# call по умолчанию "bound_check", аргументы — "column" и "primitive"
+# helper по умолчанию { call = "bound_check", column = "column", primitive = "primitive" }
 ```
 
 **Зачем.** Колонка, объявленная `Mapped[PositiveDecimal]`, обещает дважды.

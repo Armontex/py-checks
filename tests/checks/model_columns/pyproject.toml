@@ -4,7 +4,7 @@ src = "."
 [tool.py-checks.model-columns]
 zones = ["infra/database/models"]
 defaults = ["default", "server_default", "onupdate"]
-unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
+skip = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
 [tool.py-checks.model-columns.instead]
