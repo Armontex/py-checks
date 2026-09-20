@@ -254,7 +254,7 @@ defaults = [
 unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
-[model-columns.types]
+[model-columns.instead]
 Enum = "a bare Enum is a native Postgres type; use stored_enum()"
 Float = "a Float column drifts; state is exact, use Numeric"
 JSONB = "a bare JSONB is a shape nobody declared; wrap it in a TypeDecorator"
@@ -293,7 +293,7 @@ because = "unit_of_work owns the transaction boundary"
 [determinism]
 zones = ["modules", "repositories"]
 
-[determinism.sources]
+[determinism.instead]
 "datetime.now" = "take the Clock port and call it"
 "date.today" = "take the Clock port and call it"
 "time.monotonic" = "take the Clock port and call it"
@@ -992,7 +992,7 @@ defaults = [
 unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
-[tool.py-checks.model-columns.types]
+[tool.py-checks.model-columns.instead]
 Enum = "a bare Enum is a native Postgres type; use stored_enum()"
 Float = "a Float column drifts; state is exact, use Numeric"
 JSONB = "a bare JSONB is a shape nobody declared; wrap it in a TypeDecorator"
@@ -1104,7 +1104,7 @@ gives 94 hits, 52 of them in `migrations/versions` alone.
 [tool.py-checks.statement-keys]
 zones = ["infra/database/repositories"]
 # lists default to ["index_elements"], mappings to ["set_"],
-# calls to ["from_select"], loops to ["execute"]
+# sub-queries to ["from_select"], loops to ["execute"]
 ```
 
 **Why.** Rows are assembled through models, so pyright holds the column list:
@@ -1214,7 +1214,7 @@ already exists.
 [tool.py-checks.determinism]
 zones = ["modules", "repositories"]
 
-[tool.py-checks.determinism.sources]
+[tool.py-checks.determinism.instead]
 "datetime.now" = "take the Clock port and call it"
 "datetime.utcnow" = "take the Clock port and call it"
 "date.today" = "take the Clock port and call it"

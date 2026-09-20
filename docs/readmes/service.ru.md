@@ -251,7 +251,7 @@ defaults = [
 unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
-[model-columns.types]
+[model-columns.instead]
 Enum = "голый Enum — нативный тип Postgres; возьми stored_enum()"
 Float = "колонка Float дрейфует; состояние точное, возьми Numeric"
 JSONB = "голый JSONB — форма, которую никто не объявил; заверни в TypeDecorator"
@@ -289,7 +289,7 @@ because = "границей транзакции владеет unit_of_work"
 [determinism]
 zones = ["modules", "repositories"]
 
-[determinism.sources]
+[determinism.instead]
 "datetime.now" = "возьми порт Clock и позови его"
 "date.today" = "возьми порт Clock и позови его"
 "time.monotonic" = "возьми порт Clock и позови его"
@@ -970,7 +970,7 @@ defaults = [
 unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
-[tool.py-checks.model-columns.types]
+[tool.py-checks.model-columns.instead]
 Enum = "голый Enum — нативный тип Postgres; используй stored_enum()"
 Float = "Float дрейфует; состояние точно, используй Numeric"
 JSONB = "голый JSONB — форма, которую никто не объявил; заверни в TypeDecorator"
@@ -1080,7 +1080,7 @@ WHOLE))` — оно состоит из атрибута, который pyright
 [tool.py-checks.statement-keys]
 zones = ["infra/database/repositories"]
 # lists по умолчанию ["index_elements"], mappings — ["set_"],
-# calls — ["from_select"], loops — ["execute"]
+# sub-queries — ["from_select"], loops — ["execute"]
 ```
 
 **Зачем.** Строки собираются через модели, поэтому список колонок держит
@@ -1187,7 +1187,7 @@ py-checks run --all
 [tool.py-checks.determinism]
 zones = ["modules", "repositories"]
 
-[tool.py-checks.determinism.sources]
+[tool.py-checks.determinism.instead]
 "datetime.now" = "возьми порт Clock и позови его"
 "datetime.utcnow" = "возьми порт Clock и позови его"
 "date.today" = "возьми порт Clock и позови его"
