@@ -11,7 +11,10 @@ dependencies = [
     "libcst>=1.9,<2",
     "pydantic>=2.13.5,<3",
     "pydantic-settings>=2.15.0,<3",
-    "rich>=15.0.0,<16.0.0",
+    # Floor low, ceiling at the next major: what is used here is `Console` and
+    # `Table`, and both have been the same since 13. A linter that forces its
+    # host to move a display library a major is a linter nobody adopts.
+    "rich>=14.0.0,<16.0.0",
     "typer>=0.27.2,<0.28",
 ]
 
