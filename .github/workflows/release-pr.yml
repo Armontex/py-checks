@@ -1,0 +1,72 @@
+name: release-pr
+
+# Версию подняли на ветке, ветку слили в `develop` — дальше запрос на слияние в
+# `main` собирается сам, с телом из CHANGELOG. Кнопку жмёт человек: за ней
+# публикация на PyPI, а версию оттуда не отозвать.
+on:
+  push:
+    branches: [develop]
+
+permissions: {}
+
+jobs:
+  propose:
+    name: propose
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: false
+          python-version: "3.14"
+
+      # Признак релиза один и тот же у обоих процессов: версия в манифесте, на
+      # которую ещё нет тега. В `develop` приезжает и то, что версии не меняет.
+      - name: Версия и была ли она уже выпущена
+        id: named
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(uv version --short)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$version" >/dev/null 2>&1; then
+            echo "fresh=false" >> "$GITHUB_OUTPUT"
+            echo "v$version уже выпущена — предлагать нечего"
+          else
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Запрос на слияние в main
+        if: steps.named.outputs.fresh == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.named.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Раздел этой версии из CHANGELOG, который написал `cz bump`.
+          awk -v tag="v$VERSION" '
+            $0 ~ "^## " tag "( |$)" { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          {
+            echo "Слияние выпускает \`v$VERSION\`: \`release.yml\` поставит тег на"
+            echo "слитый коммит \`main\` и с него же опубликует на PyPI."
+            echo
+            cat notes.md
+          } > body.md
+          # Запрос живёт один на релиз: следующий пуш в `develop` до слияния
+          # обновляет тело, а не заводит второй.
+          open="$(gh pr list --base main --head develop --state open --json number --jq '.[0].number // empty')"
+          if [[ -n "$open" ]]; then
+            gh pr edit "$open" --title "release: v$VERSION" --body-file body.md
+          else
+            gh pr create --base main --head develop --title "release: v$VERSION" --body-file body.md
+          fi
