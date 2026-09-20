@@ -18,6 +18,16 @@ dependencies = [
     "typer>=0.27.2,<0.28",
 ]
 
+# Страница на PyPI — это README и эта таблица, больше там ничего нет:
+# ссылки из README ведут в репозиторий по полному адресу, потому что
+# относительный путь PyPI разрешает у себя и упирается в 404.
+[project.urls]
+Homepage = "https://github.com/Armontex/py-checks"
+Source = "https://github.com/Armontex/py-checks"
+Issues = "https://github.com/Armontex/py-checks/issues"
+Changelog = "https://github.com/Armontex/py-checks/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/Armontex/py-checks/blob/main/docs/service.md"
+
 [project.scripts]
 py-checks = "py_checks.cli:main"
 

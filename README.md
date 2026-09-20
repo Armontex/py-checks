@@ -8,11 +8,11 @@
 
 [![ci](https://github.com/Armontex/py-checks/actions/workflows/ci.yml/badge.svg)](https://github.com/Armontex/py-checks/actions/workflows/ci.yml)
 [![python](https://img.shields.io/badge/python-3.14%2B-3776AB)](https://www.python.org/)
-[![правил](https://img.shields.io/badge/checks-27-2ea043)](#что-проверяется)
+[![правил](https://img.shields.io/badge/checks-28-2ea043)](#что-проверяется)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-FAB040)](#pre-commit)
 [![ruff](https://img.shields.io/badge/linted%20with-ruff-261230)](https://docs.astral.sh/ruff/)
 [![pyright](https://img.shields.io/badge/types-pyright%20strict-1f6feb)](https://microsoft.github.io/pyright/)
-[![license](https://img.shields.io/badge/license-MIT-750014)](LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-750014)](https://github.com/Armontex/py-checks/blob/main/LICENSE)
 
 </div>
 
@@ -44,7 +44,7 @@ src/app/presentation/api/v1/routers/bets.py:22:1: endpoint-declarations: POST /b
 - **Правило универсально, таблица — ваша.** Одно правило «этот вызов живёт только здесь» закрывает и границу транзакции, и запрет `float` в домене. Библиотека не содержит ни одного имени вашего проекта.
 - **Отказ объясняет себя.** Сообщение говорит, что не так и чем это заменить, а не «нарушение правила №14».
 - **Исключение стоит одной строки, но требует причины.** `# check-ok: raw-sql: проба живости, формы ORM нет` — пометка без причины сама становится нарушением.
-- **Чужую работу мы не делаем.** Что умеют ruff, pyright и import-linter — остаётся за ними; что и почему туда отдано, записано в [`docs/service.md`](docs/service.md).
+- **Чужую работу мы не делаем.** Что умеют ruff, pyright и import-linter — остаётся за ними; что и почему туда отдано, записано в [`docs/service.md`](https://github.com/Armontex/py-checks/blob/main/docs/service.md).
 
 ## Установка
 
@@ -91,7 +91,7 @@ py-checks explain determinism   # что правило требует и как
 
 ## Что проверяется
 
-Двадцать семь правил в девяти группах:
+Двадцать восемь правил в девяти группах:
 
 | Группа | О чём |
 |---|---|
@@ -106,7 +106,7 @@ py-checks explain determinism   # что правило требует и как
 | `hygiene` | потолок у зависимости |
 
 <details>
-<summary>Все двадцать семь</summary>
+<summary>Все двадцать восемь</summary>
 
 | Код | Что падает | Вид |
 |---|---|:-:|
@@ -143,7 +143,7 @@ py-checks explain determinism   # что правило требует и как
 
 Каждое правило объясняет себя целиком — `py-checks explain <код>` печатает
 докстринг с причиной и список настроек. Заготовка таблиц для типового сервиса
-лежит в [`docs/service.md`](docs/service.md).
+лежит в [`docs/service.md`](https://github.com/Armontex/py-checks/blob/main/docs/service.md).
 
 ### Три вида правил
 
@@ -163,7 +163,7 @@ text("SELECT 1")  # db-ok: raw-sql: проба живости, формы ORM н
 
 Каноническая форма — `# check-ok: <код>: <причина>`, она снимает ровно одно
 правило. У каждой группы есть своё короткое слово (`# db-ok`, `# type-ok`,
-`# signature-ok`, …): человек помнит группу, а не двадцать семь кодов.
+`# signature-ok`, …): человек помнит группу, а не двадцать восемь кодов.
 
 Пометок в строке может стоять несколько — подпись в столбик собирает их на
 последней строке:
@@ -319,8 +319,8 @@ uv run pytest -q
 `tests/projects/<код>__<вариант>/`. Библиотека проверяет сама себя: правило,
 которое не выдерживает свой же репозиторий, до чужого доезжать не должно.
 
-Соглашения репозитория — в [`AGENTS.md`](AGENTS.md).
+Соглашения репозитория — в [`AGENTS.md`](https://github.com/Armontex/py-checks/blob/main/AGENTS.md).
 
 ## Лицензия
 
-[MIT](LICENSE) — © 2026 Armontex.
+[MIT](https://github.com/Armontex/py-checks/blob/main/LICENSE) — © 2026 Armontex.
