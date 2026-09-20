@@ -1,0 +1,46 @@
+# Ставить нечего: dependabot — часть GitHub, он читает этот файл сам.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # Еженедельно и с потолком. Потолки в манифесте узкие нарочно, и без бота
+    # никто не обновляется, пока что-нибудь не заставит, — а тогда это годовой
+    # запас мажоров одним запросом, где красный прогон говорит лишь, что один
+    # из сорока подъёмов сломал сборку.
+    open-pull-requests-limit: 5
+    # Выдержка: релиз, вышедший вчера, ещё никто не запускал. Неделя — это
+    # срок, за который автор успевает выпустить 1.2.1 вместо 1.2.0.
+    cooldown:
+      default-days: 7
+    # Сообщение коммита проверяет commitizen, и «Bump x from 1 to 2» он не
+    # принимает.
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+    # Ветка развития, а не main: в main приезжает то, что уже прошло develop.
+    target-branch: develop
+    groups:
+      # Один запрос на всю неделю, а не по одному на пакет: десять открытых
+      # подъёмов — это десять прогонов и десять ревью, которых никто не делает.
+      python:
+        patterns:
+          - "*"
+
+  # Действия в рабочих процессах прибиты по SHA — сами они не сдвинутся, и
+  # уехавший SHA виден только боту.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+    target-branch: develop
+    groups:
+      actions:
+        patterns:
+          - "*"

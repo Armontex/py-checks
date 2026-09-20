@@ -1,22 +1,49 @@
-# Настройки типового сервиса
+# The settings of a typical service
 
-Библиотека не знает, как называются слои проекта и где живёт его ORM: у сервиса
-это `domain` и `infra/database`, у утилиты таких слоёв нет вовсе. Поэтому таблиц
-внутри неё нет — их приносит шаблон при генерации проекта.
+English · [Русский](readmes/service.ru.md)
 
-Здесь лежит то, что было общего у четырёх сервисов на момент переноса; ниже они
-названы A, B, C и D, и там, где они разошлись, это сказано. Это заготовка для
-шаблона и одновременно запись того, что именно считалось правильным.
+The library does not know what a project's layers are called or where its ORM
+lives: a service has `domain` and `infra/database`, a command-line utility has
+no such layers at all. So there are no tables inside it — the tables arrive
+with the template that generates the project.
 
-Настройки ruff и pyright здесь по той же причине: библиотека их не возит, их
-кладёт шаблон, и дальше это файлы проекта.
+What follows is what four services had in common at the time of the move. They
+are called **A**, **B**, **C** and **D** below, and where they differed, it is
+said. This is both a draft for the template and a record of what was held to
+be right — with the reason, every time, because a rule without one is a rule
+the next reader deletes.
 
-## Где они лежат
+The ruff and pyright settings are here for the same reason: the library does
+not carry them, the template lays them down, and from then on they are the
+project's own files.
 
-Дальше всё написано секциями `[tool.py-checks.<код>]` — это вид для
-`pyproject.toml`. У настроек есть и свой файл: `py-checks.toml` или
-`pychecks.toml`, с точкой в начале или без. В нём приставки нет — весь файл и
-есть эта секция:
+## How to read this
+
+Every rule is written to the same shape:
+
+> **What it catches** — one sentence.
+> **The table** — the TOML the project writes.
+> **Why** — the failure the rule is paid to prevent.
+> **Instead of** — the off-the-shelf tool that was considered, and what it
+> costs, measured on the four services rather than guessed at.
+> **The mark** — the word that lifts the rule from a line, with a reason.
+
+| Section | |
+|---|---|
+| [1. Where the settings live](#1-where-the-settings-live) | one file, not two |
+| [2. Who checks what](#2-who-checks-what) | ruff, pyright, import-linter, us |
+| [3. The hooks](#3-the-hooks) | what ships with the library, what the project declares |
+| [4. The rules](#4-the-rules) | all twenty-eight, by group |
+| [5. The generated files](#5-the-generated-files) | contracts and `.env.example` |
+| [6. What is handed to others](#6-what-is-handed-to-others) | ruff, pyright, pytest-alembic, symlinks |
+| [7. The whole config](#7-the-whole-config) | one block to copy |
+
+## 1. Where the settings live
+
+Everything below is written as `[tool.py-checks.<code>]` sections — that is
+the `pyproject.toml` view. The settings also have a file of their own:
+`py-checks.toml` or `pychecks.toml`, with or without a leading dot. In that
+file there is no prefix — the whole file *is* that section:
 
 ```toml
 # pychecks.toml
@@ -26,42 +53,99 @@ src = "src"
 max-lines = 300
 ```
 
-Выбирают одно из двух. Два места разом — ошибка, а не слияние: это вопрос без
-ответа, и лучше спросить его вслух, чем молча прочитать одно и забыть про
-другое. `pyproject.toml` без секции вторым местом не считается — он есть у
-каждого проекта, и молчаливое присутствие выбором не является.
+One of the two is chosen. Both at once is an error rather than a merge: it is
+a question without an answer, and it is better asked out loud than settled by
+silently reading one and forgetting the other. A `pyproject.toml` with no
+section does not count as the second place — every project has one, and a
+silent presence is not a choice.
 
-Свой файл заодно называет корень проекта: инструмент работает и там, где
-`pyproject.toml` нет вовсе.
+A file of its own also names the project root: the tool works where there is
+no `pyproject.toml` at all.
 
-## Какие хуки приезжают, а какие проект ставит сам
+Two settings stand outside the rules, at the top of the file:
 
-Библиотека публикует только свои:
+```toml
+src = "src"                      # where the project's own code is
+ignore = ["schema-drift"]        # rules this project does not run
+extend-exclude = ["generated"]   # on top of the default exclusions
+```
+
+## 2. Who checks what
+
+The rules below exist because nothing off the shelf covers them. Where
+something does, it keeps the job — a second opinion costs a second
+configuration, and the two drift.
+
+| The convention | Who holds it |
+|---|---|
+| Function length | rule `function-length`: ruff `PLR0915` counts statements rather than lines, and on four services, at a limit of 50, it does not fire once — where by lines ten functions are over |
+| Branches in a function | ruff `PLR0912` |
+| Nested `with` | ruff `SIM117`, with an autofix |
+| Depth of `try` and `if` | rule `nesting`: ruff has nothing for it — `PLR1702` counts every kind as one number and lives in preview |
+| Arguments into an operation | rule `operation-shape`, setting `max-arguments`: `PLR0913` knows neither classes nor the exception for a constructor |
+| A list in a column | rule `signature-layout`, with an autofix: the formatter respects a trailing comma but never writes one, and `COM812` fires off a line break that is already there |
+| A signature written out in full | rule `keyword-only-arguments`, with an autofix |
+| `frozen=True, slots=True` on values | rule `frozen-dataclasses`: ruff has no rule about how a dataclass is declared |
+| Bounds on settings fields | rule `config-fields`: neither pydantic nor ruff demands `Field(...)` or a bound |
+| `Any` in a signature | ruff `ANN401` — parameters and return only; class fields it does not see |
+| A string key, a tuple by position | rule `annotation-shapes` |
+| `Final` and `ClassVar` on constants | rule `constant-annotations` |
+| A column by string, N+1 in a repository | rule `statement-keys` |
+| The material of a column | rule `model-columns` |
+| A model past the boundary of the database layer | rule `model-boundary`: ruff sees the import out of the models package; what is then done with that name it does not |
+| Models and migrations out of step | rule `schema-drift` on top of `alembic check`: statics cannot see this, it needs a database |
+| A migration that rolls back | pytest-alembic `test_up_down_consistency` |
+| The clock, the dice, a new identifier | rule `determinism`: `TID251` knows no zones, its per-file relief also lifts the ban on `Literal`, and `func.gen_random_uuid()` inside a statement it does not see at all |
+| A naive timestamp | ruff `DTZ` |
+| The name of an event in the log | rule `log-events`: nothing off the shelf |
+| A complete route declaration | rule `endpoint-declarations`: FastAPI gives the words but demands none of them; Schemathesis checks the schema against the code, not the schema for completeness |
+| The call sites of a conversion | rule `confined-functions`: nothing off the shelf |
+| A ceiling on a dependency | rule `dependency-bounds`: nothing off the shelf; `deptry` (unused and undeclared) and `uv lock --check` are useful alongside |
+| A complete `.env.example` | built by `py-checks sync`, plus `config-fields` with `alias` |
+| `AGENTS.md` and `CLAUDE.md` in step | a symlink, plus the `check-symlinks` and `destroyed-symlinks` hooks |
+| Surviving mutants | `mutmut` with a baseline of its own — a CI step of the project, not a rule |
+| A CHECK under a bounded column | rule `bound-checks` |
+| SQL as a string instead of an expression | rule `raw-sql`: `TID251` bans `text()` outright and takes 94 lawful places down with it |
+| The transaction boundary | rule `confined-calls`: ruff sees names, but neither zones nor an owner |
+| A type banned in a zone | rule `confined-types`: neither ruff nor pyright knows that `Decimal` in the domain is not enough |
+| Module length | rule `module-length`: ruff has no rule; in pylint it is `C0302` |
+| A magic number, a forgotten `print`, commented-out code | ruff `PLR2004`, `T20`, `ERA` |
+| `typing.Literal` instead of `StrEnum` | ruff `TID251`, one `banned-api` line instead of 138 lines of checker |
+
+A separate bandit is then unnecessary: the `S` rules are bandit, rewritten
+inside ruff. On the four services it stood next to ruff as a second dependency
+and a second hook — the move throws it out.
+
+## 3. The hooks
+
+The library publishes only its own:
 
 ```yaml
-- repo: https://github.com/<owner>/py-checks
-  rev: v0.1.0
+- repo: https://github.com/Armontex/py-checks
+  rev: v0.3.1
   hooks:
     - id: py-checks
-      args: [--fix]          # починить то, что чинится само
+      args: [--fix]          # repair what repairs itself
     - id: py-checks-sync
 ```
 
-Хук один, а не по хуку на правило: что включено, решает конфиг проекта, и
-список хуков не обязан повторять его вторым голосом. Одно правило зовут
-`args: [--select, "<код>,<код>"]` — так же это устроено у ruff.
+One hook rather than one per rule: which rules run is the config's decision,
+and the hook list is not obliged to say it a second time. A single rule is
+called with `args: [--select, "<code>,<code>"]` — the same arrangement ruff
+has.
 
-Ставить его нужно **до** `ruff-format`. Правка автофикса ставит символы, а не
-колонки: после вставки `*` подпись может стать длиннее лимита строки, и
-раскладывает её форматтер проекта. Библиотека зовёт `ruff` сама, если найдёт
-его в PATH, но в отдельном окружении хука его нет — там файл остаётся
-исправленным, но неразложенным, и следующий хук в том же прогоне это чинит.
+It has to stand **before** `ruff-format`. The autofix writes characters, not
+columns: once a `*` is inserted the signature can pass the line limit, and it
+is the project's formatter that lays it out. The library calls `ruff` itself
+if it finds one on PATH, but in the hook's own isolated environment there is
+none — there the file is left repaired but unformatted, and the next hook in
+the same run fixes that.
 
-Остальное проект объявляет сам — ruff, pyright, import-linter, commitizen.
-У каждого из них есть свой хук, написанный его же авторами, и знают они о себе
-больше, чем знали бы мы. Собрать за них конфиг — другое дело: `.importlinter`
-отстаёт от раскладки на диске, поэтому его собирает `py-checks sync`, а
-гоняет по нему граф хук самого import-linter:
+The rest the project declares itself — ruff, pyright, import-linter,
+commitizen. Each has a hook written by its own authors, and they know more
+about themselves than we would. Building their config for them is another
+matter: `.importlinter` falls behind the layout on disk, so `py-checks sync`
+builds it and import-linter's own hook walks the graph:
 
 ```yaml
 - repo: https://github.com/seddonym/import-linter
@@ -70,41 +154,20 @@ max-lines = 300
     - id: import-linter
 ```
 
-По той же причине import-linter не лежит в зависимостях библиотеки: мы его ни
-разу не импортируем, а тащить чужой инструмент всем, кто нас поставил, — это
-решать за проект, чем ему проверять импорты.
+For the same reason import-linter is not a dependency of the library: we never
+import it, and handing a third-party tool to everyone who installed us would
+be deciding, on the project's behalf, what checks its imports.
 
-## Слои
+## 4. The rules
 
-```toml
-[tool.py-checks.contracts]
-# Связывать слои между собой — вся их работа, поэтому им можно всё.
-composition-root = ["ioc", "bootstrap", "entrypoints"]
+Nine groups. Each group has a short word that lifts any rule in it from a
+line — `# import-ok`, `# placement-ok`, `# signature-ok`, `# type-ok`,
+`# db-ok`, `# effect-ok`, `# api-ok`, `# call-ok`, `# hygiene-ok` — and the
+canonical `# check-ok: <code>: <reason>` always works and lifts exactly one.
 
-# Зависимости смотрят внутрь: домен не знает ничего, приложение знает домен,
-# а всё, что разговаривает с внешним миром, знает приложение и невидимо для
-# него. `presentation` намеренно не видит `domain`: край переводит свои типы в
-# DTO приложения и обратно, и роутер, читающий доменный объект, связал форму
-# внешнего мира с формой правил.
-[tool.py-checks.contracts.layers]
-domain = ["domain", "shared"]
-application = ["domain", "application", "shared"]
-infra = ["domain", "application", "infra", "shared", "config"]
-presentation = ["application", "presentation", "shared", "config"]
-observability = ["observability", "shared", "config"]
-config = ["config", "shared"]
-shared = ["shared"]
-```
+### 4.1 imports — which package is allowed where
 
-В D между приложением и краем стоит ещё один слой — операция, которой
-нужны два модуля, и есть workflow:
-
-```toml
-workflows = ["domain", "application", "workflows", "shared"]
-presentation = ["application", "workflows", "presentation", "shared", "config"]
-```
-
-## Где чей фреймворк
+#### `confined-imports` — a package is imported outside the places set aside for it
 
 ```toml
 [tool.py-checks.confined-imports.packages]
@@ -123,31 +186,50 @@ prometheus_client = ["observability", "bootstrap", "infra"]
 opentelemetry = ["observability", "bootstrap", "infra"]
 ```
 
-Своё дописывается рядом: `maxapi = ["presentation", "bootstrap/channels", "ioc"]`
-у A, `aiokafka = ["infra/kafka", "ioc"]` у D, `shared_contracts` у C и D.
-Пустой список значит «нигде» — так держат убранную
-библиотеку, чтобы она не вернулась: `agents = []`.
+**Why.** A framework spreads by import. The day the ORM is imported in a use
+case, the use case can no longer be read without a database, and the layer
+diagram becomes a drawing rather than a fact. The table says where each
+framework is allowed to be seen; everything not in the table is unrestricted.
 
-## Что запечатано
+An empty list means "nowhere" — that is how a library that was taken out is
+kept out: `agents = []`.
+
+**Where the services differed.** Each added its own line: `maxapi =
+["presentation", "bootstrap/channels", "ioc"]` in A, `aiokafka =
+["infra/kafka", "ioc"]` in D, `shared_contracts` in C and D.
+
+**The mark.** `# import-ok: confined-imports: <reason>`.
+
+#### `sealed-imports` — a sealed zone imports a foreign package
 
 ```toml
 [tool.py-checks.sealed-imports]
-# `modules` держит правила и интерфейсы вокруг них: DTO здесь — dataclass, а не
-# модель фреймворка. `shared` печатают A и C: его импортирует домен
-# каждого модуля, поэтому фреймворк, добравшийся туда, оказывается в каждом
-# запечатанном слое сразу.
+# `modules` holds the rules and the interfaces around them: a DTO here is a
+# dataclass, not a framework's model. `shared` is sealed by A and C: every
+# module's domain imports it, so a framework that reaches it is inside every
+# sealed layer at once.
 zones = ["modules", "shared"]
 
 [tool.py-checks.sealed-imports.allow]
-# Сценарий руководит и потому имеет право сказать, что произошло; правила верны
-# независимо от того, слушает ли их кто-нибудь.
+# A use case leads and may therefore say what happened; the rules are true
+# whether or not anybody is listening.
 application = ["structlog"]
 ```
 
-В B в `shared` живёт валидатор адреса, поэтому там запечатан только
-`modules`.
+**Why.** `confined-imports` names a package and says where it may go. This is
+the other direction: a zone is named, and nothing third-party may enter it
+except by the allow list. The two are needed together because the first only
+knows the packages somebody remembered to write down, and the sealed zone is
+exactly the place where the next forgotten one would do the damage.
 
-## Что лежит в директории
+**Where the services differed.** B keeps an address validator in `shared`, so
+only `modules` is sealed there.
+
+**The mark.** `# import-ok: sealed-imports: <reason>`.
+
+### 4.2 placement — what belongs where
+
+#### `class-modules` — a module holds what its directory does not allow
 
 ```toml
 [tool.py-checks.class-modules.policies]
@@ -161,23 +243,31 @@ schemas = ["model", "alias"]
 errors = ["error", "alias"]
 ```
 
-Ключ — путь, а не имя: `application/services` держит класс-оркестратор, а
-`domain/services` — функции, правила, сравнивающие два факта. Правило по имени
-запретило бы всю доменную категорию целиком.
+**Why.** A directory is a promise about what is inside it. A port declared
+next to a use case is a port nobody will find, and a dataclass in `ports/` is
+an interface that quietly grew a field.
 
-Виды: `class`, `port` (Protocol, ABC), `dataclass`, `model` (pydantic), `alias`,
-`enum`, `error`, `function`. Импорты, константы, `if TYPE_CHECKING` и докстринг
-разрешены везде.
+The key is a path, not a name: `application/services` holds an orchestrating
+class, while `domain/services` holds functions — rules that compare two facts.
+A rule by name would have banned the whole domain category.
 
-Исключение узнаётся и по базе `Exception`, и по имени базы: `class
-NotFound(OrderError)` наследуется от своего же корня, а не от `Exception`, но
-имя корня кончается так же. Поэтому весь словарь отказов пакета собирается в
-`errors/` или `exceptions.py`, и читатель находит его в одном месте.
+The kinds are `class`, `port` (Protocol, ABC), `dataclass`, `model`
+(pydantic), `alias`, `enum`, `error`, `function`. Imports, constants,
+`if TYPE_CHECKING` and the docstring are allowed everywhere.
 
-## Где место классу
+An error is recognised both by the base `Exception` and by the name of the
+base: `class NotFound(OrderError)` inherits from its own root rather than from
+`Exception`, but the root's name ends the same way. So a package's whole
+vocabulary of refusals gathers in `errors/` or `exceptions.py`, and the reader
+finds it in one place.
 
-Обратная таблица: `class-modules` говорит, что можно держать в директории,
-`class-placement` — куда обязан лечь класс, откуда бы его ни начали писать.
+**The mark.** `# placement-ok: class-modules: <reason>`.
+
+#### `class-placement` — a class lies somewhere other than where its kind lives
+
+The reverse table: `class-modules` says what a directory may hold,
+`class-placement` says where a class must land, wherever somebody started
+writing it.
 
 ```toml
 [[tool.py-checks.class-placement.rules]]
@@ -214,30 +304,34 @@ inside = ["schemas/requests", "schemas/responses"]
 area = "presentation"
 ```
 
-Правило говорит о виде (`kind`) или о суффиксе имени (`suffix`) — ровно об
-одном из двух. Порядок значим: отвечает первое подошедшее правило, поэтому
-исключение остаётся исключением, даже если его имя кончается на `Service`.
+**Why.** A rule speaks of a kind (`kind`) or of a name's suffix (`suffix`) —
+exactly one of the two. Order matters: the first matching rule answers, so an
+exception stays an exception even if its name ends in `Service`.
 
-`area` сужает правило до части дерева и держит на себе половину смысла.
-`dataclass` обязан лежать в `dto/` только внутри `application`: доменный value
-object — тоже dataclass, и живёт он в домене. Область ищется подряд идущими
-кусками адреса, поэтому `application` находится и в модульном сервисе, где путь
-начинается с `modules/<имя>/`.
+`area` narrows a rule to a part of the tree and carries half the meaning. A
+`dataclass` must lie in `dto/` only inside `application`: a domain value
+object is a dataclass too, and it lives in the domain. The area is matched as
+consecutive pieces of the address, so `application` is found in a modular
+service as well, where the path starts with `modules/<name>/`.
 
-Последняя строка — вход HTTP: схема, объявленная рядом с маршрутом, случайно
-оказывается общей, поэтому запрос и ответ живут в `schemas`. Две половины, а не
-одна: модель прямо в `schemas` — это модель, направление которой читатель
-угадывает по имени, а один класс на оба конца — запрос, отрастивший поле,
-которого не хотел ответ. В B и D половин нет, там адреса —
-`requests` и `schemas`.
+The last line is the HTTP entry: a schema declared next to a route
+accidentally becomes shared, so request and response live in `schemas`. Two
+halves rather than one: a model directly in `schemas` is a model whose
+direction the reader guesses from its name, and one class for both ends is a
+request that grew a field the response never wanted.
 
-`inside` перечисляет равноправные адреса, и адрес включает имя модуля: `errors`
-подходит и как директория, и как файл `exceptions.py`. У D порт репозитория
-называется `IOutboxRepository` и лежит в `shared/ports`, поэтому в его таблице
-`ports` стоит рядом с `infra/database/repositories` — реализация и интерфейс
-одного суффикса законно лежат в двух местах.
+`inside` lists addresses of equal standing, and an address includes a module's
+name: `errors` matches both a directory and a file `exceptions.py`.
 
-## Что модуль обязан объявить
+**Where the services differed.** B and D have no halves — their addresses are
+`requests` and `schemas`. D's repository port is `IOutboxRepository` and lives
+in `shared/ports`, so its table has `ports` next to
+`infra/database/repositories`: an implementation and an interface sharing a
+suffix lawfully live in two places.
+
+**The mark.** `# placement-ok: class-placement: <reason>`.
+
+#### `required-class` — a module did not declare the class its directory exists for
 
 ```toml
 [tool.py-checks.required-class.suffixes]
@@ -249,28 +343,33 @@ models = "Model"
 tools = "Tool"
 ```
 
-Файл в `use_cases` существует ради сценария, файл в `repositories` — ради
-репозитория. Класс идёт первым и идёт один: имя файла — это то, как читатель
-находит класс, и модуль, названный ни одним из трёх лежащих в нём сценариев,
-отвечает на вопрос «где `ResolveLimitsUseCase`» словами «прочти все три».
+**Why.** A file in `use_cases` exists for a use case; a file in `repositories`
+exists for a repository. The class comes first and comes alone: the file name
+is how a reader finds the class, and a module named after none of the three
+use cases inside it answers the question "where is `ResolveLimitsUseCase`"
+with "read all three".
 
-Выше требуемого класса разрешены константы, алиасы и перечисления. Перечисление —
-не поблажка, а необходимость: тело класса выполняется в момент объявления, и
-словарь, который класс называет у себя внутри, ниже него написать нельзя.
+Above the required class, constants, aliases and enums are allowed. The enum
+is not a concession but a necessity: a class body executes at declaration
+time, and a vocabulary the class names inside itself cannot be written below
+it.
 
-Правило не касается `__init__.py` (переэкспорт, а не объявление), пустого
-модуля и модуля с подчёркиванием: `_base.py` держит машинерию своей директории,
-а не один из её классов. Подчёркивание — единственная форма этой поблажки,
-списка голых имён нет. В B и D по три модуля в `models/` названы
-`base.py`, `bound_check.py`, `enum_column.py` — это ровно тот случай, и
-переименование в `_base.py` и есть ответ.
+The rule leaves `__init__.py` alone (re-export, not declaration), as well as
+an empty module and a module with a leading underscore: `_base.py` holds its
+directory's machinery rather than one of its classes. The underscore is the
+only form of that relief; there is no list of bare names.
 
-Ключ — путь: побеждает самая внутренняя из совпавших директорий, при равной
-глубине — более длинный ключ. Поэтому `application/services` требует класс, а
-`domain/services` не требует ничего: там лежат функции, правила, сравнивающие
-два факта.
+The key is a path: the innermost matching directory wins, and at equal depth
+the longer key. So `application/services` requires a class while
+`domain/services` requires nothing.
 
-## Как устроена операция
+**Where the services differed.** B and D have three modules in `models/`
+called `base.py`, `bound_check.py` and `enum_column.py` — exactly that case,
+and renaming them to `_base.py` is the answer.
+
+**The mark.** `# placement-ok: required-class: <reason>`.
+
+#### `operation-shape` — an operation is not shaped like an operation
 
 ```toml
 [[tool.py-checks.operation-shape.operations]]
@@ -279,107 +378,343 @@ suffix = "UseCase"
 method = "execute"
 max-arguments = 3
 
-# Дверей у сервиса столько, сколько переходов у его сущности: `IBetWriter`
-# держит шесть, по одной на переход, потому что переход — это один вызов, и
-# вызывающий, которому пришлось бы сделать три, сделает два.
+# A service has as many doors as its entity has transitions: `IBetWriter`
+# holds six, one per transition, because a transition is one call, and a
+# caller who would have to make three will make two.
 [[tool.py-checks.operation-shape.operations]]
 inside = "application/services"
 suffix = "Service"
 forbids = ["UnitOfWork"]
 ```
 
-Сценарий просят об одном деле: один публичный метод, и он называется
-`execute`. Второй публичный метод — вторая операция, поделившая с первой
-конструктор, и вызывающий, которому нужна одна, тащит зависимости обеих.
-Приватных методов сколько угодно: длинная операция, разложившая себя на
-`_begun`, `_judged` и `_risked`, остаётся одной операцией.
+**Why.** A use case is asked for one thing: one public method, and it is
+called `execute`. A second public method is a second operation sharing a
+constructor with the first, and a caller who needs one drags in the
+dependencies of both. Private methods are unlimited: a long operation broken
+into `_begun`, `_judged` and `_risked` is still one operation.
 
-Вход этой двери — три поля, не больше. То, что пришло снаружи и заняло
-четыре, — это вещь с именем: команда, запрос, DTO. Считаются публичные методы,
-поэтому конструктор в счёт не идёт сам собой: через него приходят зависимости,
-а это проводка, не вход. Первый аргумент метода определяется по месту, а не по
-имени — `self` в `@staticmethod` считается как любой другой.
+The door takes three fields, no more. What came from outside and filled four
+is a thing with a name: a command, a query, a DTO. Public methods are counted,
+so the constructor is out of the count by construction: dependencies arrive
+through it, and that is wiring, not an entrance. The first argument of a
+method is decided by position rather than by name — `self` in a `@staticmethod`
+counts like any other.
 
-`PLR0913` из ruff это не заменяет: он не знает ни классов, ни исключения для
-конструктора. С `max-args = 3` он даёт 29, 142, 96 и 108 срабатываний по
-сервисам, а внутри одних только `use_cases` — 49, и все до единого приходятся
-на `__init__`.
+Nothing stands next to the operation: no second class, no function, neither
+above nor below. Constants and aliases may; an enum may not, unlike in other
+directories — a vocabulary is a class, and an operation that needed one is
+naming something its module does not own.
 
-Рядом с операцией не стоит ничего: ни второй класс, ни функция — ни выше, ни
-ниже. Константы и алиасы стоять могут, перечисление — нет, в отличие от других
-директорий: словарь — это класс, и операция, которой он понадобился, называет
-то, чем её модуль не владеет.
+`forbids` matches a type name by substring, so `UnitOfWork`, `IAuthUnitOfWork`
+and `AuthUnitOfWorkFactory` are refused alike — what is forbidden is holding
+the transaction, not spelling its name one particular way.
 
-`forbids` ловит имя типа подстрокой, поэтому `UnitOfWork`, `IAuthUnitOfWork` и
-`AuthUnitOfWorkFactory` отвергаются одинаково — запрещено держать транзакцию, а
-не писать её имя одним конкретным образом. Строка, у кого этот запрет, у
-сервисов проектная: в A транзакцию открывает сценарий и передаёт сервису
-репозитории, а в B, C и D фабрику держит сам сценарий — там
-запрет стоит только на сервисах.
+**Instead of `PLR0913`.** It knows neither classes nor the exception for a
+constructor. At `max-args = 3` it gives 29, 142, 96 and 108 hits across the
+services, and inside `use_cases` alone 49 — every one of them on `__init__`.
 
-`application/services` и никогда `domain/services`: доменный сервис — это
-функция, сравнивающая два факта, которые не принадлежат ни одному из них.
+**Where the services differed.** Who the ban belongs to is the project's line:
+in A the use case opens the transaction and hands the service its
+repositories, while in B, C and D the use case holds the factory itself —
+there the ban is on services only.
 
-## Значения неизменяемы
+**The mark.** `# placement-ok: operation-shape: <reason>`.
+
+### 4.3 signatures — length, depth, the shape of a call
+
+#### `keyword-only-arguments` — a signature is not written out in full
+
+```toml
+# no table: the rule is on for the whole tree
+```
+
+**Why.** A positional argument is a promise about order that the call site
+has to remember. Named arguments make a call read like the sentence it is,
+and a parameter added in the middle stops being able to break a caller
+silently. The autofix writes the `*`; the formatter lays the signature out.
+
+Library callbacks are the exception that needs a name rather than a setting:
+a framework calls `process_bind_param(self, value, dialect)` and the signature
+is not ours to change. Those lines carry a mark.
+
+**The mark.** `# signature-ok: keyword-only-arguments: <reason>` — anywhere in
+the signature, including the closing line of a signature written in a column.
+
+#### `signature-layout` — a list of two or more entries is written on one line
+
+```toml
+[tool.py-checks.signature-layout]
+# The half about calls is switched off for the duration of a move: in a
+# service written without it, it touches nearly every file — 693 places in B,
+# 860 in D.
+calls = true
+```
+
+**Why.** A list of two or more entries is written one per line — in the
+signature and at the call site. In a column, editing one argument touches one
+line and says exactly that; the same list on one line shifts everything after
+the edit, and review reads the whole of it to find the change.
+
+At a call site the rule fires on two or more **named** arguments, and that is
+the entire border between our code and other people's: every function of ours
+is keyword-only, so a call of ours is all names, while `isinstance(node,
+ast.Call)` and `range(1, 10)` are somebody else's positional signature and are
+left alone. Once it fires, it unfolds every argument, positional ones
+included.
+
+A decorator is the single exception: `@dataclass(frozen=True, slots=True)` is
+a label, not a list read for meaning.
+
+**Instead of `ruff format`.** The formatter keeps a list in a column when the
+trailing comma is there (the magic trailing comma), but it never writes one.
+So `--fix` writes the comma and calls the formatter — the layout from there
+on is the formatter's.
+
+**The mark.** `# signature-ok: signature-layout: <reason>`.
+
+#### `function-length` — a function is longer than the limit
+
+```toml
+[tool.py-checks.function-length]
+max-lines = 50
+```
+
+**Why.** The body is counted, not the signature: a function whose parameters
+stand in a column is not thereby longer. Fifty lines is where a function stops
+fitting on a screen and starts being held in the head.
+
+**Instead of `PLR0915`.** It counts statements rather than lines, and on four
+services, at a limit of 50, it does not fire once — where by lines ten
+functions are over.
+
+**The mark.** `# signature-ok: function-length: <reason>`.
+
+#### `module-length` — a module is longer than the limit
+
+```toml
+[tool.py-checks.module-length]
+max-lines = 600
+```
+
+**Why.** Lines are counted as written, blank ones and comments included: the
+reader has to hold all of them. Ruff has no rule for this; in pylint it is
+`C0302`.
+
+**The mark.** `# signature-ok: module-length: <reason>`.
+
+#### `nesting` — control structures are nested deeper than the limit
+
+```toml
+# `with` is deliberately absent from the table: a nested `with` is caught by
+# ruff `SIM117`, with an autofix and a ready answer — "make it one `with a, b:`".
+[tool.py-checks.nesting.limits]
+try = 1
+if = 2
+```
+
+**Why.** Depth is where logic stops being read and starts being decoded. Each
+kind has its own limit because they cost different things: a second `try`
+inside the first hides which line threw, while a second level of `if` is an
+ordinary fork and the third is the one too many. An `elif` is a branch, not a
+level; an `else:` written out with an `if` inside is a level — that is the
+extra indent.
+
+**Instead of `PLR1702`.** First, it is preview-only: without `--preview` ruff
+silently does not run it and reports everything clean. Second, it counts total
+depth as one number for every kind at once — at a limit of 3 it lets a `try`
+inside a `try` through, and at 1 it takes down the lawful `for`/`try`/`with`/`if`
+chain that D actually has.
+
+**The mark.** `# signature-ok: nesting: <reason>`.
+
+### 4.4 types — bounds, shapes, immutability
+
+#### `annotation-shapes` — a shape is named such that its fields have no names
+
+```toml
+[tool.py-checks.annotation-shapes]
+# keys default to ["str"], tuples default to true
+```
+
+**Why.** A dict with a string key reads as a set of named fields — and which
+ones, a `TypedDict` or a dataclass will say. A fixed-length tuple names its
+fields by position: `row[2]` says nothing and survives a reordering in
+silence.
+
+A genuine bag of keys — HTTP headers, a trace-context carrier — is marked.
+
+**Where the services differed.** In A and C all 5 and 34 places where the rule
+fires are marked exactly so.
+
+**The mark.** `# type-ok: annotation-shapes: headers, not fields`.
+
+#### `constant-annotations` — a constant did not say by its type that it is one
+
+```toml
+[tool.py-checks.constant-annotations]
+# module defaults to "Final", inside-class to "ClassVar"
+```
+
+**Why.** An `UPPER_SNAKE` name is a promise; `Final` makes it checkable.
+Without it the name reads as a constant and behaves as a variable, and anyone
+who imported the module is free to rebind it.
+
+Inside a class body the word is a different one: `Final` there means the
+attribute cannot be overridden at all (PEP 591), and bounded primitives are
+built on exactly that overriding — `PositiveDecimal.BOUND` replaces the base's
+`BOUND`. `ClassVar` says "belongs to the class" and leaves overriding open.
+Enums are left alone: a member is a vocabulary.
+
+`Any` in an annotation is not part of this: ruff `ANN401` catches it, though
+only in parameters and returns — a class field and a variable it does not see.
+
+**The mark.** `# type-ok: constant-annotations: <reason>`.
+
+#### `confined-types` — a field in this part of the tree is declared with a type banned here
+
+```toml
+[tool.py-checks.confined-types.zones]
+# Binary floating point does not hold a price, and a rounding error in stored
+# state is money that stops adding up. In the application a number on its way
+# to a report is arithmetic, and `float` is lawful there.
+"modules/*/domain" = ["float"]
+
+# `int` says the version may be −10000, `str` that the tag may be empty,
+# `Decimal` that the coefficient may be negative or NaN. None of that is true
+# of the business, and the type is the last place where it can be said once
+# instead of re-checked by eye.
+domain = ["str", "int", "float", "Decimal"]
+shared = ["str", "int", "float", "Decimal"]
+```
+
+**Why.** A zone is a path, and a `*` in it matches any one piece. Zones add
+up: a file in `modules/pricing/domain` falls under both lines at once.
+
+Class fields are judged; `ClassVar` and `Final` are not fields — they belong
+to the class rather than to an instance, cross no boundary and are not the
+rule's business. An annotation is seen through: `tuple[str, ...]` is the same
+bare string one floor down.
+
+`shared` is in the table on purpose: the read contracts live there. Without
+it the writing side of a projection refuses a NaN and the reading side hands
+it back.
+
+**Where the services differed.** The width of a zone is the project's call: in
+D the rule is named by `entity`, `entities`, `value_objects`, and
+`domain/services` was left out — four `Decimal` fields there are declared
+bare.
+
+**The mark.** `# type-ok: confined-types: <reason>`.
+
+#### `config-fields` — a settings field carries no bound
+
+```toml
+[tool.py-checks.config-fields]
+zones = ["config"]
+# factory defaults to "Field"
+# alias = "validation_alias" — see §5, the `.env.example` builder needs it
+
+[tool.py-checks.config-fields.bounds]
+int = ["ge", "gt", "le", "lt"]
+float = ["ge", "gt", "le", "lt"]
+str = ["min_length", "pattern"]
+```
+
+**Why.** The value arrives as text from an environment nobody reviews, so both
+halves of the declaration are compulsory.
+
+A field is declared through `Field(...)`: that is where the variable's alias,
+the default and the bounds live, and a bare `name: str = "x"` silently drops
+all three.
+
+A field with a bare number names its bound, otherwise `POSTGRES_POOL_SIZE=0`
+and a pool of five hundred are both accepted here and fail somewhere the
+settings are no longer visible in the traceback. A bare string is the same
+hole with a quieter failure: an unset variable arrives as an empty string, and
+an empty broker address or topic name is accepted as configuration.
+`max_length` does not count as a bound: a ceiling says how long a value may
+be, not that there is one.
+
+An annotation is already a rule when it carries the bound itself:
+`Port = Annotated[int, Field(ge=1, le=65535)]`, and a field of that type owes
+nothing. A `ClassVar` is a constant next to the fields, not a field.
+
+**Where the services differed.** The `str` line is the newest part of the
+rule: A and C hold to it, B has 4 fields without it, D has 12. A project
+moving gradually takes `str` out of the table and puts it back when it is
+fixed.
+
+**The mark.** `# type-ok: config-fields: <reason>`.
+
+#### `frozen-dataclasses` — a dataclass in a zone is declared without the required arguments
 
 ```toml
 [tool.py-checks.frozen-dataclasses]
 zones = ["modules"]
-# options по умолчанию ["frozen", "slots", "kw_only"]
+# options default to ["frozen", "slots", "kw_only"]
 ```
 
-Объект дела — это значение: собрали один раз и не меняли, поэтому
-существующий объект не может исподтишка съехать в недопустимое состояние.
-`frozen` это покупает, `slots` не даёт опечатке завести атрибут, которого
-никто не объявлял, а `kw_only` — перепутать местами два поля одного типа: у
-значения из четырёх строк порядок помнит только автор. В A, B и D так объявлены
-все значения внутри `modules`; в C 120 — без `kw_only`.
+**Why.** A thing of the business is a value: assembled once and not changed,
+so an existing object cannot quietly slide into a state that is not allowed.
+`frozen` buys that, `slots` keeps a typo from inventing an attribute nobody
+declared, and `kw_only` keeps two fields of the same type from swapping
+places — in a value of four strings only the author remembers the order.
 
-Зона та же, что у запечатанных импортов, и по той же причине: держать значения
-неизменяемыми имеет смысл там, где живут правила, а не в конфиге, который
-собирают из окружения, и не в проводке.
+The zone is the same as for sealed imports, and for the same reason: keeping
+values immutable makes sense where the rules live, not in a config assembled
+from the environment and not in the wiring.
 
-В ruff такого правила нет: `RUF008`, `RUF009`, `RUF045` и `RUF049` говорят о
-содержимом dataclass, ни одно — о том, как он объявлен.
+**Where the services differed.** A, B and D declare every value inside
+`modules` this way; C has 120 without `kw_only`.
 
-## Модель не покидает слой базы
+**Instead of ruff.** There is no such rule: `RUF008`, `RUF009`, `RUF045` and
+`RUF049` speak about a dataclass's contents, none about how it is declared.
+
+**The mark.** `# type-ok: frozen-dataclasses: <reason>`.
+
+### 4.5 database — the model, the column, the statement
+
+#### `model-boundary` — an ORM model is declared, built or handed out in the wrong place
 
 ```toml
 [tool.py-checks.model-boundary]
 declared = ["infra/database/models"]
 built = ["infra/database/repositories"]
-# base по умолчанию "Base"
+# base defaults to "Base"
 ```
 
-Модель — описание таблицы, и три правила держат её описанием.
+**Why.** A model is a description of a table, and three rules keep it one.
 
-Объявляется она в пакете моделей. `autogenerate` alembic видит ровно те
-модели, до которых дотянулись импорты этого пакета: таблица, объявленная в
-стороне, в миграцию не попадает, и расхождение всплывёт не здесь, а на первой
-записи в базу, где такой таблицы нет.
+*Declared* in the models package. Alembic's `autogenerate` sees exactly the
+models the imports of that package reach: a table declared off to the side
+does not make it into a migration, and the disagreement surfaces not here but
+on the first write to a database that has no such table.
 
-Собирается она только в репозиториях. Собрать модель — значит записать строку,
-а строку записывает тот, у кого есть сессия. Модель, собранная в сценарии,
-либо не делает ничего — её некуда добавить, — либо это запись, сделанная
-слоем, у которого нет транзакции, чтобы её завершить.
+*Built* only in repositories. To build a model is to write a row, and a row is
+written by whoever holds the session. A model built in a use case either does
+nothing — there is nowhere to add it — or it is a write performed by a layer
+with no transaction to finish it.
 
-Публичный метод репозитория её не возвращает. Модель уносит с собой сессию:
-обращение к атрибуту после закрытия транзакции либо падает, либо идёт в базу
-из слоя, которому туда нельзя, а по связям оттуда достижима половина схемы —
-запрос уходит из кода, который ни о каком соединении не просил. Репозитории
-возвращают DTO, идентификаторы, количества — всё, с чем слой базы уже
-закончил.
+*Not returned* by a repository's public method. A model carries the session
+with it: touching an attribute after the transaction closed either fails or
+goes to the database from a layer that may not, and half the schema is
+reachable from there by relationships — a query leaving code that never asked
+for a connection. Repositories return DTOs, identifiers, counts — everything
+the database layer has finished with.
 
-Модель узнаётся двумя способами, и оба видны в одном файле: объявление — по
-базе `Base`, использование — по импорту из пакета моделей. По имени её не
-ищут: `SettingsModel` в настройках, `DeviceModel` в домене и `ChooseModel` в
-диалоге — не таблицы, а суффикс у них тот же.
+A model is recognised in two ways, both visible in one file: declaration by
+the `Base` parent, use by the import from the models package. It is not looked
+for by name: `SettingsModel` in the settings, `DeviceModel` in the domain and
+`ChooseModel` in a dialogue are not tables, and their suffix is the same.
 
-Первое из трёх правил частично повторяет `class-placement`: тот судит по
-суффиксу имени и говорит, где месту классу `*Model`, это — по базе, и говорит,
-что класс с `Base` в родителях не бывает нигде, кроме пакета моделей.
+The first of the three rules partly repeats `class-placement`: that one judges
+by a name's suffix and says where a `*Model` class belongs; this one judges by
+the base and says a class with `Base` among its parents exists nowhere but in
+the models package.
 
-## Из чего собрана колонка
+**The mark.** `# db-ok: model-boundary: <reason>`.
+
+#### `model-columns` — a column is built out of the wrong material
 
 ```toml
 [tool.py-checks.model-columns]
@@ -396,39 +731,41 @@ unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
 
 [tool.py-checks.model-columns.types]
-Enum = "голый Enum — нативный тип Postgres; используй stored_enum()"
-Float = "Float дрейфует; состояние точно, используй Numeric"
-JSONB = "голый JSONB — форма, которую никто не объявил; заверни в TypeDecorator"
-JSON = "голый JSON — форма, которую никто не объявил; заверни в TypeDecorator"
+Enum = "a bare Enum is a native Postgres type; use stored_enum()"
+Float = "a Float column drifts; state is exact, use Numeric"
+JSONB = "a bare JSONB is a shape nobody declared; wrap it in a TypeDecorator"
+JSON = "a bare JSON is a shape nobody declared; wrap it in a TypeDecorator"
 
 [tool.py-checks.model-columns.homes]
-# Модуль, где живёт обёртка над материалом: там его называть можно.
-# В A и C он `_enum_column`, в B и D — `enum_column`.
+# The module where the wrapper over the material lives: naming it there is
+# allowed. In A and C that is `_enum_column`, in B and D `enum_column`.
 Enum = "_enum_column"
 ```
 
-Нативный enum Postgres требует `ALTER TYPE` на каждого нового члена, а
-словари здесь чужие и расти будут. `Float` не держит цену точно, а колонка —
-это состояние: ошибка округления копится с каждой записью. Голый `JSONB` —
-форма, которую никто не объявил: что положил писатель, то и получит каждый
-читатель, а разбор, поймавший бы пропущенный ключ, случается в каждом
-отдельно или нигде.
+**Why.** A native Postgres enum needs an `ALTER TYPE` for every new member,
+and these vocabularies belong to somebody else and will grow. `Float` does
+not hold a price exactly, and a column is state: the rounding error
+accumulates with every write. A bare `JSONB` is a shape nobody declared —
+what the writer put in is what every reader gets, and the parsing that would
+have caught a missing key happens in each of them separately or nowhere.
 
-Значение по умолчанию — это значение, которого никто не писал: писатель
-пропустил колонку, строка всё равно получила число, и пропуск, который на
-пропущенном аргументе конструктора поймал бы проверяльщик типов, превращается
-в правдоподобную строку. `onupdate` хуже прочих — это вторые часы рядом с
-теми, что передают аргументом, чтобы тест и повтор видели ту же метку.
+A default is a value nobody wrote: the writer skipped the column, the row got
+a number anyway, and an omission that a type checker would have caught on a
+missing constructor argument turns into a plausible row. `onupdate` is the
+worst of them — a second clock next to the one passed in as an argument so
+that a test and a retry see the same stamp.
 
-`DateTime` без `timezone=True` хранит наивную метку: те самые настенные часы
-писателя, без подписи, сравниваемые так, будто подпись не важна. Аннотация и
-`nullable=` обязаны совпадать: SQLAlchemy разрешает им разойтись, и тогда
-pyright рассуждает по одной, а база держит другое.
+A `DateTime` without `timezone=True` stores a naive stamp: the writer's wall
+clock, unsigned, compared as though the signature did not matter. The
+annotation and `nullable=` must agree: SQLAlchemy lets them diverge, and then
+pyright reasons by one while the database holds the other.
 
-`UUID`, `datetime`, `date` и `bool` в `unruled` отсутствуют намеренно: они
-исчерпывающи сами по себе, и подмножества у `bool` не бывает.
+`UUID`, `datetime`, `date` and `bool` are deliberately absent from `unruled`:
+they are exhaustive in themselves, and there is no subset of `bool`.
 
-## Граница колонки повторена в базе
+**The mark.** `# db-ok: model-columns: <reason>`.
+
+#### `bound-checks` — a bounded column did not restate its bound as a CHECK
 
 ```toml
 [tool.py-checks.bound-checks]
@@ -443,477 +780,275 @@ primitives = [
     "FiniteDecimal",
     "OfferedPrice",
 ]
-# call по умолчанию "bound_check", аргументы — "column" и "primitive"
+# call defaults to "bound_check", its arguments to "column" and "primitive"
 ```
 
-Колонка, объявленная `Mapped[PositiveDecimal]`, обещает дважды. pyright держит
-каждую строку, СОБРАННУЮ здесь, значениями, которые тип пропустил;
-`bound_check(column=..., primitive=PositiveDecimal)` в `__table_args__` держит
-каждую строку, записанную любым другим способом — бэкфилл, сессия psql, второй
-сервис в следующем году. Аннотация без CHECK — это база, доверяющая коду,
-которого она не видела.
+**Why.** A column declared `Mapped[PositiveDecimal]` promises twice. pyright
+holds every row **built here** to values the type let through;
+`bound_check(column=..., primitive=PositiveDecimal)` in `__table_args__` holds
+every row written any other way — a backfill, a psql session, a second
+service next year. An annotation without a CHECK is a database trusting code
+it has never seen.
 
-Проверяется наличие, а не эквивалентность, и потому ему можно верить: SQL
-генерируется из того же `BOUND`, которым отказывает тип, так что второго
-выражения для сравнения нет — есть вызов, который могли забыть. Отдельно
-отвергается `primitive=`, называющий не тот тип, что в аннотации: это
-единственный способ протащить расхождение обратно.
+Presence is checked rather than equivalence, and that is why it can be
+trusted: the SQL is generated from the same `BOUND` the type refuses by, so
+there is no second expression to compare against — there is a call somebody
+may have forgotten. Separately refused is a `primitive=` naming a type other
+than the one in the annotation: that is the only way to smuggle the
+disagreement back in.
 
-Список типов проектный и пишется словами: правило не импортирует код, который
-проверяет. Имя, записанное до того, как тип появился, ничего не стоит —
-правило срабатывает на аннотации, а её нет, пока примитив не написан.
+The list of types is the project's and is written as words: the rule does not
+import the code it checks. A name written before the type exists costs
+nothing — the rule fires on the annotation, and there is none until the
+primitive is written.
 
-## SQL строкой там, где хватило бы выражения
+**The mark.** `# db-ok: bound-checks: <reason>`.
+
+#### `raw-sql` — SQL is written as a string where an expression would do
 
 ```toml
 [tool.py-checks.raw-sql]
-# calls по умолчанию: CheckConstraint, text, literal_column, column
+# calls default to CheckConstraint, text, literal_column, column
 ```
 
-CHECK, записанный как `"margin >= 0 AND margin < 1"`, — второе определение
-правила, которое домен уже сформулировал, на языке, который в репозитории
-никто не проверяет. Переименуй колонку — строка по-прежнему компилируется;
-сдвинь границу — строка по-прежнему называет старое число, и расхождение
-всплывает нарушением ограничения на строке, которая была верна по всем
-правилам, известным коду.
+**Why.** A CHECK written as `"margin >= 0 AND margin < 1"` is a second
+definition of a rule the domain has already stated, in a language nobody in
+the repository checks. Rename the column and the string still compiles; move
+the bound and the string still names the old number, and the disagreement
+surfaces as a constraint violation on a row that was correct by every rule the
+code knew.
 
-Записанное выражением — `CheckConstraint(and_(margin >= NOTHING, margin <
-WHOLE))` — оно состоит из атрибута, который pyright и так проверяет, и
-констант, которыми сущность отказывает.
+Written as an expression — `CheckConstraint(and_(margin >= NOTHING, margin <
+WHOLE))` — it is made of an attribute pyright already checks and of the
+constants the entity refuses by.
 
-Где выражения честно нет, на строке пишут причину:
-`# db-ok: raw-sql: PRAGMA — это не запрос`. На четырёх сервисах таких мест
-двенадцать: пробы живости, `PRAGMA` у SQLite и `column("fixture_id", Uuid)`
-там, где запрошенные пары не лежат ни в одной таблице.
+Where there honestly is no expression, the reason goes on the line. Across the
+four services there are twelve such places: liveness probes, SQLite's `PRAGMA`
+and `column("fixture_id", Uuid)` where the requested pairs are in no table at
+all.
 
-Миграции держат SQL словами намеренно — это история, и она может не иметь
-права импортировать нужные константы. Их исключает `extend-exclude` проекта, а
-не правило.
+Migrations keep their SQL in words on purpose — they are history, and they may
+have no right to import the constants they would need. The project's
+`extend-exclude` excludes them, not the rule.
 
-`TID251` на `sqlalchemy.text` этого не заменяет: на четырёх сервисах он даёт
-94 срабатывания, из них 52 в одних только `migrations/versions`.
+**Instead of `TID251` on `sqlalchemy.text`.** Across the four services it
+gives 94 hits, 52 of them in `migrations/versions` alone.
 
-## Запрос называет колонку атрибутом
+**The mark.** `# db-ok: raw-sql: a PRAGMA is not a query`.
+
+#### `statement-keys` — a statement names a column by string, or goes to the database in a loop
 
 ```toml
 [tool.py-checks.statement-keys]
 zones = ["infra/database/repositories"]
-# lists по умолчанию ["index_elements"], mappings — ["set_"],
-# calls — ["from_select"], loops — ["execute"]
+# lists default to ["index_elements"], mappings to ["set_"],
+# calls to ["from_select"], loops to ["execute"]
 ```
 
-Строки собираются через модели, поэтому список колонок держит pyright:
-пропущенная колонка — пропущенный аргумент, переименованная — неожиданное
-ключевое слово. Строковый ключ открывает дыру заново: он ничего не совпадает
-во время проверки.
+**Why.** Rows are assembled through models, so pyright holds the column list:
+a missing column is a missing argument, a renamed one an unexpected keyword.
+A string key opens the hole again: it matches nothing at check time.
 
-`index_elements` и `set_` вместе — это `ON CONFLICT DO UPDATE`, то есть inbox
-и каждый upsert. Строка, переставшая там совпадать, не поднимает исключения:
-конфликт просто не находится, дубль вставляется второй раз, и идемпотентность
-— то, ради чего inbox и существует, — тихо кончается.
+`index_elements` and `set_` together are `ON CONFLICT DO UPDATE` — that is the
+inbox and every upsert. A string that has stopped matching there raises
+nothing: the conflict is simply not found, the duplicate is inserted a second
+time, and idempotency — the whole reason the inbox exists — quietly ends.
 
-`execute(...)` внутри цикла — поход в базу на итерацию. Сто ставок — сто
-поездок туда и обратно там, где хватило бы одного запроса. Иногда цикл честен,
-и тогда на строке цикла или вызова пишут причину:
-`# db-ok: statement-keys: у ставки не больше двадцати ног, и все они сдвинулись`.
-Снимаемо, а не совещательно, намеренно: предупреждение, которое ничего не
-роняет, читают один раз, а пометку пишет тот, у кого есть причина, и она
-остаётся в файле следующему читателю.
+An `execute(...)` inside a loop is a trip to the database per iteration. A
+hundred bets is a hundred round trips where one statement would have done.
+Sometimes the loop is honest, and then the reason goes on the line of the loop
+or the call. Liftable rather than advisory, deliberately: a warning that
+brings nothing down is read once, while a mark is written by somebody who had
+a reason, and it stays in the file for the next reader.
 
-## Кто владеет границей транзакции
+**The mark.** `# db-ok: statement-keys: a bet has no more than twenty legs, and every one of them moved`.
+
+#### `confined-calls` — a named method was called somewhere it does not belong
 
 ```toml
 [[tool.py-checks.confined-calls.rules]]
 methods = ["commit", "rollback", "begin", "begin_nested"]
 zones = ["modules", "presentation", "infra/database"]
-# Край брокера: `commit()` у консьюмера подтверждает смещение, а не транзакцию.
+# The broker's edge: a consumer's `commit()` acknowledges an offset, not a
+# transaction.
 outside = ["presentation/consumers"]
 owner = "unit_of_work"
-said = "границей транзакции владеет unit_of_work"
+said = "unit_of_work owns the transaction boundary"
 ```
 
-Ставка — это одна транзакция: списать деньги, записать ставку, записать
-событие, которое расскажет об этом остальной платформе. Репозиторий,
-коммитящий в середине, превращает её в три, и сальдо перестаёт сходиться со
-ставками. `begin` запрещён рядом с `commit` и `rollback` по той же причине с
-другого конца: вызывающий уже открыл транзакцию, а вторая внутри либо падает,
-либо тихо делает вложенную.
+**Why.** A bet is one transaction: take the money, write the bet, write the
+event that tells the rest of the platform. A repository committing halfway
+turns it into three, and the balance stops agreeing with the bets. `begin` is
+banned next to `commit` and `rollback` for the same reason from the other end:
+the caller has already opened a transaction, and a second one inside either
+fails or quietly nests.
 
-По одному файлу видно только имя метода — чей это объект, сказал бы лишь вывод
-типов. Отсюда обе рамки: зона, где `commit()` может быть только у сессии, и
-`outside` для края, где это слово занято чужим смыслом. Сервисы тут разошлись:
-A и C судят все четыре имени, B и D — только `commit` и
-`rollback`, потому что `begin` у них занят доменным репозиторием
+From a single file only the method's name is visible — whose object it is
+would take type inference to say. Hence both frames: the zone where a
+`commit()` can only be the session's, and `outside` for the edge where the
+word is taken by somebody else's meaning.
+
+**Where the services differed.** A and C judge all four names; B and D only
+`commit` and `rollback`, because `begin` is taken there by a domain repository
 (`progress.begin(enrollment=...)`).
 
-## Форма называет свои поля
+**The mark.** `# db-ok: confined-calls: <reason>`.
+
+#### `schema-drift` — the models and the migrations describe different schemas
 
 ```toml
-[tool.py-checks.annotation-shapes]
-# keys по умолчанию ["str"], tuples по умолчанию true
-
-[tool.py-checks.constant-annotations]
-# module по умолчанию "Final", inside-class — "ClassVar"
+[tool.py-checks.schema-drift]
+# versions defaults to "migrations/versions",
+# models to "src/*/infra/database/models", variable to "DATABASE_URL",
+# url to "sqlite+aiosqlite:///{path}", alembic to ["alembic"]
 ```
 
-Словарь со строковым ключом читается как набор именованных полей, а какие
-именно — скажет `TypedDict` или dataclass. Настоящий мешок ключей — заголовки
-HTTP, носитель контекста трассировки — помечается:
-`# type-ok: annotation-shapes: заголовки, а не поля`. В A и C так
-помечены все 5 и 34 места, где правило срабатывает.
+**Why.** A column added to a model with no migration behind it is a service
+that works on every developer's machine and fails on the first deployment. Or,
+worse, does not fail: SQLAlchemy asks for a column the table has not got, and
+the error arrives as a query at three in the morning rather than as a release
+that refused to go out.
 
-Кортеж фиксированной длины называет поля позициями: `row[2]` не говорит ничего
-и молча переживает перестановку.
+None of the file-reading rules can see this: `model-columns` and
+`bound-checks` judge the model, the migration has rules of its own, and the
+**disagreement** between the halves is what alembic's `check` is for. So the
+rule needs a live database and is declared `scope = ENVIRONMENT`: an ordinary
+run leaves it out, and it is called by name or with everything:
 
-Имя `UPPER_SNAKE` — обещание, `Final` делает его проверяемым: без него имя
-читается как константа, а ведёт себя как переменная, и любой импортировавший
-модуль волен её перепривязать. В теле класса слово другое: `Final` там
-означает, что атрибут нельзя переопределить вообще (PEP 591), а ограниченные
-примитивы построены ровно на переопределении — `PositiveDecimal.BOUND`
-заменяет `BOUND` базы. `ClassVar` говорит «принадлежит классу» и оставляет
-переопределение открытым. Перечисления не трогаются: член — это словарь.
-
-`Any` в аннотации сюда не входит: его ловит ruff `ANN401`, но только в
-параметрах и возврате — поле класса и переменную он не видит.
-
-## Чему не место в этой части дерева
-
-```toml
-[tool.py-checks.confined-types.zones]
-# Двоичная плавающая точка не держит цену, а ошибка округления в хранимом
-# состоянии — это деньги, которые перестают сходиться. В приложении число на
-# пути в отчёт — арифметика, и там `float` законен.
-"modules/*/domain" = ["float"]
-
-# `int` говорит, что версия может быть −10000, `str` — что тег может быть
-# пустым, `Decimal` — что коэффициент может быть отрицательным или NaN. Ничего
-# из этого про дело не верно, а тип — последнее место, где это можно сказать
-# один раз, а не перепроверять глазами.
-domain = ["str", "int", "float", "Decimal"]
-shared = ["str", "int", "float", "Decimal"]
+```bash
+py-checks run --select schema-drift
+py-checks run --all
 ```
 
-Зона — путь, и `*` в нём подходит любому одному куску. Зоны складываются: файл
-в `modules/pricing/domain` попадает под обе строки сразу.
+It brings its own database — an empty file in a temporary directory, migrated
+from nothing to `head` and deleted afterwards. Not the developer's database:
+that one stands at whatever revision its owner last ran, which is exactly the
+state the check does not trust.
 
-Судятся поля класса; `ClassVar` и `Final` — не поля: они принадлежат классу, а
-не экземпляру, границы не переходят и правилу не подсудны. Аннотация
-просматривается насквозь: `tuple[str, ...]` — та же голая строка этажом ниже.
+Hence its place: not in pre-commit, where every commit would pay for running
+every migration, but as a CI step — next to the tests, where a database
+already exists.
 
-`shared` в таблице не случайно: там живут контракты на чтение. Без него
-пишущая сторона проекции откажет NaN, а читающая его вернёт.
+**Three caveats you meet at once.**
 
-Ширина зоны — решение проекта, и сервисы тут разошлись: в D правило
-названо по `entity`, `entities`, `value_objects`, а `domain/services` в него не
-попал — 4 поля `Decimal` там объявлены голыми.
+- The project's `env.py` must read the database address from the variable
+  (`variable`). Where it takes it from its own settings, the rule cannot slip
+  a database underneath — there a CI step raises a throwaway Postgres and
+  passes it under the same name.
+- The default SQLite needs `aiosqlite` in the environment. A project that does
+  not keep one is better off pointing `url` at the same throwaway Postgres the
+  tests use.
+- `alembic` is called by the same name as in the caller's environment: the run
+  is already inside the project's environment, and a second `uv run` inside it
+  would rebuild that environment mid-check.
 
-## Поле настроек названо целиком
+**The mark.** `# db-ok: schema-drift: <reason>`.
 
-```toml
-[tool.py-checks.config-fields]
-zones = ["config"]
-# factory по умолчанию "Field"
+### 4.6 effects — the clock, the dice, the log
 
-[tool.py-checks.config-fields.bounds]
-int = ["ge", "gt", "le", "lt"]
-float = ["ge", "gt", "le", "lt"]
-str = ["min_length", "pattern"]
-```
-
-Значение приходит текстом из окружения, которое никто не ревьюит, поэтому
-обе половины объявления обязательны.
-
-Поле объявляется через `Field(...)`: там живут псевдоним переменной, значение
-по умолчанию и ограничения, а голое `name: str = "x"` молча роняет все три.
-
-Поле с голым числом называет границу, иначе `POSTGRES_POOL_SIZE=0` и пул на
-пятьсот принимаются здесь, а падают там, где в трейсбеке настроек уже не
-видно. Голая строка — та же дыра с более тихим отказом: неустановленная
-переменная приходит пустой строкой, и пустой адрес брокера или имя топика
-принимаются как настройка. `max_length` границей не считается: потолок
-говорит, какой длины значение может быть, а не что оно вообще есть.
-
-Аннотация именем — уже правило: `Port = Annotated[int, Field(ge=1, le=65535)]`
-несёт границу с собой, и поле с таким типом ничего не должно. `ClassVar` —
-константа рядом с полями, а не поле.
-
-Строка `str` в таблице — самая новая часть правила: A и C её соблюдают, в B
-4 поля без неё, в D 12. Проект, который переезжает
-постепенно, убирает `str` из таблицы и возвращает, когда починит.
-
-## Пределы длины и вложенности
-
-```toml
-[tool.py-checks.function-length]
-max-lines = 50
-
-[tool.py-checks.module-length]
-max-lines = 600
-
-# `with` в таблице нет намеренно: вложенный `with` ловит ruff `SIM117`, с
-# автофиксом и с готовым ответом — «сделай один `with a, b:`».
-[tool.py-checks.nesting.limits]
-try = 1
-if = 2
-
-[tool.py-checks.signature-layout]
-# Половину про вызовы выключают на время переезда: в сервисе, который писали
-# без неё, она трогает почти каждый файл — в B это 693 места, в D 860.
-calls = true
-```
-
-Строки модуля считаются как написаны, вместе с пустыми и комментариями:
-держать в голове читателю приходится их все.
-
-Глубина — это место, где логику перестают читать и начинают расшифровывать.
-Предел у каждого вида свой, потому что стоят они разного: второй `try` внутри
-первого прячет, какая строка бросила, а второй уровень `if` — обычная
-развилка, лишним становится третий. `elif` — ветка, а не уровень; написанный
-развёрнуто `else:` с `if` внутри — уровень, это и есть лишний отступ.
-
-`PLR1702` из ruff это не заменяет. Во-первых, он preview-only: без `--preview`
-ruff молча не выполняет правило и рапортует, что всё чисто. Во-вторых, он
-считает общую глубину одним числом на все виды сразу — при пределе 3 пропускает
-`try` внутри `try`, а при 1 роняет законную цепочку `for`/`try`/`with`/`if`,
-какая нашлась в D.
-
-## ruff
-
-`ruff.toml` в корне; `pyproject.toml` секцию `[tool.ruff]` при этом не держит —
-найдя свой файл в корне, ruff перестаёт читать pyproject целиком, и оставленная
-там секция молча перестаёт действовать.
-
-```toml
-line-length = 100
-target-version = "py314"
-
-[lint]
-select = [
-    "E",
-    "F",
-    "I",
-    "UP",
-    "B",
-    "S",       # bandit: assert, слабая случайность, инъекции
-    "ASYNC",   # блокирующий вызов внутри async def
-    "DTZ",     # datetime без зоны
-    "N",       # именование
-    "ARG",     # аргумент, который никто не читает
-    "ANN401",  # `Any` в параметре или возврате
-    "TC",      # импорт ради аннотации, нужный только проверяльщику типов
-    "ERA",     # закомментированный код
-    "T20",     # забытый print
-    "SIM117",  # вложенный `with` вместо одного `with a, b:`, с автофиксом
-    "PLR0912", # слишком много ветвей
-    "PLR0915", # слишком много инструкций
-    "PLR2004", # число в сравнении вместо константы
-    "PGH",     # глухой ignore прячет и все будущие ошибки, называй код
-]
-# B008: вызов в значении по умолчанию — то, как fastapi и typer объявляют
-# зависимости, там это подпись, а не спрятанное состояние.
-ignore = ["B008"]
-
-[lint.flake8-tidy-imports.banned-api]
-# Literal — это словарь, записанный россыпью строк: ничто его не называет,
-# ничто по нему не ходит, и те же слова печатают заново везде, где значение
-# строят, сравнивают или кладут в базу. StrEnum — то же множество с именем:
-# члены в одном месте, тест по ним ходит, CHECK в колонке берётся оттуда же.
-"typing.Literal".msg = "словарь строк — это StrEnum, а не Literal"
-```
-
-## Список в столбик
-
-Список из двух и более элементов пишется по одному на строку — и в подписи, и
-в месте вызова. В столбике правка одного аргумента трогает одну строку и
-говорит ровно это; тот же список в строку сдвигает всё, что стоит после
-правки, и ревью читает его целиком, чтобы найти изменение.
-
-В вызове правило срабатывает от двух и более ИМЕНОВАННЫХ аргументов, и это вся
-граница между своим кодом и чужим: у нас каждая функция keyword-only, поэтому
-вызов нашей функции — сплошь имена, а `isinstance(node, ast.Call)` и
-`range(1, 10)` — чужая позиционная подпись, и её не трогают. Сработав, правило
-разворачивает все аргументы, позиционные тоже.
-
-Декоратор — единственное исключение: `@dataclass(frozen=True, slots=True)` это
-метка, а не список, который читают ради смысла.
-
-`ruff format` этого не делает: он держит список в столбик, когда висячая
-запятая стоит (magic trailing comma), но сам её никогда не ставит. Поэтому
-`--fix` ставит запятую и зовёт форматтер — дальше раскладка его.
-
-### Что закрывает ruff, а что проверки
-
-| Соглашение | Чем закрыто |
-|---|---|
-| Длина функции | правило `function-length`: ruff `PLR0915` считает инструкции, а не строки, и на четырёх сервисах при пределе 50 не срабатывает ни разу — там, где по строкам десять функций за пределом |
-| Число ветвей в функции | ruff `PLR0912` |
-| Вложенный `with` | ruff `SIM117`, с автофиксом |
-| Глубина `try` и `if` | правило `nesting`: в ruff такого нет — `PLR1702` считает все виды одним числом и живёт в preview |
-| Число аргументов входа | правило `operation-shape`, настройка `max-arguments`: `PLR0913` не знает ни классов, ни исключения для конструктора |
-| Список в столбик | правило `signature-layout`, с автофиксом: форматтер уважает висячую запятую, но не ставит её, а `COM812` срабатывает от уже существующего переноса |
-| `frozen=True, slots=True` у значений | правило `frozen-dataclasses`: в ruff правил про объявление dataclass нет |
-| Ограничения у полей настроек | правило `config-fields`: ни pydantic, ни ruff не требуют ни `Field(...)`, ни границ |
-| `Any` в подписи | ruff `ANN401` — только параметры и возврат, поля класса он не видит |
-| Строковый ключ и кортеж по позициям | правило `annotation-shapes` |
-| `Final` и `ClassVar` у констант | правило `constant-annotations` |
-| Колонка строкой, N+1 в репозитории | правило `statement-keys` |
-| Материал колонки | правило `model-columns` |
-| Модель за границей слоя базы | правило `model-boundary`: импорт из пакета моделей ruff видит, а что с этим именем делают дальше — нет |
-| Расхождение моделей и миграций | правило `schema-drift` поверх `alembic check`: статикой это не видно, нужна база |
-| Откат миграции | pytest-alembic `test_up_down_consistency` |
-| Часы, случайность, новый идентификатор | правило `determinism`: `TID251` не знает зон, его послабление снимает и запрет `Literal`, а `func.gen_random_uuid()` в запросе он не видит вовсе |
-| Наивная метка времени | ruff `DTZ` |
-| Имя события в логе | правило `log-events`: готового нет |
-| Полнота декларации маршрута | правило `endpoint-declarations`: FastAPI даёт слова, но ничего не требует; Schemathesis проверяет соответствие коду, а не полноту схемы |
-| Места вызова конверсии | правило `confined-functions`: готового нет |
-| Потолок у зависимости | правило `dependency-bounds`: готового нет; рядом полезен `deptry` (неиспользуемые и необъявленные) и `uv lock --check` в CI |
-| Полнота `.env.example` | собирается `py-checks sync` плюс `config-fields` с `alias` |
-| Равенство `AGENTS.md` и `CLAUDE.md` | симлинк плюс хуки `check-symlinks`, `destroyed-symlinks` |
-| Выжившие мутанты | `mutmut` со своим базовым списком — шаг CI проекта, не правило |
-| CHECK под ограниченной колонкой | правило `bound-checks` |
-| SQL строкой вместо выражения | правило `raw-sql`: `TID251` банит `text()` целиком и валит 94 законных места |
-| Граница транзакции | правило `confined-calls`: ruff видит имена, но не зоны и не владельца |
-| Запрещённый в зоне тип | правило `confined-types`: ни ruff, ни pyright не знают, что `Decimal` в домене — это мало |
-| Длина модуля | правило `module-length`: в ruff правила нет, в pylint это `C0302` |
-| Полная запись сигнатуры | правило `keyword-only-arguments`, с автофиксом |
-| Число в сравнении, забытый `print`, закомментированный код | ruff `PLR2004`, `T20`, `ERA` |
-| `typing.Literal` вместо `StrEnum` | ruff `TID251`, строка `banned-api` вместо 138 строк проверки |
-
-Отдельный bandit при этом не нужен: правила `S` — это он и есть, переписанный
-внутри ruff. В четырёх сервисах он стоит рядом с ruff как вторая зависимость и
-второй хук — при переезде выкидывается.
-
-Послабления по папкам — проектные; то, что повторялось у всех:
-
-```toml
-[lint.per-file-ignores]
-# Тест утверждает — для этого он и есть; число, с которым он сравнивает, и есть
-# предмет теста, а имя вместо числа его прячет.
-"tests/*" = ["S101", "PLR2004", "ARG001", "S105", "S106", "TC001", "TC002", "TC003"]
-# fastapi, dishka и pydantic читают аннотации во время работы: импорт, уехавший
-# под TYPE_CHECKING, здесь не экономия, а NameError при объявлении маршрута.
-"src/*/presentation/*" = ["TC001", "TC002", "TC003"]
-"src/*/bootstrap/*" = ["TC001", "TC002", "TC003"]
-"src/*/ioc/*" = ["TC001", "TC002", "TC003"]
-"src/*/config/*" = ["TC001", "TC002", "TC003"]
-"src/*/infra/database/models/*" = ["TC001", "TC002", "TC003"]
-# Ревизия — шаблон самого alembic, и SQL в ней написан словами и заморожен в
-# день рождения миграции.
-"migrations/versions/*" = ["TC003", "S608"]
-```
-
-## pyright
-
-`pyrightconfig.json` в корне — и по той же причине: найдя его, pyright
-перестаёт читать `[tool.pyright]` из pyproject.
-
-```json
-{
-  "pythonVersion": "3.14",
-  "typeCheckingMode": "strict",
-  "venvPath": ".",
-  "venv": ".venv",
-  "include": ["src", "tests"]
-}
-```
-
-Strict везде, а не по директориям: неаннотированная функция и `Any`, вылезший
-на границу, — ошибка и в композиционном корне тоже.
-
-## Часы, случайность и новый идентификатор — из порта
+#### `determinism` — the code reads the clock, the dice or a new identifier itself
 
 ```toml
 [tool.py-checks.determinism]
 zones = ["modules", "repositories"]
 
 [tool.py-checks.determinism.sources]
-"datetime.now" = "возьми порт Clock и позови его"
-"datetime.utcnow" = "возьми порт Clock и позови его"
-"date.today" = "возьми порт Clock и позови его"
-"time.monotonic" = "возьми порт Clock и позови его"
-"time.perf_counter" = "возьми порт Clock и позови его"
-"uuid4" = "выдай идентификатор из IdGenerator и передай его"
-"uuid7" = "выдай идентификатор из IdGenerator и передай его"
-"random.*" = "прими значение аргументом"
-# Имена, а не весь модуль: `secrets.compare_digest` детерминирован и нужен
-# ровно там, где сравнивают токены.
-"secrets.token_urlsafe" = "прими значение аргументом"
-"secrets.token_hex" = "прими значение аргументом"
-"secrets.randbelow" = "прими значение аргументом"
-# Тот же источник через SQL: `func.<name>()` — вызов, который делает БАЗА,
-# пока выполняет запрос.
-"func.now" = "время строки — из порта Clock, а не из базы"
-"func.gen_random_uuid" = "идентификатор строки выдаёт тот, кто её собрал"
+"datetime.now" = "take the Clock port and call it"
+"datetime.utcnow" = "take the Clock port and call it"
+"date.today" = "take the Clock port and call it"
+"time.monotonic" = "take the Clock port and call it"
+"time.perf_counter" = "take the Clock port and call it"
+"uuid4" = "hand the identifier out of IdGenerator and pass it in"
+"uuid7" = "hand the identifier out of IdGenerator and pass it in"
+"random.*" = "take the value as an argument"
+# Names rather than the whole module: `secrets.compare_digest` is
+# deterministic and is needed exactly where tokens are compared.
+"secrets.token_urlsafe" = "take the value as an argument"
+"secrets.token_hex" = "take the value as an argument"
+"secrets.randbelow" = "take the value as an argument"
+# The same source through SQL: `func.<name>()` is a call the DATABASE makes
+# while it runs the statement.
+"func.now" = "the row's time comes from the Clock port, not from the database"
+"func.gen_random_uuid" = "the row's identifier comes from whoever built it"
 ```
 
-`datetime.now()`, `uuid4()` и `random.random()` делают сценарий
-непроверяемым: один и тот же вход даёт разный выход, и тест либо замораживает
-мир мокой, либо не утверждает ничего. Бизнес-код берёт их зависимостью:
+**Why.** `datetime.now()`, `uuid4()` and `random.random()` make a use case
+untestable: the same input gives a different output, and the test either
+freezes the world with a mock or asserts nothing at all. Business code takes
+them as a dependency:
 
 ```python
 async def handle(self, *, command: PlaceBet) -> BetId:
-    placed_at = self._clock.now()  # порт, внедрённый
-    bet_id = command.bet_id  # выдан на краю
+    placed_at = self._clock.now()  # a port, injected
+    bet_id = command.bet_id  # handed out at the edge
 ```
 
-Вызов через порт правило не трогает — оно судит глобальные источники. Имя
-сверяется с хвостом: `datetime.now` подходит и записи `datetime.datetime.now`,
-а `random.*` — любому вызову модуля целиком.
+A call through a port the rule leaves alone — it judges global sources. A name
+is matched against the tail: `datetime.now` matches `datetime.datetime.now`
+too, and `random.*` matches any call into that module.
 
-Репозитории закрыты той же зоной, и там источник пишется на SQL.
-`gen_random_uuid()` внутри INSERT — то же решение этажом ниже, где его ещё
-хуже видно: в тесте о нём нечего утверждать, слой хранения становится автором
-идентификатора, о котором ему ничего не передавали, а среди uuid7 появляется
-uuid4 — случайный там, где все остальные упорядочены, и упорядоченность — то,
-ради чего индекс по ним чего-то стоит.
+Repositories are inside the same zone, and there the source is written in SQL.
+A `gen_random_uuid()` inside an INSERT is the same decision one floor down,
+where it is even harder to see: a test has nothing to assert about it, the
+storage layer becomes the author of an identifier nobody passed it, and a
+uuid4 appears among uuid7s — random where everything else is ordered, and
+ordering is the whole reason an index on them is worth anything.
 
-Ruff `TID251` закрывает половину и стоит дороже, чем кажется. Он банит имя во
-всём дереве, а послабления пишутся путями в `per-file-ignores` — и снимают
-`TID251` в файле ЦЕЛИКОМ, вместе с запретом `typing.Literal`, который отдан
-тому же правилу. Замер бана на четырёх сервисах: 27 срабатываний, все
-законные — `shared/clock.py`, `shared/ids.py`, `infra/auth/secrets.py` и
-`time.monotonic()` в `presentation`, где меряют длительность для метрики.
-Ровно те места, которые зона и оставляет в покое.
+**Instead of `TID251`.** It covers half and costs more than it looks. It bans
+a name across the whole tree, and relief is written as paths in
+`per-file-ignores` — which lifts `TID251` in that file **entirely**, together
+with the ban on `typing.Literal` handed to the same rule. Measured across the
+four services: 27 hits, every one of them lawful — `shared/clock.py`,
+`shared/ids.py`, `infra/auth/secrets.py` and `time.monotonic()` in
+`presentation`, where a duration is measured for a metric. Exactly the places
+the zone leaves alone.
 
-Группа `DTZ` в наборе ruff выше стоит не вместо этого правила, а рядом:
-наивная метка времени — другая ошибка, и на четырёх сервисах она сейчас не
-встречается ни разу.
+Ruff's `DTZ` group above stands alongside rather than instead: a naive
+timestamp is a different mistake, and across the four services it currently
+does not occur once.
 
-## Событие в логе названо перечислением
+**The mark.** `# effect-ok: determinism: <reason>`.
+
+#### `log-events` — an event in the log is named by something other than an enum member
 
 ```toml
 [tool.py-checks.log-events]
 enum = "LogEvent"
-# levels по умолчанию debug, info, warning, warn, error, exception, critical
-# receiver по умолчанию "(^|_)log(ger)?$" — `logger`, `log`, `self._logger`
+# levels default to debug, info, warning, warn, error, exception, critical
+# receiver defaults to "(^|_)log(ger)?$" — `logger`, `log`, `self._logger`
 ```
 
-Имя события читает не человек: процессор в цепочке structlog превращает
-`consumer.message.handled` в счётчик, а алерт джойнится по этой строке.
-Литерал, написанный на месте вызова, определения не имеет, и код, который имя
-издаёт, ничем не связан с кодом, который его ловит: опечатка не ломает ни
-одного теста, она просто перестаёт совпадать, и метрика тихо читает ноль.
+**Why.** An event's name is not read by a human: a processor in the structlog
+chain turns `consumer.message.handled` into a counter, and an alert joins on
+that string. A literal written at the call site has no definition, and the
+code that emits the name is tied to nothing that catches it: a typo breaks no
+test, it simply stops matching, and the metric quietly reads zero.
 
 ```python
-logger.info("consumer started", topics=topics)  # отвергнуто
-logger.info(LogEvent.CONSUMER_STARTED, topics=...)  # требуется
+logger.info("consumer started", topics=topics)  # refused
+logger.info(LogEvent.CONSUMER_STARTED, topics=...)  # required
 ```
 
-Правило читает ФОРМУ `LogEvent.SOMETHING` и члена не ищет: имени, которого в
-перечислении нет, откажет pyright, а без него это `AttributeError` на первом
-же запуске — собирать члены значило бы ловить пойманное дважды.
+The rule reads the **shape** `LogEvent.SOMETHING` and does not look for the
+member: a name that is not in the enum is refused by pyright, and without
+pyright it is an `AttributeError` on the first run — collecting the members
+would mean catching what is already caught.
 
-Чужой логгер — библиотечный или тот, чьим словарём владеет другой проект, —
-снимается пометкой: `# effect-ok: log-events: не наш логгер`. На четырёх
-сервисах таких мест нет: 330 вызовов, все через `LogEvent`.
+A third-party logger — a library's, or one whose vocabulary another project
+owns — is lifted by a mark. Across the four services there are no such places:
+330 calls, all through `LogEvent`.
 
-Типами это закрывается тоже — обёрткой над structlog, объявляющей
-`event: LogEvent`: литерал тогда отвергает pyright, потому что `str` не
-подходит под `LogEvent`, хотя `LogEvent` и есть `StrEnum`. Цена — свой класс
-логгера в каждом сервисе и проброс `**kwargs`, а сторонние логгеры внутри
-сервиса всё равно зовутся напрямую.
+**Instead of the rule.** Types close this as well — a wrapper over structlog
+declaring `event: LogEvent`: a literal is then refused by pyright, because
+`str` does not fit `LogEvent`, even though `LogEvent` is a `StrEnum`. The
+price is a logger class of your own in every service and `**kwargs` passed
+through, and third-party loggers inside the service are still called directly.
 
-## Маршрут объявляет, чем отвечает
+**The mark.** `# effect-ok: log-events: not our logger`.
+
+### 4.7 api — what a route declares
+
+#### `endpoint-declarations` — a route did not say what it answers with
 
 ```toml
 [tool.py-checks.endpoint-declarations]
@@ -924,41 +1059,47 @@ bodiless = [204, 205, 304]
 exempt = "include_in_schema"
 ```
 
-Декоратор маршрута — это контракт. Кто читает сгенерированную схему — соседний
-сервис, человек, пишущий клиент, — читает только то, что объявил декоратор, и
-поле, которого там нет, для него не существует, что бы ни возвращало тело
-функции.
+**Why.** A route decorator is a contract. Whoever reads the generated schema —
+a neighbouring service, a person writing a client — reads only what the
+decorator declared, and a field that is not there does not exist for them,
+whatever the function body returns.
 
-Механизм у FastAPI есть, требования писать — нет. Маршрут без `summary`
-попадёт в схему с именем функции вместо описания («Create Ladder» — фраза про
-код, а не про эндпоинт), а с пустым `responses` — с обещанием, что отказов у
-него не бывает: успех из подписи выводится, отказы — нет, и ничто в ней не
-говорит, что этот маршрут отвечает 409.
+FastAPI has the mechanism; it demands none of it. A route with no `summary`
+lands in the schema with the function's name in place of a description
+("Create Ladder" — a phrase about the code, not about the endpoint), and with
+an empty `responses` it lands with a promise that it never refuses: success is
+inferred from the signature, refusals are not, and nothing in the schema says
+this route answers 409.
 
-Путь пишется словом `path=`: позиционный первый аргумент — единственное в
-декораторе, чей смысл зависит от позиции.
+The path is written as `path=`: the positional first argument is the only
+thing in the decorator whose meaning depends on position.
 
-`response_model` не требуется там, где тела не бывает: 204, 205 и 304 — модель
-ответа рядом с ними обещает то, что протокол запрещает. Статус, записанный не
-числом и не членом `HTTPStatus`, читается как неизвестный, а неизвестный
-считается имеющим тело: проверка, сработавшая зря, снимается пометкой, а
-промолчавшая — это контракт, которого никто не хватится.
+`response_model` is not required where there is no body: 204, 205 and 304 — a
+response model next to them promises what the protocol forbids. A status
+written as neither a number nor an `HTTPStatus` member reads as unknown, and
+an unknown one is taken to have a body: a check that fired needlessly is
+lifted by a mark, while one that stayed silent is a contract nobody will miss.
 
-Маршрут с `include_in_schema=False` правило не трогает: схема — это то, что
-оно защищает, а такого маршрута в ней нет. Ровно это и есть `/docs` с
-соседями — они схему описывают, а не стоят в ней.
+A route with `include_in_schema=False` the rule leaves alone: the schema is
+what it protects, and such a route is not in it. That is exactly `/docs` and
+its neighbours — they describe the schema rather than stand in it.
 
-Consumer правило не достаёт: у подписчика нет ни статуса, ни модели ответа, а
-то, что объявлять ему, — группа, топик, судьба отвергнутого сообщения — это
-правило само по себе, и оно не написано намеренно, пока первый настоящий
-обработчик не покажет, каким ему быть.
+Consumers are out of reach: a subscriber has neither a status nor a response
+model, and what it should declare — the group, the topic, the fate of a
+rejected message — is a rule of its own, deliberately unwritten until the
+first real handler shows what it should be.
 
-Schemathesis решает соседнюю задачу, а не эту: он берёт готовую схему и
-проверяет запросами по запущенному сервису, что ответы ей соответствуют. Про
-пустой `responses` он промолчит — сервис отвечает ровно так, как обещал, то
-есть ничем. Полезен поверх, не вместо.
+**Instead of Schemathesis.** It solves the neighbouring problem: it takes a
+finished schema and checks, by requests against a running service, that the
+answers match it. About an empty `responses` it says nothing — the service
+answers exactly as promised, that is, with nothing. Useful on top, not
+instead.
 
-## У функции есть список мест, откуда её зовут
+**The mark.** `# api-ok: endpoint-declarations: <reason>`.
+
+### 4.8 calls — where a function may be called from
+
+#### `confined-functions` — a named function was called from somewhere it may not be
 
 ```toml
 [tool.py-checks.confined-functions]
@@ -978,162 +1119,484 @@ in_cents = [
 ]
 ```
 
-Сервис считает в одной валюте, и гарантия за этой фразой — не имя типа: это
-то, что у конверсии одна реализация и места её вызова можно перечислить. Три
-края конвертируют, и у каждого причина, которую читатель может проверить:
-приём меряет ставку один раз, на входе, и записывает результат вместе с
-курсом, который его дал; кэшаут переводит ставку внутрь и предложение наружу
-по одному курсу — потому число, которое видит игрок, и не зависит от того, что
-курс сдвинулся между двумя вызовами; лимиты переводят настроенный потолок в
-момент суждения о купоне, потому потолок и следует за курсом, а настройки
-никто не перевыпускает.
+**Why.** A service counts in one currency, and the guarantee behind that
+sentence is not the name of a type: it is that conversion has one
+implementation and its call sites can be listed. Three edges convert, and each
+has a reason a reader can check: acceptance measures the stake once, on the
+way in, and records the result together with the rate that produced it;
+cashout converts the stake inwards and the offer outwards at one rate — which
+is why the number the player sees does not depend on the rate moving between
+two calls; limits convert the configured ceiling at the moment the coupon is
+judged, which is why the ceiling follows the rate and nobody has to reissue
+the settings.
 
-Где угодно ещё конверсия — это сумма в чьей-то валюте посреди расчёта, то
-самое, ради чего правило «внутри — евро» и существует, и ошибка, которую она
-даёт, — число, верное ровно до того дня, когда встретятся две валюты.
+Anywhere else, a conversion is an amount in somebody's currency in the middle
+of a calculation — the very thing "euros on the inside" exists to prevent —
+and the error it gives is a number that is right up to the day two currencies
+meet.
 
-`in_cents` в списке по более узкой причине: это не конверсия, но это второе
-место, где точная величина перестаёт быть точной, и величина, округлённая
-рано, — округление, которого арифметика не просила.
+`in_cents` is on the list for a narrower reason: it is not a conversion, but
+it is the second place where an exact quantity stops being exact, and a
+quantity rounded early is a rounding the arithmetic never asked for.
 
-Место — кусок пути, а не файл: край это место в замысле, а файл, который
-разделили надвое, краем быть не перестал. `home` выводит из-под правила
-модуль, где функция объявлена: там она написана, а не позвана.
+A place is a piece of a path, not a file: an edge is a place in the design,
+and a file split in two has not stopped being an edge. `home` takes the module
+where the function is declared out of the rule's reach: there it is written,
+not called.
 
-## У зависимости есть потолок
+**The mark.** `# call-ok: confined-functions: <reason>`.
+
+### 4.9 hygiene — the manifest
+
+#### `dependency-bounds` — a dependency may move to a version nobody has ever run
 
 ```toml
 [tool.py-checks.dependency-bounds]
-# ceilings по умолчанию ==, <=, <, ~=, ===
-# pins по умолчанию rev, tag
+# ceilings default to ==, <=, <, ~=, ===
+# pins default to rev, tag
 ```
 
-Требование объявляет потолок одним из двух способов: точной версией
-(`greenlet==3.5.5`) или парой «пол и потолок» (`pydantic>=2.13.5,<3`;
-`structlog~=26.1` — то же самое, сказанное иначе).
+**Why.** A requirement declares a ceiling one of two ways: an exact version
+(`greenlet==3.5.5`) or a floor-and-ceiling pair (`pydantic>=2.13.5,<3`;
+`structlog~=26.1` is the same thing said differently).
 
-Отвергается голый пол — `pre-commit>=4.6.2`. Читается он как минимум, а ведёт
-себя как «что новее на момент, когда кто-то пересобрал лок»: выходит мажор,
-лок двигается, и изменение приезжает в том коммите, который случайно тронул
-зависимости. Потолок делает этот приезд осознанной правкой, за которой стоит
-дифф и прогон тестов, — единственное место, где ломающее обновление вообще
-можно прочитать.
+A bare floor is refused — `pre-commit>=4.6.2`. It reads as a minimum and
+behaves as "whatever is newest the moment somebody rebuilt the lock": a major
+comes out, the lock moves, and the change arrives in whichever commit happened
+to touch the dependencies. A ceiling makes that arrival a deliberate edit,
+with a diff behind it and a test run — the only place a breaking upgrade can
+be read at all.
 
-`uv.lock` этого не заменяет: он фиксирует то, что стоит сегодня, и
-пересобирается — ограничение это то, что переживает пересборку.
+`uv.lock` does not replace this: it pins what is installed today and is
+rebuilt — a constraint is what survives the rebuild.
 
-Проверяются все группы — `project.dependencies`, extras, `dependency-groups`,
-`build-system.requires`: зависимость тестов решает, проходит ли набор, а
-сборочная — существует ли колесо. Исключение одно, и оно несёт свой
-собственный гвоздь: требование без спецификаторов, чьё имя лежит в
-`[tool.uv.sources]` с `rev` или `tag`.
+Every group is checked — `project.dependencies`, extras, `dependency-groups`,
+`build-system.requires`: a test dependency decides whether the suite passes,
+and a build one whether a wheel exists at all. There is one exception, and it
+carries its own nail: a requirement with no specifiers whose name is in
+`[tool.uv.sources]` with a `rev` or a `tag`.
 
-Это правило судит не файл исходника, а проект: вместо разобранного файла ему
-дают корень, и зовут один раз за прогон, вместе с остальными — `py-checks
-run`. Что ему дают, правило говорит само, полем `scope`.
+This rule judges a project rather than a source file: instead of a parsed file
+it is handed the root, and it is called once per run along with the rest —
+`py-checks run`. What it is handed, the rule says itself, in its `scope`.
 
-## `.env.example` не проверяется, а собирается
+**The mark.** `# hygiene-ok: dependency-bounds: <reason>`.
 
-Файл выводится из классов настроек, а не поддерживается рядом с ними, и
-собирает его тот же `py-checks sync`, что и контракты:
+## 5. The generated files
+
+Two files in the repository are not written by hand and not checked either —
+they are built, by `py-checks sync`, from what they are derived from. The hook
+`py-checks-sync` (`sync --check`) fails when they have fallen behind.
+
+### `.importlinter` — from the layer table
+
+```toml
+[tool.py-checks.contracts]
+# Tying the layers together is the whole of their work, so they may see all.
+composition-root = ["ioc", "bootstrap", "entrypoints"]
+
+# Dependencies point inwards: the domain knows nothing, the application knows
+# the domain, and everything that speaks to the outside world knows the
+# application and is invisible to it. `presentation` deliberately does not see
+# `domain`: the edge translates its own types into the application's DTOs and
+# back, and a router reading a domain object has tied the shape of the outside
+# world to the shape of the rules.
+[tool.py-checks.contracts.layers]
+domain = ["domain", "shared"]
+application = ["domain", "application", "shared"]
+infra = ["domain", "application", "infra", "shared", "config"]
+presentation = ["application", "presentation", "shared", "config"]
+observability = ["observability", "shared", "config"]
+config = ["config", "shared"]
+shared = ["shared"]
+```
+
+The file is built from the table **and** from what is on disk: a layer that
+does not exist is left out of the contract, otherwise import-linter would fail
+on the first module that is not there. Modules get an `independence` contract
+and migrations a `forbidden` one against the application package — both come
+out of the layout rather than out of the table.
+
+`header` writes the built file's own header, `#` included — for a project
+whose comments are in another language.
+
+**Where the services differed.** D has one more layer between the application
+and the edge — an operation that needs two modules is a workflow:
+
+```toml
+workflows = ["domain", "application", "workflows", "shared"]
+presentation = ["application", "workflows", "presentation", "shared", "config"]
+```
+
+### `.env.example` — from the settings classes
 
 ```toml
 [tool.py-checks.env-example]
 settings = ["myservice.config.settings:Settings"]
-# path по умолчанию ".env.example"
+# path defaults to ".env.example"
+# header — your own header, `#` included
 ```
 
-Называют корневой класс, дальше секции находятся сами: поле, тип которого —
-модель, и есть «здесь начинается ещё одна группа переменных». Переменной такое
-поле не становится — своего имени в окружении у него нет. В файл едут имя
-переменной, значение по умолчанию, первый абзац докстринга класса и
-`description` поля, если оно есть, — комментарий, который писали рядом с
-переменной в файле, переезжает к полю, где его прочитают и без файла.
+The root class is named; the sections find themselves from there: a field
+whose type is a model is "another group of variables starts here". Such a
+field does not become a variable — it has no name of its own in the
+environment. What goes into the file is the variable's name, its default, the
+first paragraph of the class docstring and the field's `description` if it has
+one — the comment somebody used to write beside the variable moves to the
+field, where it is read without the file.
 
-Цена — генератор импортирует настройки, то есть выполняет код приложения. По-
-другому и нельзя: имя переменной это значение атрибута, собранное вызовом, и
-прочитать его текстом значит выполнить этот вызов самому.
+The price is that the generator imports the settings, that is, runs
+application code. There is no other way: the variable's name is an attribute's
+value assembled by a call, and reading it as text would mean performing that
+call yourself.
 
-Половина этого соглашения живёт всё же проверкой: `config-fields` с настройкой
-`alias = "validation_alias"` требует, чтобы поле называло переменную, из
-которой читается. Без неё имя знает один pydantic — он выводит его из имени
-поля и приставки, — и собирать `.env.example` не из чего. Поле, объявленное
-`default_factory`, — исключение: это вложенная секция, а не значение, и
-переменные читают её собственные поля.
+Half of this convention is still a check: `config-fields` with
+`alias = "validation_alias"` requires a field to name the variable it is read
+from. Without that only pydantic knows the name — it derives it from the field
+name and a prefix — and there is nothing to build `.env.example` out of. A
+field declared with `default_factory` is the exception: that is a nested
+section, not a value, and the variables are read by its own fields.
 
-## `CLAUDE.md` — симлинк на `AGENTS.md`
+## 6. What is handed to others
 
-Два инструмента читают два имени одних и тех же указаний. Указатель внутри
-файла не работает: каждый читает только своё имя, и файл с ссылкой вместо
-текста — это файл без содержимого для того агента, который его открыл.
-Поэтому симлинк на уровне файловой системы, а не копия и не проверка равенства
-двух текстов:
+### ruff
+
+`ruff.toml` in the root; `pyproject.toml` then holds no `[tool.ruff]` section
+— having found its own file in the root, ruff stops reading pyproject
+entirely, and a section left there silently stops applying.
+
+```toml
+line-length = 100
+target-version = "py314"
+
+[lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B",
+    "S",       # bandit: assert, weak randomness, injections
+    "ASYNC",   # a blocking call inside async def
+    "DTZ",     # datetime with no zone
+    "N",       # naming
+    "ARG",     # an argument nobody reads
+    "ANN401",  # `Any` in a parameter or a return
+    "TC",      # an import for an annotation, needed by the type checker only
+    "ERA",     # commented-out code
+    "T20",     # a forgotten print
+    "SIM117",  # a nested `with` instead of one `with a, b:`, with an autofix
+    "PLR0912", # too many branches
+    "PLR0915", # too many statements
+    "PLR2004", # a number in a comparison instead of a constant
+    "PGH",     # a blind ignore hides every future error too; name the code
+]
+# B008: a call in a default is how fastapi and typer declare dependencies —
+# there it is the signature, not hidden state.
+ignore = ["B008"]
+
+[lint.flake8-tidy-imports.banned-api]
+# A Literal is a vocabulary written as loose strings: nothing names it,
+# nothing walks it, and the same words are typed again wherever a value is
+# built, compared or stored. A StrEnum is the same set with a name: the
+# members are in one place, a test can walk them, and a column's CHECK is
+# taken from there.
+"typing.Literal".msg = "a vocabulary of strings is a StrEnum, not a Literal"
+```
+
+Per-directory relief is the project's; what every service had in common:
+
+```toml
+[lint.per-file-ignores]
+# A test asserts — that is what it is for; the number it compares against is
+# the subject of the test, and a name in place of the number hides it.
+"tests/*" = ["S101", "PLR2004", "ARG001", "S105", "S106", "TC001", "TC002", "TC003"]
+# fastapi, dishka and pydantic read annotations at run time: an import moved
+# under TYPE_CHECKING is not a saving here but a NameError at route
+# declaration.
+"src/*/presentation/*" = ["TC001", "TC002", "TC003"]
+"src/*/bootstrap/*" = ["TC001", "TC002", "TC003"]
+"src/*/ioc/*" = ["TC001", "TC002", "TC003"]
+"src/*/config/*" = ["TC001", "TC002", "TC003"]
+"src/*/infra/database/models/*" = ["TC001", "TC002", "TC003"]
+# A revision is alembic's own template, and the SQL in it is written in words
+# and frozen on the migration's birthday.
+"migrations/versions/*" = ["TC003", "S608"]
+```
+
+### pyright
+
+`pyrightconfig.json` in the root — for the same reason: having found it,
+pyright stops reading `[tool.pyright]` from pyproject.
+
+```json
+{
+  "pythonVersion": "3.14",
+  "typeCheckingMode": "strict",
+  "venvPath": ".",
+  "venv": ".venv",
+  "include": ["src", "tests"]
+}
+```
+
+Strict everywhere rather than per directory: an unannotated function and an
+`Any` that reached a boundary are errors in the composition root as well.
+
+### pytest-alembic — a migration that rolls back
+
+`test_up_down_consistency` applies and rolls back every revision against a
+real database — stronger than any reading of the source.
+
+What it will not say: a `downgrade()` left as `pass` rolls back beautifully
+and rolls nothing back. A migration that honestly cannot be undone says so out
+loud:
+
+```python
+def downgrade() -> None:
+    raise NotImplementedError("drops the audit table; restore from a backup")
+```
+
+`pass` is a release with no way out: a deployment that went wrong at three in
+the morning is then fixed forwards by whoever is awake. Writing the reverse
+while the forward one is fresh takes minutes.
+
+### A symlink — `CLAUDE.md` for `AGENTS.md`
+
+Two tools read two names for the same instructions. A pointer inside the file
+does not work: each reads only its own name, and a file with a link instead of
+text is a file with no content for the agent that opened it. So a symlink at
+the filesystem level, rather than a copy or a check that two texts are equal:
 
 ```bash
 ln -s AGENTS.md CLAUDE.md
 ```
 
-Проверять после этого нечего — сломанный симлинк ловят готовые хуки
-`check-symlinks` и `destroyed-symlinks`. Оговорка: симлинки плохо переживают
-Windows и некоторые редакторы.
+After that there is nothing to check — a broken symlink is caught by the
+ready-made `check-symlinks` and `destroyed-symlinks` hooks. One caveat:
+symlinks travel badly to Windows and through some editors.
 
-## Схема миграций и схема моделей — одна схема
+### mutmut — surviving mutants
+
+A CI step of the project with a baseline of its own, not a rule: mutation
+testing needs the test suite, several minutes and a list of what already
+survives. Its config lives where mutmut looks for it — `[tool.mutmut]` in
+`pyproject.toml`, or `[mutmut]` in `setup.cfg` if the project keeps its tool
+settings in separate files.
+
+## 7. The whole config
+
+One block, everything above, ready to copy into `py-checks.toml` — the names
+of layers, zones and directories are the ones a typical service had; change
+them for yours.
 
 ```toml
-[tool.py-checks.schema-drift]
-# versions по умолчанию "migrations/versions",
-# models — "src/*/infra/database/models", variable — "DATABASE_URL",
-# url — "sqlite+aiosqlite:///{path}", alembic — ["alembic"]
+src = "src"
+
+[contracts]
+composition-root = ["ioc", "bootstrap", "entrypoints"]
+
+[contracts.layers]
+domain = ["domain", "shared"]
+application = ["domain", "application", "shared"]
+infra = ["domain", "application", "infra", "shared", "config"]
+presentation = ["application", "presentation", "shared", "config"]
+observability = ["observability", "shared", "config"]
+config = ["config", "shared"]
+shared = ["shared"]
+
+[confined-imports.packages]
+sqlalchemy = ["infra/database", "ioc"]
+asyncpg = ["infra/database", "ioc"]
+alembic = ["infra/database"]
+fastapi = ["presentation", "bootstrap"]
+starlette = ["presentation", "bootstrap"]
+starlette_exporter = ["bootstrap"]
+dishka = ["ioc", "bootstrap", "presentation"]
+uvicorn = ["entrypoints"]
+typer = ["entrypoints"]
+sentry_sdk = ["observability"]
+prometheus_client = ["observability", "bootstrap", "infra"]
+opentelemetry = ["observability", "bootstrap", "infra"]
+
+[sealed-imports]
+zones = ["modules", "shared"]
+
+[sealed-imports.allow]
+application = ["structlog"]
+
+[class-modules.policies]
+use_cases = ["class"]
+"application/services" = ["class"]
+repositories = ["class"]
+ports = ["port", "alias"]
+dto = ["dataclass", "alias"]
+schemas = ["model", "alias"]
+errors = ["error", "alias"]
+
+[[class-placement.rules]]
+kind = "error"
+inside = ["errors", "exceptions"]
+
+[[class-placement.rules]]
+kind = "port"
+inside = ["ports"]
+area = "application"
+
+[[class-placement.rules]]
+suffix = "Repository"
+inside = ["infra/database/repositories", "ports"]
+
+[[class-placement.rules]]
+kind = "dataclass"
+inside = ["dto"]
+area = "application"
+
+[[class-placement.rules]]
+suffix = "UseCase"
+inside = ["use_cases"]
+area = "application"
+
+[[class-placement.rules]]
+suffix = "Service"
+inside = ["application/services"]
+area = "application"
+
+[[class-placement.rules]]
+kind = "model"
+inside = ["schemas/requests", "schemas/responses"]
+area = "presentation"
+
+[required-class.suffixes]
+use_cases = "UseCase"
+"application/services" = "Service"
+repositories = "Repository"
+config = "Settings"
+models = "Model"
+
+[[operation-shape.operations]]
+inside = "use_cases"
+suffix = "UseCase"
+method = "execute"
+max-arguments = 3
+
+[[operation-shape.operations]]
+inside = "application/services"
+suffix = "Service"
+forbids = ["UnitOfWork"]
+
+[function-length]
+max-lines = 50
+
+[module-length]
+max-lines = 600
+
+[nesting.limits]
+try = 1
+if = 2
+
+[signature-layout]
+calls = true
+
+[frozen-dataclasses]
+zones = ["modules"]
+options = ["frozen", "slots", "kw_only"]
+
+[annotation-shapes]
+
+[constant-annotations]
+
+[confined-types.zones]
+"modules/*/domain" = ["float"]
+domain = ["str", "int", "float", "Decimal"]
+shared = ["str", "int", "float", "Decimal"]
+
+[config-fields]
+zones = ["config"]
+alias = "validation_alias"
+
+[config-fields.bounds]
+int = ["ge", "gt", "le", "lt"]
+float = ["ge", "gt", "le", "lt"]
+str = ["min_length", "pattern"]
+
+[model-boundary]
+declared = ["infra/database/models"]
+built = ["infra/database/repositories"]
+
+[model-columns]
+zones = ["infra/database/models"]
+defaults = [
+    "default",
+    "insert_default",
+    "default_factory",
+    "server_default",
+    "onupdate",
+    "server_onupdate",
+]
+unruled = ["str", "int", "float", "Decimal", "dict", "Any"]
+aware = ["DateTime"]
+
+[model-columns.types]
+Enum = "a bare Enum is a native Postgres type; use stored_enum()"
+Float = "a Float column drifts; state is exact, use Numeric"
+JSONB = "a bare JSONB is a shape nobody declared; wrap it in a TypeDecorator"
+JSON = "a bare JSON is a shape nobody declared; wrap it in a TypeDecorator"
+
+[model-columns.homes]
+Enum = "_enum_column"
+
+[bound-checks]
+zones = ["infra/database/models"]
+primitives = [
+    "PositiveDecimal",
+    "NonNegativeDecimal",
+    "PositiveInt",
+    "NonNegativeInt",
+    "NonEmptyString",
+]
+
+[raw-sql]
+
+[statement-keys]
+zones = ["infra/database/repositories"]
+
+[[confined-calls.rules]]
+methods = ["commit", "rollback", "begin", "begin_nested"]
+zones = ["modules", "presentation", "infra/database"]
+outside = ["presentation/consumers"]
+owner = "unit_of_work"
+said = "unit_of_work owns the transaction boundary"
+
+[determinism]
+zones = ["modules", "repositories"]
+
+[determinism.sources]
+"datetime.now" = "take the Clock port and call it"
+"datetime.utcnow" = "take the Clock port and call it"
+"date.today" = "take the Clock port and call it"
+"time.monotonic" = "take the Clock port and call it"
+"time.perf_counter" = "take the Clock port and call it"
+"uuid4" = "hand the identifier out of IdGenerator and pass it in"
+"uuid7" = "hand the identifier out of IdGenerator and pass it in"
+"random.*" = "take the value as an argument"
+"secrets.token_urlsafe" = "take the value as an argument"
+"secrets.token_hex" = "take the value as an argument"
+"secrets.randbelow" = "take the value as an argument"
+"func.now" = "the row's time comes from the Clock port, not from the database"
+"func.gen_random_uuid" = "the row's identifier comes from whoever built it"
+
+[log-events]
+enum = "LogEvent"
+
+[endpoint-declarations]
+methods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"]
+required = ["path", "status_code", "summary", "responses"]
+body = "response_model"
+bodiless = [204, 205, 304]
+exempt = "include_in_schema"
+
+[dependency-bounds]
+
+[env-example]
+settings = ["myservice.config.settings:Settings"]
 ```
-
-Колонка, добавленная в модель без миграции за ней, — сервис, который работает
-на машине каждого разработчика и падает на первом развёртывании. Или, что
-хуже, не падает: SQLAlchemy просит колонку, которой у таблицы нет, и ошибка
-приходит запросом в три часа ночи, а не выкаткой, которая отказалась уходить.
-
-Ни одно правило из тех, что читают файлы, этого не видит: `model-columns` и
-`bound-checks` судят модель, миграцию судят свои проверки, а РАСХОЖДЕНИЕ между
-половинами — это то, ради чего у alembic есть `check`. Поэтому правилу нужна
-живая база, и оно объявлено `scope = ENVIRONMENT`: в обычный прогон такое не
-входит, его зовут по имени или целиком:
-
-```bash
-py-checks run --select schema-drift
-py-checks run --all
-```
-
-Базу оно приносит своё — пустой файл во временной директории, накатанный от
-нуля до `head` и удалённый следом. Не базу разработчика: та стоит на той
-ревизии, на которой её оставили, а это ровно то состояние, которому проверка
-и не верит.
-
-Отсюда её место: не в pre-commit, где каждый коммит платил бы за накат всех
-миграций, а шагом CI — рядом с тестами, где база уже есть.
-
-Две оговорки, на которые натыкаются сразу:
-
-- `env.py` проекта обязан читать адрес базы из переменной (`variable`). Где он
-  берёт его из своих настроек, правило подсунуть базу не может — там шаг CI
-  поднимает одноразовый Postgres и передаёт его тем же именем.
-- SQLite по умолчанию требует `aiosqlite` в окружении. Проекту, который его не
-  держит, проще указать в `url` тот же одноразовый Postgres, что и в тестах.
-- `alembic` зовётся тем же именем, что и в окружении вызвавшего: прогон уже
-  идёт из окружения проекта, и второй `uv run` внутри него пересобрал бы это
-  окружение посреди проверки.
-
-## Миграция откатывается
-
-Отдано pytest-alembic: `test_up_down_consistency` накатывает и откатывает
-каждую ревизию на настоящей базе — это сильнее любого чтения исходника.
-
-Чего он не скажет: `downgrade()`, оставленный как `pass`, откатывается
-прекрасно и не откатывает ничего. Миграция, которую честно не развернуть,
-говорит это вслух:
-
-```python
-def downgrade() -> None:
-    raise NotImplementedError("удаляет таблицу аудита; восстанавливать из бэкапа")
-```
-
-`pass` — это релиз без выхода: развёртывание, пошедшее не так в три часа ночи,
-чинит вперёд тот, кто не спит. Обратную писать, пока прямая свежа, — минуты.
