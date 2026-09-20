@@ -90,6 +90,9 @@ class Directory(CheckSettings):
     `only` — виды, которым здесь место, и ничего другого рядом не садится.
     `home` — виды, которым место ТОЛЬКО здесь: порт, объявленный в другом
     конце дерева, — это порт, которого читатель не найдёт.
+    `area` — часть дерева, внутри которой дом и имя вообще о чём-то говорят:
+    правило про `dto` написано про слой приложения, а dataclass в загрузчике
+    или в наблюдаемости — просто способ сложить три поля рядом.
     `suffix` — как зовут класс, ради которого директория существует; он же
     живёт только здесь.
     `required` — модуль обязан объявить такой класс, первым и один.
@@ -100,6 +103,7 @@ class Directory(CheckSettings):
 
     only: tuple[Kind, ...] = ()
     home: tuple[Kind, ...] = ()
+    area: str | None = None
     suffix: str | None = None
     required: bool = False
     operation: Operation | None = None
@@ -116,6 +120,14 @@ class Directory(CheckSettings):
             raise ValueError(message)
         if self.operation is not None:
             message = "`operation` без `suffix`: непонятно, какой класс здесь операция"
+            raise ValueError(message)
+        return self
+
+    @model_validator(mode="after")
+    def _claims(self) -> Self:
+        """Область сужает притязание: без дома и имени сужать нечего."""
+        if self.area is not None and not self.home and self.suffix is None:
+            message = "`area` без `home` и `suffix`: эта директория ни на что не притязает"
             raise ValueError(message)
         return self
 
@@ -188,10 +200,18 @@ def claimants(
     *,
     declared: Declaration,
     layout: dict[str, Directory],
+    where: Place,
 ) -> list[Claim]:
-    """Адреса, объявившие это объявление своим: по имени или по виду."""
+    """Адреса, объявившие это объявление своим: по имени или по виду.
+
+    Блок с `area` притязает только на то, что лежит внутри названной части
+    дерева: соглашение про `dto` написано про слой приложения, и dataclass в
+    загрузчике ему не подсуден.
+    """
     found: list[Claim] = []
     for address, directory in layout.items():
+        if directory.area is not None and not where.holds(path=directory.area):
+            continue
         said = _claim(
             declared=declared,
             directory=directory,

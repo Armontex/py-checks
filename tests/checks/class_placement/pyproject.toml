@@ -4,6 +4,10 @@ src = "."
 # Дом объявляется адресом: вид, у которого дом назван, живёт только там.
 # Поэтому домам положено быть перечисленными всем — доменный value object
 # тоже dataclass, и его дом здесь назван наравне с `application/dto`.
+#
+# `area` сужает притязание до той части дерева, где соглашение написано:
+# внутри приложения dataclass живёт в `dto`, внутри домена — где угодно, а
+# dataclass в загрузчике не предмет разговора вовсе.
 [tool.py-checks.layout.errors]
 home = ["error"]
 
@@ -15,9 +19,11 @@ home = ["port"]
 
 [tool.py-checks.layout."application/dto"]
 home = ["dataclass"]
+area = "application"
 
 [tool.py-checks.layout.domain]
 home = ["dataclass"]
+area = "domain"
 
 [tool.py-checks.layout."infra/database/repositories"]
 suffix = "Repository"
