@@ -72,11 +72,11 @@ max-lines = 300
 # Правила, зависящие от места, работают только в названных зонах.
 [model-columns]
 zones = ["infra/database/models"]
-types = { Numeric = "деньги описывают Numeric(18, 4)" }
+instead = { Float = "колонка Float дрейфует; состояние точное, возьми Numeric" }
 
 [determinism]
 zones = ["modules/*/domain", "modules/*/application"]
-sources = { "datetime.now" = "часы берут портом", "uuid4" = "идентификатор выдают на краю" }
+instead = { "datetime.now" = "часы берут портом", "uuid4" = "идентификатор выдают на краю" }
 ```
 
 и запустите:

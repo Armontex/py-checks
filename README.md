@@ -85,11 +85,11 @@ max-lines = 300
 # Rules that depend on place only work in the zones you name.
 [model-columns]
 zones = ["infra/database/models"]
-types = { Numeric = "money is described by Numeric(18, 4)" }
+instead = { Float = "a Float column drifts; state is exact, use Numeric" }
 
 [determinism]
 zones = ["modules/*/domain", "modules/*/application"]
-sources = { "datetime.now" = "take the clock as a port", "uuid4" = "hand the id out at the edge" }
+instead = { "datetime.now" = "take the clock as a port", "uuid4" = "hand the id out at the edge" }
 ```
 
 and run:
