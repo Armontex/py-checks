@@ -2,7 +2,7 @@
 src = "."
 
 [tool.py-checks.confined-functions]
-home = "shared/money"
+declared-in = "shared/money"
 
 [tool.py-checks.confined-functions.calls]
 to_eur = ["modules/cashout/application"]

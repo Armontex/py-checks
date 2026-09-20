@@ -26,7 +26,7 @@ NULLABLE: Final = "nullable"
 class ModelColumnsSettings(ZonedSettings):
     factories: tuple[str, ...] = ("mapped_column", "Column")
     types: dict[str, str] = {}
-    homes: dict[str, str] = {}
+    wrappers: dict[str, str] = {}
     defaults: tuple[str, ...] = ()
     unruled: tuple[str, ...] = ()
     aware: tuple[str, ...] = ()
@@ -46,7 +46,7 @@ class ModelColumns:
     получит каждый читатель, а разбор, поймавший бы пропущенный ключ, случается
     в каждом отдельно или нигде.
 
-    `homes` — модуль, которому этот материал называть можно: там живёт обёртка
+    `wrappers` — модуль, которому этот материал называть можно: там живёт обёртка
     над ним, и правило его не касается.
 
     `defaults` — все способы, которыми колонка заполняет себя сама. Значение по
@@ -66,7 +66,7 @@ class ModelColumns:
     разрешает им разойтись, и тогда аннотация лжёт: pyright рассуждает по ней,
     база держит ключевое слово, и одно из двух неверно на каждой строке.
 
-    Настройки: `zones`, `factories`, `types`, `homes`, `defaults`, `unruled`,
+    Настройки: `zones`, `factories`, `types`, `wrappers`, `defaults`, `unruled`,
     `aware`, `nullable`.
     """
 
@@ -117,7 +117,7 @@ class ModelColumns:
     ) -> Iterator[Violation]:
         """Материал и то, чем колонка заполняет себя сама."""
         written = name(node=node.func)
-        if written in limits.types and limits.homes.get(written) != file.path.stem:
+        if written in limits.types and limits.wrappers.get(written) != file.path.stem:
             yield cls._says(
                 file=file,
                 node=node,
