@@ -459,6 +459,40 @@ For the same reason import-linter is not a dependency of the library: we never
 import it, and handing a third-party tool to everyone who installed us would
 be deciding, on the project's behalf, what checks its imports.
 
+### `doctor` — the config judged instead of the code
+
+A rule with no table says nothing, and that silence looks exactly like a
+convention nobody breaks. `py-checks doctor` is the command that reads the
+config itself and says where the quiet comes from:
+
+```
+$ py-checks doctor
+py-checks.toml
+
+  опечатка в имени секции
+    [class-lenght] — такой секции нет; ближайшие: module-length, function-length
+
+  правило включено, но молчит
+    [statement-keys] — зон не названо: судить негде
+    [layout] — секция пуста, а умолчаний у правила нет
+
+  адрес, которого нет на диске
+    [layout] — 'application/handlers' не нашлось в src
+
+замечаний — 3
+```
+
+Four questions, all of them about the file rather than the tree: a section
+name nobody reads (a typo is silently ignored otherwise — nothing looks for a
+section nobody declared), `ignore` naming a rule that does not exist, a rule
+whose table leaves it with nothing to judge, and an address no directory or
+module answers to. The last one is the slow one: a directory gets renamed, the
+block stays, and the rule goes on looking where nothing is.
+
+It belongs in CI beside `run`, not in the hooks: it reads the whole tree of
+`src` to answer the last question, and it has nothing to say about the file
+that is being committed. It exits `1` when it has complaints.
+
 ## 5. The rules
 
 Nine groups. Each group has a short word that lifts any rule in it from a

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from py_checks.config import CheckSettings
+from py_checks.core import depth
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -22,9 +23,6 @@ if TYPE_CHECKING:
 INIT: Final = "__init__"
 
 SEPARATOR: Final = "/"
-
-# Один любой кусок пути: `modules/*/domain` — домен любого модуля.
-ANY: Final = "*"
 
 # Пакет и хотя бы один шаг внутри него: файл, лежащий прямо в корне исходников,
 # ни в каком пакете не находится, и говорить о его месте нечего.
@@ -65,9 +63,9 @@ class Place:
         то же место.
         """
         return (
-            _run(
+            depth(
                 parts=self.parts,
-                wanted=path,
+                path=path,
             )
             is not None
         )
@@ -80,9 +78,9 @@ class Place:
         можно только по тому, где они кончаются, — глубже тот, кто кончается
         позже.
         """
-        return _run(
+        return depth(
             parts=self.parts[:-1],
-            wanted=directory,
+            path=directory,
         )
 
 
@@ -139,34 +137,3 @@ def _relative(
     except ValueError:
         return None
     return inside.with_suffix("").parts
-
-
-def _run(
-    *,
-    parts: tuple[str, ...],
-    wanted: str,
-) -> int | None:
-    """Конец последнего вхождения подряд идущих кусков пути.
-
-    `*` подходит любому одному куску: `modules/*/domain` — это домен любого
-    модуля, и перечислять модули по именам не нужно.
-    """
-    needle = tuple(wanted.split(SEPARATOR))
-    span = len(needle)
-    ends = [
-        start + span
-        for start in range(len(parts) - span + 1)
-        if _same(
-            found=parts[start : start + span],
-            needle=needle,
-        )
-    ]
-    return max(ends) if ends else None
-
-
-def _same(
-    *,
-    found: tuple[str, ...],
-    needle: tuple[str, ...],
-) -> bool:
-    return all(wanted in (ANY, part) for part, wanted in zip(found, needle, strict=True))

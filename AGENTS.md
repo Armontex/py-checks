@@ -26,6 +26,7 @@ uv run pytest -q                 # тесты
 uv run ruff check . && uv run ruff format .
 uv run pyright                   # strict
 uv run py-checks run             # библиотека проверяет сама себя
+uv run py-checks doctor          # и сходятся ли её собственные настройки
 uv run pre-commit run --all-files   # всё сразу, ~7 секунд
 ```
 
