@@ -119,6 +119,7 @@ Twenty-eight rules in nine groups:
 | `database` | the model's boundary, a column's material, the shape of a query, the schema |
 | `effects` | the clock, the dice, and the name of an event in the log |
 | `api` | what an entrance declares about itself |
+| `errors` | the code a refusal carries |
 | `calls` | a function whose call sites can be listed |
 | `hygiene` | a ceiling on a dependency |
 
@@ -153,6 +154,7 @@ Twenty-eight rules in nine groups:
 | `determinism` | the code reads the clock, the dice or a new identifier itself | file |
 | `log-events` | an event in the log is named by something other than an enum member | file |
 | `edge-declarations` | an entrance did not say how it behaves | file |
+| `refusals` | a no nobody can branch on | file |
 | `confined-functions` | a named function was called from somewhere it may not be | file |
 | `dependency-bounds` | a dependency may move to a version nobody has ever run | project |
 

@@ -177,6 +177,13 @@
     'bad/infra/database/models.py:16:23: raw-sql: CheckConstraint(...) со строкой SQL; вместо неё — выражение по колонке, например and_(margin >= NOTHING, margin < WHOLE)',
   ])
 # ---
+# name: test_check_output_matches_the_snapshot[refusals]
+  list([
+    'bad/modules/betslip/application/use_cases/place.py:7:13: refusals: бросает ValueError, а кода на нём нет: снаружи об этом отказе известно только то, что он случился. Ответь своей ошибкой с refusal=',
+    'bad/modules/betslip/application/use_cases/place.py:9:13: refusals: бросает BetslipChangedError без refusal=; код — то, на что ветвится вызывающий, а фраза — человеку',
+    'bad/modules/betslip/application/use_cases/place.py:10:9: refusals: бросает BetslipChangedError классом, без refusal=',
+  ])
+# ---
 # name: test_check_output_matches_the_snapshot[required_class]
   list([
     'bad/config/kafka.py:4:1: required-class: Topics объявлен выше ...Settings, ради которого существует модуль; хелперам место ниже',

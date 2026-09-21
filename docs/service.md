@@ -311,6 +311,16 @@ zones = ["modules", "repositories"]
 [log-events]
 enum = "LogEvent"
 
+# --- Refusals ---------------------------------------------------------------
+
+# A refusal has two halves: the sentence is for a person and may be rewritten,
+# the code is what a caller branches on and may not.
+[refusals]
+zones = ["modules"]
+carries = "refusal"
+allow = ["NotImplementedError"]
+internal = ["InvariantError"]
+
 # --- The edge ---------------------------------------------------------------
 
 # One block per framework, and the block says only what this service demands of
@@ -1529,6 +1539,47 @@ it is handed the root, and it is called once per run along with the rest —
 `py-checks run`. What it is handed, the rule says itself, in its `scope`.
 
 **The mark.** `# hygiene-ok: dependency-bounds: <reason>`.
+
+### 5.10 errors — what a module refuses with
+
+#### `refusals` — a no nobody can branch on
+
+```toml
+[tool.py-checks.refusals]
+zones = ["modules"]
+carries = "refusal"
+allow = ["NotImplementedError"]
+internal = ["InvariantError", "StaleWriteError"]
+```
+
+**Why.** A refusal has two halves. The sentence is for a person: it is read in
+a log, it gets rewritten, and nothing may depend on its wording. The code is
+what a caller branches on — "not enough funds" is a screen, "the basket
+changed" is a re-price — so the sentence is free to change and the code is
+not. That only holds while every no a module says carries one.
+
+A builtin exception carries neither. A `ValueError` crossing a use case is a
+refusal about which the outside knows only that it happened, and the perimeter
+turns it into a 500 because there is nothing else it can honestly do.
+`allow` names the builtins that are not refusals: `NotImplementedError` is not
+a no, it is a method that does not exist yet, and it is the one exception a
+reader never mistakes for an answer.
+
+`carries` is the name of the field a refusal of your own is given
+(`raise BasketChanged(refusal=Refusal.BASKET_CHANGED)`). Leave it out and the
+rule judges only the builtins — which is the whole of it for a service that
+has no vocabulary of codes yet.
+
+`internal` names your errors that are not a no to anybody outside: they say
+the code is written wrong, that a port broke its promise, or that a record
+contradicts what is stored. Nobody branches on those, and the answer to them
+is a retry or a page.
+
+**Instead of ruff.** `TRY002` fires on `raise Exception(...)` and nothing
+else — a `ValueError` is exactly as codeless and passes it. `TRY003` is about
+the length of a message, not about whether anything can be done with it.
+
+**The mark.** `# error-ok: refusals: <reason>`.
 
 ## 6. The generated files
 
