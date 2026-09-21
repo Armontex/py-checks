@@ -1,0 +1,8 @@
+[tool.py-checks]
+src = "."
+
+[tool.py-checks.refusals]
+zones = ["modules"]
+carries = "refusal"
+allow = ["NotImplementedError"]
+internal = ["InvariantError"]
