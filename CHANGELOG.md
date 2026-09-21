@@ -1,3 +1,21 @@
+## v0.5.0 (2026-09-21)
+
+### BREAKING CHANGE
+
+- [endpoint-declarations] -> [edge-declarations], блок на фреймворк:
+`[edge-declarations.fastapi]` и `[edge-declarations.faststream]`, а в блоке
+только `required`. Имена методов, декоратор или вызов, `response_model`,
+статусы без тела и `include_in_schema` знает библиотека.
+
+### Features
+
+- **errors**: отказ несёт код, на который можно ветвиться
+- **api**: вход объявляет себя, а таблица называет фреймворк
+
+### Fixes
+
+- **ci**: пропуск прогона не выдаётся форку
+
 ## v0.4.2 (2026-09-21)
 
 ### Fixes

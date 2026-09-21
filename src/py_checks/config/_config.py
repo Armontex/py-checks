@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
@@ -16,16 +17,46 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
-# Секции, которые больше не читаются: четыре правила про раскладку говорили об
-# одной и той же директории с четырёх сторон, и один факт приходилось писать
-# четыре раза. Молчать о них нельзя — незнакомая секция выглядит как
-# работающая настройка, а на деле правило судит по пустой таблице.
-RETIRED: Final[dict[str, str]] = {
-    "class-modules": "`only`",
-    "class-placement": "`home` и `suffix`",
-    "required-class": "`required` рядом с `suffix`",
-    "operation-shape": "`operation`",
-    "model-boundary": "`orm` и `base`",
+@dataclass(frozen=True, slots=True)
+class Moved:
+    """Куда переехала секция и чем она там записывается."""
+
+    into: str
+    written: str
+
+
+# Секции, которые больше не читаются. Молчать о них нельзя: незнакомая секция
+# выглядит как работающая настройка, а на деле правило судит по пустой таблице.
+#
+# Четыре правила про раскладку говорили об одной директории с четырёх сторон, и
+# один факт приходилось писать четыре раза в четырёх синтаксисах. `endpoint-
+# declarations` переехал по той же причине с другого конца: маршрут оказался не
+# единственным входом в процесс, а второй вид входа в плоскую секцию не встаёт.
+RETIRED: Final[dict[str, Moved]] = {
+    "class-modules": Moved(
+        into="layout",
+        written="`only`",
+    ),
+    "class-placement": Moved(
+        into="layout",
+        written="`home` и `suffix`",
+    ),
+    "required-class": Moved(
+        into="layout",
+        written="`required` рядом с `suffix`",
+    ),
+    "operation-shape": Moved(
+        into="layout",
+        written="`operation`",
+    ),
+    "model-boundary": Moved(
+        into="layout",
+        written="`orm` и `base`",
+    ),
+    "endpoint-declarations": Moved(
+        into="edge-declarations",
+        written="блок вида входа — `route` с теми же ключами",
+    ),
 }
 
 
@@ -34,15 +65,18 @@ def retired(
     checks: Mapping[str, object],
     source: Path | None,
 ) -> None:
-    """Падает, если в настройках остались секции, которые слились в `[layout]`."""
-    found = [name for name in RETIRED if name in checks]
+    """Падает, если в настройках остались секции, которые слились в общие таблицы."""
+    found = sorted(name for name in RETIRED if name in checks)
     if not found:
         return
     named = prefix(source=source)
-    listed = ", ".join(f"[{named}{name}] -> {RETIRED[name]}" for name in sorted(found))
+    listed = "; ".join(
+        f"[{named}{name}] -> [{named}{RETIRED[name].into}], {RETIRED[name].written}"
+        for name in found
+    )
     raise ConfigError(
-        f"эти секции слились в общую таблицу [{named}layout], блок на директорию: "
-        f"{listed}. Одна директория — один блок, а не четыре строки в четырёх таблицах"
+        f"эти секции больше не читаются, их содержимое переехало в общие таблицы, "
+        f"блок на предмет разговора: {listed}"
     )
 
 

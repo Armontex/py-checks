@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from py_checks.checks.api import Edges
 from py_checks.config import CheckSettings, Config, ConfigError, find_root, load
 from py_checks.core import ParsedFile, ParseError, Violation, python_files, report
 
@@ -200,3 +201,17 @@ def test_extend_exclude_adds_to_the_defaults(tmp_path: Path) -> None:
     config = load(root=tmp_path)
 
     assert config.excluded == (*config.exclude, "tests/checks/*")
+
+
+def test_a_retired_section_names_the_table_it_moved_into(tmp_path: Path) -> None:
+    write(tmp_path, "pychecks.toml", "[endpoint-declarations]\nrequired = []\n")
+
+    with pytest.raises(ConfigError, match=r"\[edge-declarations\]"):
+        load(root=tmp_path)
+
+
+def test_a_block_named_after_an_unknown_framework_is_refused(tmp_path: Path) -> None:
+    write(tmp_path, "pychecks.toml", '[edge-declarations.litestar]\nrequired = ["path"]\n')
+
+    with pytest.raises(ConfigError, match="про такой фреймворк правило не знает"):
+        load(root=tmp_path).settings_for(code="edge-declarations", model=Edges)

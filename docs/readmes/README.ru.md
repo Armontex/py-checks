@@ -36,7 +36,7 @@ src/app/modules/cashout/application/offer.py:34:9: determinism: uuid4() не д�
     идентификатор выдают на краю и передают внутрь
 src/app/infra/database/models/bet.py:51:5: model-columns: stake — Numeric без ограничений;
     деньги описывают Numeric(18, 4)
-src/app/presentation/api/v1/routers/bets.py:22:1: endpoint-declarations: POST /bets
+src/app/presentation/api/v1/routers/bets.py:22:1: edge-declarations: POST /bets
     не назвал response_model
 ```
 
@@ -104,7 +104,8 @@ py-checks explain determinism   # что правило требует и как
 | `types` | границы у полей, форма аннотаций, неизменяемость |
 | `database` | граница модели, материал колонки, форма запроса, схема |
 | `effects` | часы, случайность и имя события в логе |
-| `api` | чем маршрут отвечает и что обязан объявить |
+| `api` | что вход в процесс объявляет о себе |
+| `errors` | код, который несёт отказ |
 | `calls` | функция, у которой есть список мест, откуда её зовут |
 | `hygiene` | потолок у зависимости |
 
@@ -138,7 +139,8 @@ py-checks explain determinism   # что правило требует и как
 | `schema-drift` | модели и миграции описывают уже разные схемы | среда |
 | `determinism` | код сам читает часы, случайность или новый идентификатор | файл |
 | `log-events` | событие в логе названо чем-то кроме члена перечисления | файл |
-| `endpoint-declarations` | маршрут не сказал, чем он отвечает | файл |
+| `edge-declarations` | вход не сказал, как он себя ведёт | файл |
+| `refusals` | отказ, на который нечем ответить | файл |
 | `confined-functions` | названная функция позвана не оттуда, откуда ей можно | файл |
 | `dependency-bounds` | зависимость может уехать на версию, которую никто не запускал | проект |
 

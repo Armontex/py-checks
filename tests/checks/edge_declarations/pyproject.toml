@@ -1,0 +1,8 @@
+[tool.py-checks]
+src = "."
+
+[tool.py-checks.edge-declarations.fastapi]
+required = ["path", "status_code", "summary", "responses"]
+
+[tool.py-checks.edge-declarations.faststream]
+required = ["group_id", "parser", "decoder", "ack_policy", "no_reply", "auto_offset_reset"]
