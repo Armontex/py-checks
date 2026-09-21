@@ -84,12 +84,18 @@
     'bad/modules/orders/application/place.py:13:20: determinism: random.choice() не детерминирован; прими значение аргументом',
   ])
 # ---
-# name: test_check_output_matches_the_snapshot[endpoint_declarations]
+# name: test_check_output_matches_the_snapshot[edge_declarations]
   list([
-    "bad/presentation/api/v1/routers/tickets.py:10:2: endpoint-declarations: POST '/tickets' передаёт путь позиционно; напиши path=",
-    "bad/presentation/api/v1/routers/tickets.py:20:2: endpoint-declarations: GET '/tickets' не объявляет summary=",
-    "bad/presentation/api/v1/routers/tickets.py:20:2: endpoint-declarations: GET '/tickets' не объявляет responses=",
-    "bad/presentation/api/v1/routers/tickets.py:20:2: endpoint-declarations: GET '/tickets' не объявляет response_model= и отвечает телом; без него отвечают 204, 205, 304",
+    "bad/presentation/api/v1/routers/tickets.py:10:2: edge-declarations: POST '/tickets' передаёт путь позиционно; напиши path=",
+    "bad/presentation/api/v1/routers/tickets.py:20:2: edge-declarations: GET '/tickets' не объявляет summary=",
+    "bad/presentation/api/v1/routers/tickets.py:20:2: edge-declarations: GET '/tickets' не объявляет responses=",
+    "bad/presentation/api/v1/routers/tickets.py:20:2: edge-declarations: GET '/tickets' не объявляет response_model= и отвечает телом; без него отвечают 204, 205, 304",
+    'bad/presentation/consumers/bets.py:7:18: edge-declarations: SUBSCRIBER не называет топик; он пишется первым аргументом',
+    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' не объявляет parser=",
+    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' не объявляет decoder=",
+    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' не объявляет ack_policy=",
+    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' не объявляет no_reply=",
+    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' не объявляет auto_offset_reset=",
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[frozen_dataclasses]

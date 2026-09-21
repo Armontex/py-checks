@@ -313,12 +313,23 @@ enum = "LogEvent"
 
 # --- The edge ---------------------------------------------------------------
 
-[endpoint-declarations]
-methods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"]
+# One block per framework, and the block says only what this service demands of
+# an entrance. What an entrance IS - the method names, a decorator or a call,
+# how the first argument is written - the rule knows: their authors decided it,
+# and a table about it here would be a retelling of somebody else's docs.
+[edge-declarations.fastapi]
 required = ["path", "status_code", "summary", "responses"]
-body = "response_model"
-bodiless = [204, 205, 304]
-exempt = "include_in_schema"
+
+[edge-declarations.faststream]
+required = [
+    "group_id",
+    "parser",
+    "decoder",
+    "ack_policy",
+    "no_reply",
+    "auto_offset_reset",
+    "isolation_level",
+]
 
 [confined-functions]
 # Conversion has one implementation, and its call sites can be listed.
@@ -402,7 +413,7 @@ configuration, and the two drift.
 | The clock, the dice, a new identifier | rule `determinism`: `TID251` knows no zones, its per-file relief also lifts the ban on `Literal`, and `func.gen_random_uuid()` inside a statement it does not see at all |
 | A naive timestamp | ruff `DTZ` |
 | The name of an event in the log | rule `log-events`: nothing off the shelf |
-| A complete route declaration | rule `endpoint-declarations`: FastAPI gives the words but demands none of them; Schemathesis checks the schema against the code, not the schema for completeness |
+| A complete declaration at an entrance | rule `edge-declarations`: FastAPI and FastStream give the words but demand none of them; Schemathesis checks the schema against the code, not the schema for completeness |
 | The call sites of a conversion | rule `confined-functions`: nothing off the shelf |
 | A ceiling on a dependency | rule `dependency-bounds`: nothing off the shelf; `deptry` (unused and undeclared) and `uv lock --check` are useful alongside |
 | A complete `.env.example` | built by `py-checks sync`, plus `config-fields` with `alias` |
@@ -1352,18 +1363,41 @@ through, and third-party loggers inside the service are still called directly.
 
 **The mark.** `# effect-ok: log-events: not our logger`.
 
-### 5.7 api — what a route declares
+### 5.7 api — what an entrance declares
 
-#### `endpoint-declarations` — a route did not say what it answers with
+#### `edge-declarations` — an entrance did not say how it behaves
 
 ```toml
-[tool.py-checks.endpoint-declarations]
-methods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"]
+[tool.py-checks.edge-declarations.fastapi]
 required = ["path", "status_code", "summary", "responses"]
-body = "response_model"
-bodiless = [204, 205, 304]
-exempt = "include_in_schema"
+
+[tool.py-checks.edge-declarations.faststream]
+required = [
+    "group_id",
+    "parser",
+    "decoder",
+    "ack_policy",
+    "no_reply",
+    "auto_offset_reset",
+    "isolation_level",
+]
 ```
+
+One block per framework, and the block names one thing: what this service
+demands. Everything else about an entrance was decided by whoever wrote the
+framework — `router.post` is a decorator and its path is written as `path=`,
+`broker.subscriber` is as often an ordinary call and its topic is written
+first and without a name — and a table repeating that here would be a retelling
+of somebody else's documentation, stale the moment it changes.
+
+That is also what keeps the rule honest about names. A route is matched only
+as a decorator, because `get`, `post` and `delete` are the same names an HTTP
+client goes by and reading every `.post(...)` in the tree would find a route in
+the first adapter that talks to a neighbour. A subscription is matched
+anywhere, because `subscriber` is not a word anything else here is called.
+
+A block named after a framework the rule does not know is refused by name, with
+the ones it knows listed.
 
 **Why.** A route decorator is a contract. Whoever reads the generated schema —
 a neighbouring service, a person writing a client — reads only what the
@@ -1377,8 +1411,11 @@ an empty `responses` it lands with a promise that it never refuses: success is
 inferred from the signature, refusals are not, and nothing in the schema says
 this route answers 409.
 
-The path is written as `path=`: the positional first argument is the only
-thing in the decorator whose meaning depends on position.
+The first argument is the only thing in a decorator whose meaning depends on
+position. A path is written as `path=` and a path passed positionally is
+refused; a topic is written first and without a name and a subscription that
+names it is refused. Both are the frameworks' own conventions, so neither is
+in the table.
 
 `response_model` is not required where there is no body: 204, 205 and 304 — a
 response model next to them promises what the protocol forbids. A status
@@ -1390,10 +1427,15 @@ A route with `include_in_schema=False` the rule leaves alone: the schema is
 what it protects, and such a route is not in it. That is exactly `/docs` and
 its neighbours — they describe the schema rather than stand in it.
 
-Consumers are out of reach: a subscriber has neither a status nor a response
-model, and what it should declare — the group, the topic, the fate of a
-rejected message — is a rule of its own, deliberately unwritten until the
-first real handler shows what it should be.
+A consumer is the other entrance in the same layer, and it has neither a
+status nor a response model. What it declares instead is what happens to a
+record: which topic, under whose group, how the bytes are read, when the
+offset moves and where a new group starts. Every one of those has a FastStream
+default, and every default is a decision the design already made differently —
+`AckPolicy.REJECT_ON_ERROR` drops the record the broker has just redelivered,
+`auto_offset_reset="latest"` skips the backlog a new group exists to read, and
+an automatic decoder turns the bytes into a dict before the inbox has seen
+what arrived.
 
 **Instead of Schemathesis.** It solves the neighbouring problem: it takes a
 finished schema and checks, by requests against a running service, that the
@@ -1401,7 +1443,7 @@ answers match it. About an empty `responses` it says nothing — the service
 answers exactly as promised, that is, with nothing. Useful on top, not
 instead.
 
-**The mark.** `# api-ok: endpoint-declarations: <reason>`.
+**The mark.** `# api-ok: edge-declarations: <reason>`.
 
 ### 5.8 calls — where a function may be called from
 

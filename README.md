@@ -38,7 +38,7 @@ src/app/modules/cashout/application/offer.py:34:9: determinism: uuid4() is not d
     the identifier is handed out at the edge and passed inwards
 src/app/infra/database/models/bet.py:51:5: model-columns: stake is a Numeric with no bound;
     money is described by Numeric(18, 4)
-src/app/presentation/api/v1/routers/bets.py:22:1: endpoint-declarations: POST /bets
+src/app/presentation/api/v1/routers/bets.py:22:1: edge-declarations: POST /bets
     did not name a response_model
 ```
 
@@ -118,7 +118,7 @@ Twenty-eight rules in nine groups:
 | `types` | bounds on fields, the shape of an annotation, immutability |
 | `database` | the model's boundary, a column's material, the shape of a query, the schema |
 | `effects` | the clock, the dice, and the name of an event in the log |
-| `api` | what a route answers with and what it must declare |
+| `api` | what an entrance declares about itself |
 | `calls` | a function whose call sites can be listed |
 | `hygiene` | a ceiling on a dependency |
 
@@ -152,7 +152,7 @@ Twenty-eight rules in nine groups:
 | `schema-drift` | the models and the migrations describe different schemas | environment |
 | `determinism` | the code reads the clock, the dice or a new identifier itself | file |
 | `log-events` | an event in the log is named by something other than an enum member | file |
-| `endpoint-declarations` | a route did not say what it answers with | file |
+| `edge-declarations` | an entrance did not say how it behaves | file |
 | `confined-functions` | a named function was called from somewhere it may not be | file |
 | `dependency-bounds` | a dependency may move to a version nobody has ever run | project |
 
