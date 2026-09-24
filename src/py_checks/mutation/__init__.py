@@ -15,6 +15,7 @@ mutmut зовётся процессом, как `schema-drift` зовёт alemb
 from py_checks.mutation._constants import BASELINE, SECTION
 from py_checks.mutation._errors import GateError
 from py_checks.mutation._gate import Diffed, Gate, Verdict, gate
+from py_checks.mutation._mutmut import Tally
 from py_checks.mutation._settings import Mutation, mutation
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "Gate",
     "GateError",
     "Mutation",
+    "Tally",
     "Verdict",
     "gate",
     "mutation",

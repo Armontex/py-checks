@@ -420,3 +420,49 @@ def test_diff_where_nothing_mutated_changed_says_so(
 
     assert result.exit_code == 0, result.output
     assert "мутируемое не менялось" in result.output
+
+
+def test_full_counts_what_was_tried_killed_and_left(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Справка, а не суд: сколько мутантов попробовали и чем кончилось."""
+    report = (
+        "app.logic.limits.a: killed\n"
+        "app.logic.limits.b: timeout\n"
+        "app.logic.limits.c: caught by type check\n"
+        "app.logic.limits.d: survived\n"
+        "app.logic.prices.e: no tests\n"
+        "app.logic.prices.f: suspicious\n"
+        "app.logic.prices.g: skipped"
+    )
+    root = project(root=tmp_path, reports=[report] * 2)
+    baseline(root=root, counted={"app.logic.limits": 1, "app.logic.prices": 1})
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["mutation", "full"])
+
+    assert result.exit_code == 0, result.output
+    assert "мутантов: запущено 6, убито 3, осталось 2, прочее 1" in result.output
+
+
+def test_diff_counts_only_the_modules_it_judged(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = project(
+        root=tmp_path,
+        reports=[
+            "app.logic.limits.a: killed\napp.logic.limits.b: survived\n"
+            "app.logic.prices.c: killed\napp.logic.prices.d: killed"
+        ],
+    )
+    branched(root=root)
+    baseline(root=root, counted={"app.logic.limits": 1})
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["mutation", "diff", "--against", "develop"])
+
+    assert result.exit_code == 0, result.output
+    assert "в изменённых модулях: запущено 2, убито 1, осталось 1" in result.output
+    assert "прочее" not in result.output

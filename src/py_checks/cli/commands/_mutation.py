@@ -15,7 +15,7 @@ from py_checks.core import EXIT_OK, EXIT_VIOLATION
 from py_checks.mutation import GateError, gate
 
 if TYPE_CHECKING:
-    from py_checks.mutation import Gate, Verdict
+    from py_checks.mutation import Gate, Tally, Verdict
 
 Children = Annotated[
     int | None,
@@ -65,6 +65,10 @@ def diff(  # check-ok: keyword-only-arguments: подпись команды р�
     if not verdict.counted:
         _say(text=f"ok: против {diffed.against} мутируемое не менялось")
         raise typer.Exit(EXIT_OK)
+    _counted(
+        tally=verdict.tally,
+        where=" в изменённых модулях",
+    )
     _judged(verdict=verdict)
     _say(
         text=(
@@ -81,6 +85,7 @@ def full(  # check-ok: keyword-only-arguments: подпись команды р�
     """Всё, что мутируется, против записи — модуль за модулем."""
     project = _project(children=children)
     verdict = _full(project=project)
+    _counted(tally=verdict.tally)
     _judged(verdict=verdict)
     before = sum(verdict.recorded.values())
     if verdict.total < before:
@@ -126,6 +131,21 @@ def _full(*, project: Gate) -> Verdict:
         return project.full()
     except GateError as error:
         _refuse(message=str(error))
+
+
+def _counted(
+    *,
+    tally: Tally,
+    where: str = "",
+) -> None:
+    """Сколько мутантов прогон попробовал и чем кончилось, — справка, не суд."""
+    other = f", прочее {tally.other}" if tally.other else ""
+    _say(
+        text=(
+            f"мутантов{where}: запущено {tally.tried}, убито {tally.killed}, "
+            f"осталось {tally.alive}{other}"
+        )
+    )
 
 
 def _judged(*, verdict: Verdict) -> None:

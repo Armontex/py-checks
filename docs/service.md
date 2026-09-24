@@ -539,6 +539,18 @@ py-checks mutation full     # everything mutmut mutates, module by module
 py-checks mutation record   # a full pass, written down as the new record
 ```
 
+Each pass also says what it tried and how that ended — for information, not as
+a verdict. `убито` is what mutmut itself counts as killed: a failed test, a
+timeout, a mutant the type checker refused. `осталось` is the survivors the
+gate judges. Anything else — `suspicious`, a segfault — is shown apart rather
+than folded into either:
+
+```
+$ py-checks mutation full
+мутантов: запущено 2643, убито 2630, осталось 13
+ok: 13 выживш(их), как в записи
+```
+
 It is an extra rather than part of the core: `pip install
 "python-checks[mutation]"`. The library never imports mutmut — it calls it as
 a process, the way `schema-drift` calls alembic — but it reads what mutmut

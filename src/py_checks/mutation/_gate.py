@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from py_checks.mutation._baseline import recorded, write
-from py_checks.mutation._mutmut import Mutmut, by_module, module_of
+from py_checks.mutation._mutmut import Mutmut, by_module, module_of, survivors, tallied
 from py_checks.mutation._process import Shell
 from py_checks.mutation._scope import against_ref, changed, scope
 from py_checks.mutation._settings import mutation
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from py_checks.config import Config
+    from py_checks.mutation._mutmut import Tally
     from py_checks.mutation._settings import Mutation
 
 
@@ -30,6 +31,7 @@ class Verdict:
     counted: dict[str, int]
     recorded: dict[str, int]
     alive: tuple[str, ...]
+    tally: Tally
 
     @property
     def grown(self) -> dict[str, tuple[int, int]]:
@@ -72,13 +74,15 @@ class Gate:
         Модуль из записи, где выживших не осталось, тоже попадает в счёт, с
         нулём: иначе убыль в нём не видна, и запись так и носит отвоёванное.
         """
-        alive = self.mutmut.alive()
+        report = self.mutmut.report()
+        alive = survivors(report=report)
         reported = by_module(alive=alive)
         before = recorded(path=self.baseline)
         return Verdict(
             counted={module: reported.get(module, 0) for module in {*reported, *before}},
             recorded=before,
             alive=tuple(sorted(alive)),
+            tally=tallied(report=report),
         )
 
     def diff(self, *, against: str | None) -> Diffed | None:
@@ -103,41 +107,48 @@ class Gate:
                 src=self.config.src,
             ),
         )
-        before = recorded(path=self.baseline)
-        if not modules:
-            return Diffed(
-                against=target,
-                verdict=Verdict(
-                    counted={},
-                    recorded=before,
-                    alive=(),
-                ),
-            )
-        # Отчёт печатает весь кэш, и модули, которых ветка не трогала, тоже;
-        # судят здесь только то, что она поменяла.
-        alive = [
-            mutant
-            for mutant in self.mutmut.alive(modules=modules)
-            if module_of(mutant=mutant) in modules
-        ]
-        reported = by_module(alive=alive)
         return Diffed(
             against=target,
-            verdict=Verdict(
-                counted={module: reported.get(module, 0) for module in modules},
-                recorded=before,
-                alive=tuple(sorted(alive)),
+            verdict=_changed(
+                report=self.mutmut.report(modules=modules) if modules else "",
+                modules=modules,
+                before=recorded(path=self.baseline),
             ),
         )
 
     def record(self) -> dict[str, int]:
         """Полный прогон, и его итог по модулям — в файл записи."""
-        counted = by_module(alive=self.mutmut.alive())
+        counted = by_module(alive=survivors(report=self.mutmut.report()))
         write(
             path=self.baseline,
             counted=counted,
         )
         return counted
+
+
+def _changed(
+    *,
+    report: str,
+    modules: tuple[str, ...],
+    before: dict[str, int],
+) -> Verdict:
+    """Вердикт по модулям ветки.
+
+    Отчёт печатает весь кэш, и модули, которых ветка не трогала, тоже; судят
+    здесь только то, что она поменяла. Пустой список модулей — пустой вердикт:
+    прогонять было нечего, и mutmut не звали.
+    """
+    alive = [mutant for mutant in survivors(report=report) if module_of(mutant=mutant) in modules]
+    reported = by_module(alive=alive)
+    return Verdict(
+        counted={module: reported.get(module, 0) for module in modules},
+        recorded=before,
+        alive=tuple(sorted(alive)),
+        tally=tallied(
+            report=report,
+            modules=modules,
+        ),
+    )
 
 
 def gate(
