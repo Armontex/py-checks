@@ -15,6 +15,7 @@ from py_checks.config import ConfigError, find_root, load, prefix
 from py_checks.contracts import SECTION as CONTRACTS
 from py_checks.core import EXIT_OK, EXIT_VIOLATION, available, depth, section_of
 from py_checks.environment import SECTION as ENV_EXAMPLE
+from py_checks.mutation import SECTION as MUTATION
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -22,8 +23,8 @@ if TYPE_CHECKING:
     from py_checks.config import CheckSettings, Config, TomlValue
     from py_checks.core import Check
 
-# Секции, которые принадлежат не правилу, а сборщику файлов.
-BUILDERS: Final[frozenset[str]] = frozenset({CONTRACTS, ENV_EXAMPLE})
+# Секции, которые читает не правило: сборщики файлов и мутационный гейт.
+OWNED: Final[frozenset[str]] = frozenset({CONTRACTS, ENV_EXAMPLE, MUTATION})
 
 # Ключ, называющий места: он есть у всех правил, которые работают не везде, и
 # пустой список в нём означает, что правило молчит по всему дереву.
@@ -91,11 +92,11 @@ def _unknown(*, config: Config) -> Iterator[Complaint]:
     known = _sections()
     named = prefix(source=config.origin)
     for section in sorted(config.checks):
-        if section in known or section in BUILDERS:
+        if section in known or section in OWNED:
             continue
         close = get_close_matches(
             section,
-            [*known, *BUILDERS],
+            [*known, *OWNED],
             n=CLOSE,
             cutoff=ALIKE,
         )
@@ -244,7 +245,7 @@ def _addressed(*, config: Config) -> Iterator[tuple[str, str]]:
     """
     shared = _shared()
     for section, table in config.checks.items():
-        if section in BUILDERS:
+        if section in OWNED:
             continue
         if section in shared:
             yield from ((section, key) for key, value in table.items() if isinstance(value, dict))

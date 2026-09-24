@@ -311,6 +311,7 @@ no-print = "myproject_checks:NoPrint"
 | `py-checks explain <код>` | что правило требует и какие у него настройки |
 | `py-checks sync [--check]` | собрать контракты импортов и `.env.example` |
 | `py-checks doctor` | проверить сами настройки: опечатки, мёртвые адреса, молчащие правила |
+| `py-checks mutation diff\|full\|record` | мутационный гейт поверх `mutmut`; нужен `python-checks[mutation]` |
 
 ## Разработка
 

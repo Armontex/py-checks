@@ -351,6 +351,16 @@ in_cents = ["modules/pricing/application"]
 
 [dependency-bounds]
 
+# --- The mutation gate ------------------------------------------------------
+
+# What gets mutated is mutmut's own table; here is only what the gate needs:
+# where the record lives, and the profile the property tests draw under while
+# they are mutated — a fresh example every run kills a mutant once and misses
+# it the next time, and the record would move on its own.
+[mutation]
+baseline = "tools/mutation_baseline.json"
+env = { HYPOTHESIS_PROFILE = "deterministic" }
+
 # --- What is built rather than checked --------------------------------------
 
 [env-example]
@@ -428,7 +438,7 @@ configuration, and the two drift.
 | A ceiling on a dependency | rule `dependency-bounds`: nothing off the shelf; `deptry` (unused and undeclared) and `uv lock --check` are useful alongside |
 | A complete `.env.example` | built by `py-checks sync`, plus `config-fields` with `alias` |
 | `AGENTS.md` and `CLAUDE.md` in step | a symlink, plus the `check-symlinks` and `destroyed-symlinks` hooks |
-| Surviving mutants | `mutmut` with a baseline of its own — a CI step of the project, not a rule |
+| Surviving mutants | `py-checks mutation` over `mutmut`: the scope is mutmut's, the record is the project's, the three passes are the library's |
 | A CHECK under a bounded column | rule `bound-checks` |
 | SQL as a string instead of an expression | rule `raw-sql`: `TID251` bans `text()` outright and takes 94 lawful places down with it |
 | The transaction boundary | rule `confined-calls`: ruff sees names, but neither zones nor an owner |
@@ -516,6 +526,74 @@ block stays, and the rule goes on looking where nothing is.
 It belongs in CI beside `run`, not in the hooks: it reads the whole tree of
 `src` to answer the last question, and it has nothing to say about the file
 that is being committed. It exits `1` when it has complaints.
+
+### `mutation` — the tests judged instead of the code
+
+A surviving mutant is a line that was changed while every test still passed.
+`py-checks mutation` runs `mutmut` and refuses a push that leaves more of them
+in a module than that module's record allows:
+
+```bash
+py-checks mutation diff     # the modules this branch touched — what a push runs
+py-checks mutation full     # everything mutmut mutates, module by module
+py-checks mutation record   # a full pass, written down as the new record
+```
+
+It is an extra rather than part of the core: `pip install
+"python-checks[mutation]"`. The library never imports mutmut — it calls it as
+a process, the way `schema-drift` calls alembic — but it reads what mutmut
+prints, and that format is the contract between the two. The extra pins the
+major in which the format holds: a parser that missed every `survived` line
+would count zero and pass everything.
+
+It belongs on push rather than in CI: the report is for whoever is about to
+push the tests it judges, and a CI runner is the weakest machine there is to
+spend minutes of mutation on.
+
+```yaml
+- repo: local
+  hooks:
+    - id: mutation-gate
+      name: no new mutant survives the unit tests
+      entry: nice -n 19 uv run py-checks mutation diff
+      language: system
+      pass_filenames: false
+      always_run: true
+      stages: [pre-push]
+```
+
+| Key | Default | |
+|---|---|---|
+| `command` | `["mutmut"]` | how mutmut is called |
+| `baseline` | `"mutation-baseline.json"` | where `record` writes the survivors per module |
+| `against` | `["origin/develop", "develop"]` | what a branch is compared to when the push does not say |
+| `children` | mutmut decides | how many mutants run at once; `--children` overrides it |
+| `env` | `{}` | variables for the run |
+
+What gets mutated is not in this table. It is `source_paths` and
+`do_not_mutate` of mutmut itself, read from wherever mutmut reads them —
+`[tool.mutmut]` if `pyproject.toml` has one, `[mutmut]` of `setup.cfg`
+otherwise. Stating the scope twice is how the two would come apart. A project
+that states it nowhere is refused: a gate that does not know what is mutated
+would judge nothing and pass everything.
+
+**Why module by module.** The record is a map, not a number, and `full` judges
+it module by module just as `diff` does. A total stays put when one module
+gains a survivor and another loses one — and the new hole goes through under
+cover of somebody else's work.
+
+**Why the survivors are run again.** mutmut's cache is keyed on the mutated
+source, so a mutant that a test written today kills stays on record as alive:
+nothing about its file changed. `diff` names the modules it judges and `full`
+names the survivors the cache believes in, and naming is what makes mutmut run
+them again. Two verdicts count, `survived` and `no tests`; the second is the
+stronger, since a module with no test at all would otherwise score zero. A
+`not checked` is a refusal: mutmut exits `1` when its test collection fails,
+and by the exit code alone that run looks like one that left survivors.
+
+**Instead of `tools/check_mutation_gate.py`.** Three services carried it, in
+three versions of 514, 600 and 700 lines, and the fix for `not checked` had
+reached two of them.
 
 ## 5. The rules
 

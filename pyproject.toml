@@ -28,6 +28,13 @@ Issues = "https://github.com/Armontex/py-checks/issues"
 Changelog = "https://github.com/Armontex/py-checks/blob/main/CHANGELOG.md"
 Documentation = "https://github.com/Armontex/py-checks/blob/main/docs/service.md"
 
+[project.optional-dependencies]
+# Мутационный гейт зовёт mutmut процессом и читает то, что тот напечатал:
+# импорта нет, а договор есть — формат вывода. Потолок на следующем мажоре
+# потому, что в мажоре этот формат и поменяют, а разбор, промахнувшийся мимо
+# строк `survived`, насчитал бы ноль выживших и пропустил бы всё.
+mutation = ["mutmut>=3.7,<4"]
+
 [project.scripts]
 py-checks = "py_checks.cli:main"
 
