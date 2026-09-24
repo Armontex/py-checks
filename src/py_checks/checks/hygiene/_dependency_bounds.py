@@ -1,4 +1,4 @@
-"""У зависимости есть потолок, иначе версию выбирает решатель."""
+"""A dependency has a ceiling, otherwise the resolver chooses the version."""
 
 from __future__ import annotations
 
@@ -20,9 +20,9 @@ MANIFEST: Final = "pyproject.toml"
 MARKERS: Final = ";"
 FIRST: Final = 1
 
-# Имя, за которым идут extras и спецификаторы. `packaging` разобрал бы это
-# правильно и не является зависимостью хуков, а формы, которые встречаются в
-# манифесте, узки настолько, что выражение говорит всё правило целиком.
+# A name followed by extras and specifiers. `packaging` would parse this
+# properly and is not a dependency of the hooks, while the forms found in a
+# manifest are narrow enough that the expression states the whole rule.
 REQUIREMENT: Final = re.compile(
     r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)(?:\[[^\]]*\])?(?P<rest>.*)$"
 )
@@ -34,31 +34,31 @@ class DependencyBoundsSettings(CheckSettings):
 
 
 class DependencyBounds:
-    """Падает, если зависимость может уехать на версию, которую никто не запускал.
+    """Fails when a dependency may move to a version nobody has ever run.
 
-    Требование объявляет потолок одним из двух способов: точной версией
-    (`greenlet==3.5.5`) или парой «пол и потолок» (`pydantic>=2.13.5,<3`,
-    `structlog~=26.1` — то же самое, сказанное иначе).
+    A requirement declares a ceiling one of two ways: an exact version
+    (`greenlet==3.5.5`) or a floor-and-ceiling pair (`pydantic>=2.13.5,<3`;
+    `structlog~=26.1` is the same thing said differently).
 
-    Отвергается голый пол — `pre-commit>=4.6.2`. Читается он как минимум, а
-    ведёт себя как «что новее на момент, когда кто-то пересобрал лок», то есть
-    как другой сервис после каждого обновления: выходит мажор, лок двигается, и
-    изменение приезжает в том коммите, который случайно тронул зависимости.
-    Потолок делает этот приезд осознанной правкой, за которой стоит диff и
-    прогон тестов, — единственное место, где ломающее обновление вообще можно
-    прочитать.
+    A bare floor is refused — `pre-commit>=4.6.2`. It reads as a minimum and
+    behaves as "whatever is newest the moment somebody rebuilt the lock", that
+    is, as a different service after every rebuild: a major comes out, the
+    lock moves, and the change arrives in whichever commit happened to touch
+    the dependencies. A ceiling makes that arrival a deliberate edit, with a
+    diff behind it and a test run — the only place a breaking upgrade can be
+    read at all.
 
-    Лок этого не заменяет: `uv.lock` фиксирует то, что стоит сегодня, и он
-    пересобирается — ограничение это то, что переживает пересборку.
+    The lock does not replace this: `uv.lock` pins what is installed today and
+    is rebuilt — a constraint is what survives the rebuild.
 
-    Проверяются все группы: зависимость тестов решает, проходит ли набор, а
-    сборочная — существует ли колесо.
+    Every group is checked: a test dependency decides whether the suite
+    passes, and a build one whether a wheel exists at all.
 
-    Исключение одно, и оно несёт свой собственный гвоздь: требование без
-    спецификаторов, чьё имя лежит в `[tool.uv.sources]` с `rev` или `tag`.
-    Коммит — самый тесный потолок, какой бывает.
+    There is one exception, and it carries its own nail: a requirement with no
+    specifiers whose name is in `[tool.uv.sources]` with a `rev` or a `tag`.
+    A commit is the tightest ceiling there is.
 
-    Настройки: `ceilings`, `pins`.
+    Settings: `ceilings`, `pins`.
     """
 
     code: ClassVar[str] = CODE
@@ -103,8 +103,8 @@ class DependencyBounds:
                 column=FIRST,
                 code=CODE,
                 message=(
-                    f"{where}: у {requirement!r} нет потолка; закрепи (==) или ограничь "
-                    f"(>=x,<y), иначе версию выберет решатель"
+                    f"{where}: {requirement!r} has no ceiling; pin it (==) or bound it "
+                    f"(>=x,<y), otherwise the resolver chooses the version"
                 ),
             )
 
@@ -125,10 +125,10 @@ class DependencyBounds:
 
     @staticmethod
     def _stated(*, requirement: str) -> str | None:
-        """Спецификаторы требования, или None, если это не то, что мы читаем.
+        """The requirement's specifiers, or None if it is not what we read.
 
-        Маркеры отрезаются первыми: `; python_version < "3.13"` несёт свои
-        операторы сравнения и ничего не говорит о том, какая версия встанет.
+        Markers are cut off first: `; python_version < "3.13"` carries its own
+        comparison operators and says nothing about which version gets installed.
         """
         written = requirement.split(MARKERS, maxsplit=1)[0].strip()
         found = REQUIREMENT.match(written)
@@ -145,7 +145,7 @@ class DependencyBounds:
         manifest: dict[str, Any],
         pins: tuple[str, ...],
     ) -> frozenset[str]:
-        """Имена, чей источник — коммит: это потолок в одну версию."""
+        """Names whose source is a commit: a ceiling of exactly one version."""
         sources = manifest.get("tool", {}).get("uv", {}).get("sources", {})
         return frozenset(
             name.lower().replace("_", "-")
@@ -155,7 +155,7 @@ class DependencyBounds:
 
     @staticmethod
     def _requirements(*, manifest: dict[str, Any]) -> list[tuple[str, str]]:
-        """Каждое требование файла вместе с группой, в которой оно написано."""
+        """Every requirement in the file, with the group it is written in."""
         project = manifest.get("project", {})
         listed: list[tuple[str, str]] = [
             ("project.dependencies", one) for one in project.get("dependencies", [])
@@ -163,8 +163,8 @@ class DependencyBounds:
         for extra, group in project.get("optional-dependencies", {}).items():
             listed += [(f"project.optional-dependencies.{extra}", one) for one in group]
         for name, group in manifest.get("dependency-groups", {}).items():
-            # Группа может включать другую группу — это словарь, а не
-            # требование, и ограничивать в нём нечего.
+            # A group may include another group — that is a dict, not a
+            # requirement, and there is nothing in it to bound.
             listed += [(f"dependency-groups.{name}", one) for one in group if isinstance(one, str)]
         listed += [
             ("build-system.requires", one)
@@ -178,7 +178,7 @@ class DependencyBounds:
         text: str,
         requirement: str,
     ) -> int:
-        """Строка, на которой требование написано: tomllib позиций не отдаёт."""
+        """The line the requirement is written on: tomllib does not report positions."""
         for number, line in enumerate(text.splitlines(), start=FIRST):
             if requirement in line:
                 return number

@@ -1,4 +1,4 @@
-"""Команда `run`: прогнать проверки."""
+"""The `run` command: run the checks."""
 
 from __future__ import annotations
 
@@ -28,29 +28,29 @@ if TYPE_CHECKING:
     from py_checks.core import Check
 
 
-def run(  # check-ok: keyword-only-arguments: подпись команды разбирает typer
+def run(  # check-ok: keyword-only-arguments: typer parses the command's signature
     paths: Annotated[
         list[Path] | None,
-        typer.Argument(help="файлы или папки; без них — весь `src` проекта"),
+        typer.Argument(help="files or directories; without them, the whole of the project's `src`"),
     ] = None,
     select: Annotated[
         list[str] | None,
         typer.Option(
             "--select",
             "-s",
-            help="коды проверок через запятую; без них — все включённые",
+            help="check codes, comma-separated; without them, every enabled one",
         ),
     ] = None,
     autofix: Annotated[
         bool,
-        typer.Option("--fix", help="исправить то, что правится само"),
+        typer.Option("--fix", help="repair what repairs itself"),
     ] = False,
     everything: Annotated[
         bool,
-        typer.Option("--all", help="вместе с правилами, которым нужна живая среда"),
+        typer.Option("--all", help="including the rules that need a live environment"),
     ] = False,
 ) -> None:
-    """Проверить файлы и вернуть код выхода: 0 — чисто, 1 — есть нарушения."""
+    """Check the files and return an exit code: 0 — clean, 1 — violations found."""
     root = find_root(start=Path.cwd())
     config = load(root=root)
     chosen = _chosen(
@@ -59,8 +59,8 @@ def run(  # check-ok: keyword-only-arguments: подпись команды ра
         paths=bool(paths),
         everything=everything,
     )
-    # Обход дерева нужен только файловым правилам: прогон одного правила про
-    # проект не должен читать список из тысячи файлов, чтобы никому его не дать.
+    # Only file rules need the tree walked: a run of one project rule should not
+    # read a list of a thousand files only to hand it to nobody.
     files = (
         python_files(
             paths=paths or [],
@@ -89,7 +89,7 @@ def run(  # check-ok: keyword-only-arguments: подпись команды ра
 
 
 def _fixed(*, violations: list[Violation]) -> list[Violation]:
-    """Наложить правки и вернуть то, что осталось человеку."""
+    """Apply the fixes and return what is left for a person."""
     changed, left = fix(violations=violations)
     reformat(paths=changed)
     return left
@@ -102,11 +102,10 @@ def _chosen(
     paths: bool,
     everything: bool,
 ) -> Checks:
-    """Выбранные проверки, а без выбора — все, кроме отключённых в конфиге.
+    """The selected checks, or, with no selection, all but those disabled in config.
 
-    Явный `--select` сильнее всего остального: если проверку позвали по имени,
-    значит её хотят запустить именно сейчас — и несмотря на `ignore`, и
-    несмотря на то, что ей нужна база.
+    An explicit `--select` beats everything else: a check called by name is
+    wanted right now — despite `ignore`, and despite needing a database.
     """
     listed = available()
     if select:
@@ -126,15 +125,15 @@ def _chosen(
 
 
 def _codes(*, select: Sequence[str]) -> set[str]:
-    """Коды из `--select`: и повторённый флаг, и список через запятую.
+    """The codes from `--select`: a repeated flag and a comma-separated list.
 
-    Набор правил пишут в одну строку — `-s raw-sql,statement-keys`, — потому
-    что так его и держат в голове: не по одному флагу на правило, а списком.
-    Повторённый флаг остаётся рабочим, оба способа дают одно и то же.
+    A set of rules is written on one line — `-s raw-sql,statement-keys` —
+    because that is how it is held in the head: as a list, not a flag per rule.
+    A repeated flag still works; both ways give the same thing.
 
-    Опечатка в коде — ошибка разбора аргумента, а не падение: имя проверки
-    приходит из командной строки, и отвечать на него следом трассировкой
-    значит показывать внутренности там, где ошибся человек.
+    A typo in a code is an argument parse error, not a crash: the check's name
+    comes from the command line, and answering it with a traceback shows the
+    internals where it was a person who made the mistake.
     """
     named = (code.strip() for value in select for code in value.split(","))
     try:
@@ -149,12 +148,12 @@ def _wanted(
     paths: bool,
     everything: bool,
 ) -> bool:
-    """Входит ли правило в прогон, которому не назвали имён.
+    """Whether a rule belongs in a run that named no codes.
 
-    Названные пути правил про проект не касаются: прогон по одному файлу
-    проверяет этот файл, а не проект вокруг него. Правилу, которому нужна
-    живая среда, место в CI, а не в хуке на коммит, — его зовут `--all` или по
-    имени.
+    Named paths do not concern the project rules: a run over one file checks
+    that file, not the project around it. A rule that needs a live environment
+    belongs in CI, not in a commit hook — it is called with `--all` or by
+    name.
     """
     if paths and check.scope is not Scope.FILE:
         return False

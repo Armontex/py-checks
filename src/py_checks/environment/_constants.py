@@ -1,4 +1,4 @@
-"""Имена, о которых знают все модули пакета."""
+"""Names every module of the package knows."""
 
 from __future__ import annotations
 

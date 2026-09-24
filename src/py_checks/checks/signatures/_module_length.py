@@ -1,4 +1,4 @@
-"""Длина модуля."""
+"""The length of a module."""
 
 from __future__ import annotations
 
@@ -26,14 +26,14 @@ class ModuleLengthSettings(CheckSettings):
 
 
 class ModuleLength:
-    """Падает, если модуль длиннее лимита.
+    """Fails when a module is longer than the limit.
 
-    Длинный модуль — это обычно несколько модулей, которые не разъехались
-    вовремя. Считаются все строки файла, включая пустые и комментарии: правило
-    про размер файла, который приходится держать в голове, а не про плотность
-    кода в нём.
+    A long module is usually several modules that did not split up in time.
+    Every line of the file is counted, blank ones and comments included: the
+    rule is about the size of a file the reader has to hold in their head, not
+    about how dense the code in it is.
 
-    Настройка: `max-lines`.
+    Settings: `max-lines`.
     """
 
     code: ClassVar[str] = CODE
@@ -60,5 +60,5 @@ class ModuleLength:
             line=limits.max_lines + 1,
             column=1,
             code=CODE,
-            message=f"{length} строк, предел {limits.max_lines}",
+            message=f"{length} lines, the limit is {limits.max_lines}",
         )

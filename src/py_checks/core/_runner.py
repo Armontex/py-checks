@@ -1,4 +1,4 @@
-"""Прогон проверок по файлам."""
+"""Running the checks over the files."""
 
 from __future__ import annotations
 
@@ -30,11 +30,11 @@ def survey(
     config: Config,
     root: Path,
 ) -> list[Violation]:
-    """Все нарушения выбранных правил: файловых — по файлам, проектных — по корню.
+    """Every violation of the chosen rules: file rules by file, project rules by root.
 
-    Разделение сделано один раз здесь, потому что вид правила виден только по
-    тому, что ему дают: у судящего файл и у судящего проект разные `run`, и
-    складывать их в один цикл нечестно.
+    The split is made once, here, because a rule's kind shows only in what it
+    is given: a rule judging a file and a rule judging the project have
+    different `run`s, and putting them in one loop would be a pretence.
     """
     return [
         *inspect(
@@ -58,10 +58,10 @@ def inspect(
     config: Config,
     root: Path | None = None,
 ) -> list[Violation]:
-    """Все нарушения по всем файлам.
+    """Every violation across every file.
 
-    Внешний цикл по файлам, а не по проверкам: файл читается и разбирается один
-    раз, а проверок на него много.
+    The outer loop is over files, not checks: a file is read and parsed once,
+    and there are many checks for it.
     """
     settings = {
         check.code: config.settings_for(
@@ -94,10 +94,10 @@ def examine(
     config: Config,
     root: Path,
 ) -> list[Violation]:
-    """Нарушения правил, которым нужен проект целиком.
+    """The violations of the rules that need the whole project.
 
-    Каждое зовётся один раз: что прочитать — манифест, пару файлов, дерево, —
-    решает оно само.
+    Each is called once: what to read — the manifest, a pair of files, the
+    tree — it decides itself.
     """
     return [
         violation
@@ -113,11 +113,11 @@ def examine(
 
 
 def _aliases(*, registered: Mapping[str, Check]) -> dict[str, frozenset[str]]:
-    """Слово группы и все правила, которые оно снимает.
+    """A group's word and every rule it lifts.
 
-    Слово у группы одно на всех, поэтому `# signature-ok` снимает любую
-    проверку из `signatures`: человек помнит группу, а не сорок кодов. Когда
-    нужно снять ровно одно правило, для этого есть `# check-ok: <код>`.
+    A group has one word for all of its rules, so `# signature-ok` lifts any
+    check from `signatures`: people remember the group, not forty codes. When
+    exactly one rule has to be lifted, there is `# check-ok: <code>`.
     """
     groups: dict[str, set[str]] = defaultdict(set)
     for code, check in registered.items():
@@ -165,10 +165,10 @@ def _inspect_file(
 
 
 def _broken(*, error: ParseError) -> Violation:
-    """Сломанный файл — это одно нарушение, а не падение всего прогона.
+    """A broken file is one violation, not a crash of the whole run.
 
-    Иначе один файл с недописанным синтаксисом прячет нарушения во всех
-    остальных.
+    Otherwise one file with half-written syntax hides the violations in all
+    the others.
     """
     return Violation(
         path=error.path,

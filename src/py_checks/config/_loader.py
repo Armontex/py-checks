@@ -1,4 +1,4 @@
-"""Чтение настроек: из своего файла проекта или из `pyproject.toml`."""
+"""Reading the settings: from the project's own file or from `pyproject.toml`."""
 
 from __future__ import annotations
 
@@ -16,17 +16,17 @@ if TYPE_CHECKING:
 
     from py_checks.config._toml import TomlTable, TomlValue
 
-# Все файлы, по которым узнаётся корень проекта. `pyproject.toml` последний:
-# он у проекта есть почти всегда, а свой файл настроек лежит рядом с ним.
+# Every file that marks the project root. `pyproject.toml` comes last: a
+# project nearly always has one, and its own settings file sits next to it.
 ANCHORS: Final[tuple[str, ...]] = (*STANDALONE, PYPROJECT)
 
 
 def find_root(*, start: Path) -> Path:
-    """Ближайшая папка вверх по дереву, где лежит манифест или свой файл настроек.
+    """The nearest folder up the tree that holds the manifest or the own settings file.
 
-    Именно она считается корнем проекта: пути в конфиге и в выводе даются
-    относительно неё, чтобы строка нарушения не зависела от того, откуда
-    запустили проверку.
+    That folder is taken as the project root: paths in the config and in the
+    output are relative to it, so a violation line does not depend on where
+    the check was run from.
     """
     for directory in (start, *start.parents):
         if any((directory / name).is_file() for name in ANCHORS):
@@ -35,24 +35,25 @@ def find_root(*, start: Path) -> Path:
 
 
 def load(*, root: Path) -> Config:
-    """Настройки проекта; если их нигде нет — значения по умолчанию.
+    """The project's settings; if there are none anywhere, the defaults.
 
-    Настройки живут либо в своём файле — `py-checks.toml` или
-    `pychecks.toml`, с точкой в начале или без, — либо секцией
-    `[tool.py-checks]` в `pyproject.toml`. В своём файле приставки нет:
-    весь файл и есть эта секция.
+    The settings live either in the tool's own file — `py-checks.toml` or
+    `pychecks.toml`, with or without a leading dot — or as the
+    `[tool.py-checks]` section in `pyproject.toml`. The tool's own file
+    has no prefix: the whole file is that section.
 
-    Двух мест разом не бывает: это не слияние, а вопрос без ответа, и лучше
-    спросить его вслух, чем молча прочитать одно и забыть про другое.
+    Two places at once are not allowed: that is not a merge but a question
+    with no answer, and it is better to ask it out loud than to read one
+    silently and forget the other.
     """
     found = _found(root=root)
     if not found:
         return Config()
     if len(found) > 1:
         raise ConfigError(
-            "настройки лежат в нескольких местах: "
+            "the settings are in more than one place: "
             + ", ".join(source.name for source, _ in found)
-            + "; оставь одно, иначе неизвестно, какое из них читают"
+            + "; keep one, otherwise nobody knows which of them is read"
         )
     source, section = found[0]
     return _build(
@@ -62,10 +63,10 @@ def load(*, root: Path) -> Config:
 
 
 def _found(*, root: Path) -> list[tuple[Path, TomlTable]]:
-    """Файлы, в которых настройки этого инструмента действительно есть.
+    """The files that actually hold this tool's settings.
 
-    `pyproject.toml` без секции файлом настроек не считается: он лежит у
-    каждого проекта, и молчаливое присутствие — не выбор автора.
+    A `pyproject.toml` without the section does not count as a settings file:
+    every project has one, and being there silently is not the author's choice.
     """
     found: list[tuple[Path, TomlTable]] = []
     for name in STANDALONE:
@@ -102,7 +103,7 @@ def _build(
         source=source,
     )
     named = prefix(source=source)
-    # В своём файле секции нет — называть в сообщении нечего, кроме файла.
+    # The tool's own file has no section — there is nothing to name in the message but the file.
     where = f" [{named.rstrip('.')}]" if named else ""
     try:
         return Config.model_validate({**own, "checks": checks, "origin": source})
@@ -111,7 +112,7 @@ def _build(
 
 
 def _split(*, section: TomlTable) -> tuple[TomlTable, dict[str, TomlTable]]:
-    """Свои ключи отдельно, вложенные таблицы проверок отдельно."""
+    """The top-level keys on one side, the nested check tables on the other."""
     own: TomlTable = {}
     checks: dict[str, TomlTable] = {}
     for key, value in section.items():

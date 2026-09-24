@@ -1,4 +1,4 @@
-"""Слово группы для пометок: `# hygiene-ok: <код>: <причина>`."""
+"""The group's word for marks: `# hygiene-ok: <code>: <reason>`."""
 
 from typing import Final
 

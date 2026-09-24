@@ -159,7 +159,7 @@ def test_settings_in_two_places_are_an_error(tmp_path: Path) -> None:
     write(tmp_path, "pyproject.toml", '[tool.py-checks]\nsrc = "app"\n')
     write(tmp_path, "pychecks.toml", 'src = "lib"\n')
 
-    with pytest.raises(ConfigError, match="нескольких местах"):
+    with pytest.raises(ConfigError, match="more than one place"):
         load(root=tmp_path)
 
 
@@ -213,5 +213,5 @@ def test_a_retired_section_names_the_table_it_moved_into(tmp_path: Path) -> None
 def test_a_block_named_after_an_unknown_framework_is_refused(tmp_path: Path) -> None:
     write(tmp_path, "pychecks.toml", '[edge-declarations.litestar]\nrequired = ["path"]\n')
 
-    with pytest.raises(ConfigError, match="про такой фреймворк правило не знает"):
+    with pytest.raises(ConfigError, match="the rule does not know this framework"):
         load(root=tmp_path).settings_for(code="edge-declarations", model=Edges)

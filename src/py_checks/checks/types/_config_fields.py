@@ -1,4 +1,4 @@
-"""Поле настроек названо целиком: и как приходит, и какие значения допустимы."""
+"""A settings field is named in full: how it arrives and which values are allowed."""
 
 from __future__ import annotations
 
@@ -18,26 +18,26 @@ if TYPE_CHECKING:
 
 CODE: Final = "config-fields"
 
-# Классы, которые держат словарь или интерфейс, а не поля настроек.
+# Classes that hold a vocabulary or an interface, not settings fields.
 NOT_SETTINGS: Final[frozenset[str]] = frozenset(
     {"Enum", "StrEnum", "IntEnum", "IntFlag", "Flag", "Protocol", "TypedDict"},
 )
 
-# Аннотация, которая говорит, как значение хранится, и ничего — какие значения
-# допустимы. Всё остальное — имя, а имя это место, где правило может жить.
+# An annotation that says how a value is stored and nothing about which values
+# are allowed. Anything else is a name, and a name is a place a rule can live.
 BOUNDS: Final[dict[str, tuple[str, ...]]] = {
     "int": ("ge", "gt", "le", "lt"),
     "float": ("ge", "gt", "le", "lt"),
-    # `max_length` тут отсутствует намеренно: потолок говорит, какой длины
-    # значение может быть, а не что оно вообще есть, — а речь именно о пустой
-    # строке, которой оборачивается неустановленная переменная.
+    # `max_length` is left out on purpose: a ceiling says how long a value may
+    # be, not that there is one at all — and the point is exactly the empty
+    # string an unset variable turns into.
     "str": ("min_length", "pattern"),
 }
 
 CLASS_VAR: Final = "ClassVar"
 
-# Поле, собранное фабрикой, — это вложенная секция, а не значение: переменной у
-# него нет, её читают поля внутри.
+# A field built by a factory is a nested section, not a value: it has no
+# variable of its own, the fields inside it read theirs.
 FACTORY: Final = "default_factory"
 
 
@@ -48,35 +48,36 @@ class ConfigFieldsSettings(ZonedSettings):
 
 
 class ConfigFields:
-    """Падает, если поле настроек ничем не ограничено.
+    """Fails when a settings field carries no bound.
 
-    Значение приходит текстом из окружения, которое никто не ревьюит, поэтому
-    обе половины объявления обязательны.
+    The value arrives as text from an environment nobody reviews, so both
+    halves of the declaration are compulsory.
 
-    Поле объявляется через `Field(...)`: там живут псевдоним переменной,
-    значение по умолчанию и ограничения, а голое `name: str = "x"` молча
-    роняет все три.
+    A field is declared through `Field(...)`: that is where the variable's
+    alias, the default and the bounds live, and a bare `name: str = "x"`
+    silently drops all three.
 
-    Поле с голым числом называет границу — `ge`, `gt`, `le`, `lt` — или
-    аннотируется типом, который её несёт. Без этого `POSTGRES_POOL_SIZE=0` и
-    пул на пятьсот принимаются здесь и падают где-то там, где в трейсбеке
-    настроек уже не видно.
+    A field with a bare number names its bound — `ge`, `gt`, `le`, `lt` — or
+    is annotated with a type that carries one. Otherwise
+    `POSTGRES_POOL_SIZE=0` and a pool of five hundred are both accepted here
+    and fail somewhere the settings are no longer visible in the traceback.
 
-    Голая строка — та же дыра с более тихим отказом: неустановленная переменная
-    приходит пустой строкой, и пустой адрес брокера, DSN или имя топика
-    принимаются как настройка. Поле называет `min_length` или `pattern`, либо
-    несёт тип, который это делает.
+    A bare string is the same hole with a quieter failure: an unset variable
+    arrives as an empty string, and an empty broker address, DSN or topic name
+    is accepted as configuration. The field names `min_length` or `pattern`,
+    or carries a type that does.
 
-    Поле называет переменную, из которой читается (`alias`, у pydantic это
-    `validation_alias`). Без неё имя переменной знает один pydantic — он
-    выводит его из имени поля и приставки, — и ни `.env.example`, собранный из
-    этих же классов, ни человек, ищущий, откуда берётся значение, назвать её не
-    могут. Поле, собранное `default_factory`, — исключение: это вложенная
-    секция, а не значение, и переменные читают её собственные поля.
+    A field names the variable it is read from (`alias`; in pydantic that is
+    `validation_alias`). Without it only pydantic knows the variable's name —
+    it derives it from the field name and the prefix — and neither the
+    `.env.example` built from these same classes nor a person looking for
+    where the value comes from can name it. A field built by `default_factory`
+    is the exception: it is a nested section, not a value, and the variables
+    are read by its own fields.
 
-    `ClassVar` — не поле настроек, а константа рядом с ними.
+    A `ClassVar` is not a settings field but a constant next to them.
 
-    Настройки: `zones`, `factory`, `alias`, `bounds`.
+    Settings: `zones`, `factory`, `alias`, `bounds`.
     """
 
     code: ClassVar[str] = CODE
@@ -148,16 +149,16 @@ class ConfigFields:
         named: frozenset[str],
         limits: ConfigFieldsSettings,
     ) -> str | None:
-        """Чем поле не закрыто, или `None`, если закрыто."""
+        """What the field leaves open, or `None` if nothing."""
         if not cls._declared(
             node=statement.value,
             factory=limits.factory,
         ):
             if statement.value is None:
                 return (
-                    f"объявлено без значения; поле настроек объявляют через {limits.factory}(...)"
+                    f"is declared with no value; declare settings fields with {limits.factory}(...)"
                 )
-            return f"объявлено не через {limits.factory}(...)"
+            return f"is not declared with {limits.factory}(...)"
         if (
             limits.alias is not None
             and not cls._states(
@@ -170,8 +171,8 @@ class ConfigFields:
             )
         ):
             return (
-                f"не называет {limits.alias}=; без него имя переменной знает "
-                f"один pydantic, а `.env.example` собирается из этих же полей"
+                f"does not name {limits.alias}=; without it only pydantic knows the "
+                f"variable's name, and `.env.example` is built from these same fields"
             )
         wanted = cls._wanted(
             named=named,
@@ -182,8 +183,8 @@ class ConfigFields:
             wanted=wanted,
         ):
             return (
-                f"ничем не ограничено; назови одно из {', '.join(wanted)} "
-                f"или аннотируй типом, который несёт это правило"
+                f"carries no bound; name one of {', '.join(wanted)} "
+                f"or annotate it with a type that carries the rule"
             )
         return None
 
@@ -193,11 +194,11 @@ class ConfigFields:
         named: frozenset[str],
         bounds: dict[str, tuple[str, ...]],
     ) -> tuple[str, ...]:
-        """Какие ограничения задолжала аннотация.
+        """Which bounds the annotation owes.
 
-        `str | None` — это строка, а `int | None` — число: объединение говорит
-        о том, есть ли значение, а не о том, какие значения допустимы. Имя, не
-        попавшее в таблицу, — уже правило: ограничение живёт в нём.
+        `str | None` is a string and `int | None` is a number: the union says
+        whether there is a value, not which values are allowed. A name not in
+        the table is already a rule: the bound lives in it.
         """
         if not named or not named <= frozenset(bounds):
             return ()
@@ -228,7 +229,7 @@ class ConfigFields:
 
     @staticmethod
     def _settings(*, node: ast.ClassDef) -> bool:
-        """Класс полей настроек, а не словарь и не интерфейс рядом с ними."""
+        """A class of settings fields, not a vocabulary or an interface beside them."""
         bases = {
             base.attr if isinstance(base, ast.Attribute) else getattr(base, "id", "")
             for base in node.bases

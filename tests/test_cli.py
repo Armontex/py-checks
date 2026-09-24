@@ -212,7 +212,7 @@ def test_list_shows_the_check_and_its_state() -> None:
     result = runner.invoke(app, ["list"])
 
     assert "module-length" in result.output
-    assert "вкл" in result.output
+    assert "on" in result.output.split()
 
 
 @pytest.mark.usefixtures("project")

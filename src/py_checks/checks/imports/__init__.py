@@ -1,15 +1,15 @@
-"""Импорты и границы.
+"""Imports and boundaries.
 
-Слои, независимость модулей и импорты в миграциях уехали в import-linter:
-контракты для него собирает `py-checks sync`. Здесь остались два правила,
-которые в контракты ложатся наизнанку — там пришлось бы перечислять все места,
-где пакет запрещён, и дописывать каждое новое.
+Layers, module independence and imports in migrations moved to import-linter:
+its contracts are built by `py-checks sync`. Two rules stayed here, the ones
+that fit a contract inside out — there every place where a package is banned
+would have to be listed, and every new one added by hand.
 
-`confined-imports` смотрит со стороны пакета: где ему можно.
-`sealed-imports` — со стороны места: что можно здесь.
+`confined-imports` looks from the side of the package: where it may go.
+`sealed-imports` looks from the side of the place: what may come here.
 
-Обе таблицы — проектные: имена слоёв и список фреймворков библиотека знать не
-может. Без настроек оба правила молчат.
+Both tables belong to the project: the library cannot know the names of the
+layers or the list of frameworks. Without settings both rules stay silent.
 """
 
 from py_checks.checks.imports._confined import ConfinedImports, ConfinedSettings

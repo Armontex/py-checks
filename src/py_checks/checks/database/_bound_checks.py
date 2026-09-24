@@ -1,4 +1,4 @@
-"""Ограниченная колонка повторяет своё ограничение в базе."""
+"""A bounded column restates its bound in the database."""
 
 from __future__ import annotations
 
@@ -24,11 +24,11 @@ MAPPED: Final = "Mapped"
 
 
 class Helper(CheckSettings):
-    """Как зовут хелпер проекта и два его аргумента.
+    """What the project's helper and its two arguments are called.
 
-    Три голых слова в секции не говорили, что они об одном: `call` —
-    функция, `column` и `primitive` — её аргументы, и прочитать это можно было
-    только из документации. Блок говорит это формой.
+    Three bare words in the section did not say they belonged together: `call`
+    is the function, `column` and `primitive` are its arguments, and that could
+    only be read from the documentation. A block says it by its shape.
     """
 
     call: str = "bound_check"
@@ -42,26 +42,27 @@ class BoundChecksSettings(ZonedSettings):
 
 
 class BoundChecks:
-    """Падает, если ограниченная колонка не повторила своё ограничение как CHECK.
+    """Fails if a bounded column did not restate its bound as a CHECK.
 
-    Колонка, объявленная `Mapped[PositiveDecimal]`, обещает дважды. pyright
-    держит каждую строку, СОБРАННУЮ здесь, значениями, которые тип пропустил;
-    `bound_check(column=..., primitive=PositiveDecimal)` в `__table_args__`
-    держит каждую строку, записанную любым другим способом — бэкфилл, сессия
-    psql, второй сервис в следующем году. Правило связывает две половины:
-    аннотация без CHECK — это база, доверяющая коду, которого она не видела.
+    A column declared `Mapped[PositiveDecimal]` promises twice. pyright holds
+    every row BUILT here to values the type let through;
+    `bound_check(column=..., primitive=PositiveDecimal)` in `__table_args__`
+    holds every row written any other way — a backfill, a psql session, a
+    second service next year. The rule ties the two halves together: an
+    annotation without a CHECK is a database trusting code it has never seen.
 
-    Проверяется наличие, а не эквивалентность, и потому ему можно верить: SQL
-    генерируется из того же `BOUND`, которым отказывает тип, так что второго
-    выражения для сравнения просто нет — есть вызов, который могли забыть.
-    Отдельно отвергается `primitive=`, называющий не тот тип, что в аннотации:
-    это единственный способ протащить расхождение обратно.
+    Presence is checked rather than equivalence, and that is why it can be
+    trusted: the SQL is generated from the same `BOUND` the type refuses by, so
+    there is no second expression to compare against — there is a call
+    somebody may have forgotten. Separately refused is a `primitive=` naming a
+    type other than the one in the annotation: that is the only way to smuggle
+    the disagreement back in.
 
-    Список ограниченных типов проектный: библиотека не может знать, что у
-    этого сервиса деньги — `PositiveDecimal`, а доля — `MarginFraction`. Без
-    списка правило молчит.
+    The list of bounded types is the project's: the library cannot know that
+    money in this service is `PositiveDecimal` and a share is
+    `MarginFraction`. Without the list the rule is silent.
 
-    Настройки: `zones`, `primitives`, `helper`.
+    Settings: `zones`, `primitives`, `helper`.
     """
 
     code: ClassVar[str] = CODE
@@ -142,13 +143,13 @@ class BoundChecks:
         helper = limits.helper
         if said is None:
             return (
-                f"{field} объявлено как {bounded}, но CHECK не несёт; добавь "
+                f"{field} is declared as {bounded} but carries no CHECK; add "
                 f"{helper.call}({helper.column}={field}, {helper.primitive}={bounded}) "
-                f"в __table_args__"
+                f"to __table_args__"
             )
         return (
-            f"{field} объявлено как {bounded}, а его {helper.call} называет {said}; "
-            f"аннотация и CHECK читают одну границу"
+            f"{field} is declared as {bounded}, but its {helper.call} names {said}; "
+            f"the annotation and the CHECK read one bound"
         )
 
     @classmethod
@@ -158,7 +159,7 @@ class BoundChecks:
         node: ast.ClassDef,
         limits: BoundChecksSettings,
     ) -> dict[str, str]:
-        """Колонка — тип, по каждому вызову в теле класса."""
+        """Column to type, one per call in the class body."""
         found: dict[str, str] = {}
         for child in ast.walk(node):
             if not isinstance(child, ast.Call) or name(node=child.func) != limits.helper.call:
@@ -188,7 +189,7 @@ class BoundChecks:
 
     @staticmethod
     def _bounded(*, node: ast.expr) -> str | None:
-        """X из `Mapped[X]` или `Mapped[X | None]`, если это простое имя."""
+        """X from `Mapped[X]` or `Mapped[X | None]`, if it is a plain name."""
         if not isinstance(node, ast.Subscript) or name(node=node.value) != MAPPED:
             return None
         match node.slice:

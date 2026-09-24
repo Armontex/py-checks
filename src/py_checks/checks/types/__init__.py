@@ -1,8 +1,9 @@
-"""Типы и аннотации.
+"""Types and annotations.
 
-Чем объявлено значение и что об этом видно из подписи. Готовых правил тут
-почти нет: `typing.Literal` закрывается строкой `banned-api` в ruff, голый
-дженерик — строгим режимом pyright, остальное — соглашения проекта.
+What a value is declared with, and what the signature shows of it. There are
+almost no ready-made rules here: `typing.Literal` is covered by a `banned-api`
+line in ruff, a bare generic by pyright's strict mode, the rest is the
+project's own convention.
 """
 
 from py_checks.checks.types._annotation_shapes import (

@@ -1,4 +1,4 @@
-"""Часы, случайность и новый идентификатор берутся портом, а не глобально."""
+"""The clock, the dice and a new identifier come through a port, not globally."""
 
 from __future__ import annotations
 
@@ -20,29 +20,32 @@ CODE: Final = "determinism"
 
 
 class DeterminismSettings(ZonedSettings):
-    instead: dict[str, str] = {}  # noqa: RUF012 — pydantic копирует значение по умолчанию
+    instead: dict[str, str] = {}  # noqa: RUF012 — pydantic copies the default value
 
 
 class Determinism:
-    """Падает, если код сам читает часы, случайность или новый идентификатор.
+    """Fails if the code reads the clock, the dice or a new identifier itself.
 
-    `datetime.now()`, `uuid4()` и `random.random()` делают сценарий
-    непроверяемым: один и тот же вход даёт разный выход, и тест либо
-    замораживает мир мокой, либо не утверждает ничего. Бизнес-код берёт их
-    зависимостью — `self._clock.now()`, идентификатор, выданный на краю, — и
-    вызов через порт правило не трогает: оно судит глобальные источники.
+    `datetime.now()`, `uuid4()` and `random.random()` make a use case
+    untestable: the same input gives a different output, and the test either
+    freezes the world with a mock or asserts nothing at all. Business code
+    takes them as a dependency — `self._clock.now()`, an identifier handed out
+    at the edge — and the rule leaves a call through a port alone: it judges
+    global sources.
 
-    Репозитории закрыты той же зоной, и там источник пишется на SQL:
-    `func.gen_random_uuid()` внутри INSERT — то же решение этажом ниже, где его
-    ещё хуже видно. В тесте о нём нечего утверждать, слой хранения становится
-    автором идентификатора, о котором ему ничего не передавали, а среди uuid7
-    появляется uuid4 — случайный там, где все остальные упорядочены, и
-    упорядоченность — то, ради чего индекс по ним чего-то стоит.
+    Repositories are inside the same zone, and there the source is written in
+    SQL: `func.gen_random_uuid()` inside an INSERT is the same decision one
+    floor down, where it is even harder to see. A test has nothing to assert
+    about it, the storage layer becomes the author of an identifier nobody
+    passed it, and a uuid4 appears among uuid7s — random where everything else
+    is ordered, and ordering is the whole reason an index on them is worth
+    anything.
 
-    Имя сверяется с хвостом: `datetime.now` подходит и записи
-    `datetime.datetime.now`, а `random.*` — любому вызову модуля целиком.
+    A name is matched against the tail: `datetime.now` matches the spelling
+    `datetime.datetime.now` too, and `random.*` matches any call into that
+    module.
 
-    Настройки: `zones`, `instead`.
+    Settings: `zones`, `instead`.
     """
 
     code: ClassVar[str] = CODE
@@ -82,7 +85,7 @@ class Determinism:
                 node=node,
                 path=file.path,
                 code=CODE,
-                message=f"{called}() не детерминирован; {said}",
+                message=f"{called}() is not deterministic; {said}",
             )
 
     @staticmethod
@@ -91,7 +94,7 @@ class Determinism:
         called: str,
         instead: dict[str, str],
     ) -> str | None:
-        """Причина, по которой такой вызов запрещён, если он в таблице."""
+        """Why such a call is banned, if it is in the table."""
         return next(
             (
                 said

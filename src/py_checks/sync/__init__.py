@@ -1,14 +1,14 @@
-"""Файлы, которые библиотека собирает для проекта.
+"""Files the library builds for the project.
 
-Сегодня их два: контракты импортов для import-linter и `.env.example`.
-Настройки ruff, pyright и остальных инструментов библиотека не трогает: их
-приносит шаблон, и дальше они принадлежат проекту, который правит их как
-считает нужным.
+Today there are two: the import contracts for import-linter and
+`.env.example`. The library does not touch the settings of ruff, pyright and
+the other tools: the template brings them, and from then on they belong to
+the project, which edits them as it sees fit.
 
-Собирается то, что нельзя написать один раз: слой, которого нет на диске,
-ломает весь прогон import-linter, а раскладка за жизнь проекта меняется;
-список переменных живёт в полях классов настроек, и файл, который ведут рядом
-руками, расходится с ними молча.
+What gets built is what cannot be written once: a layer missing from disk
+breaks the whole import-linter run, and the layout changes over a project's
+life; the list of variables lives in the fields of the settings classes, and
+a file kept beside them by hand drifts from them silently.
 """
 
 from py_checks.sync._sync import planned, stale, write

@@ -1,4 +1,4 @@
-"""Каким приложение видит команду."""
+"""How the application sees a command."""
 
 from __future__ import annotations
 
@@ -9,11 +9,12 @@ if TYPE_CHECKING:
 
 
 class Registrar(Protocol):
-    """Функция, которая вешает команду на приложение.
+    """A function that hangs a command on the application.
 
-    Только так `_app` и знает о командах: имя, опции и справка остаются в
-    модуле команды, а приложение получает готовую регистрацию. Подпись одна и
-    та же и для `app.command(...)`, и для `app.add_typer(...)`.
+    This is the only way `_app` knows about commands: the name, the options and
+    the help stay in the command's module, and the application gets a finished
+    registration. The signature is the same for `app.command(...)` and for
+    `app.add_typer(...)`.
     """
 
     def __call__(self, *, app: typer.Typer) -> None: ...

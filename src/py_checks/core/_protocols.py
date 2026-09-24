@@ -1,4 +1,4 @@
-"""Каким библиотека видит правило."""
+"""How the library sees a rule."""
 
 from __future__ import annotations
 
@@ -15,42 +15,44 @@ if TYPE_CHECKING:
 
 
 class Scope(StrEnum):
-    """Что правилу дают на суд.
+    """What a rule is given to judge.
 
-    Вид объявляет само правило, а не группа entry points: так автор чужого
-    пакета пишет одну запись, а `list` и `explain` видят все правила разом, не
-    складывая два реестра в один.
+    The rule declares its kind itself, not the entry point group: that way the
+    author of a third-party package writes one record, and `list` and `explain`
+    see every rule at once without merging two registries into one.
     """
 
-    # Один файл, разобранный ядром: таких правил большинство.
+    # One file, parsed by the core: most rules are of this kind.
     FILE = "file"
 
-    # Корень проекта: манифест, согласие двух файлов репозитория между собой.
+    # The project root: the manifest, two files of the repository agreeing with each other.
     PROJECT = "project"
 
-    # То же, что `PROJECT`, но правилу нужна живая среда — база, сеть, долгий
-    # прогон. В обычный прогон такое не входит: его зовут по имени или в CI,
-    # иначе хук на коммит начинает ждать базу.
+    # The same as `PROJECT`, but the rule needs a live environment — a database,
+    # the network, a long run. Such a rule is not part of a normal run: it is
+    # called by name or in CI, otherwise the commit hook starts waiting for a
+    # database.
     ENVIRONMENT = "environment"
 
 
 @runtime_checkable
 class FileCheck(Protocol):
-    """Правило, которому хватает одного файла.
+    """A rule for which one file is enough.
 
-    Всё остальное — поиск файлов, разбор, настройки, вывод — делает ядро.
-    Проверка знает только своё условие и возвращает нарушения, ничего не
-    печатая: иначе формат вывода расползётся по сорока правилам.
+    Everything else — finding files, parsing, settings, output — the core
+    does. A check knows only its own condition and returns violations without
+    printing anything: otherwise the output format would spread across forty
+    rules.
     """
 
     code: ClassVar[str]
     Settings: ClassVar[type[CheckSettings]]
     scope: ClassVar[Scope]
 
-    # Слово группы, к которой правило принадлежит: `# signature-ok` снимает
-    # любую проверку из `signatures`. Пишется один раз на пакет, потому что
-    # человек помнит группу («это про подписи»), а не сорок кодов. Канонический
-    # `# check-ok: <код>` работает всегда и снимает ровно одно правило.
+    # The word of the group the rule belongs to: `# signature-ok` lifts any
+    # check from `signatures`. It is written once per package, because people
+    # remember the group ("this is about signatures"), not forty codes. The
+    # canonical `# check-ok: <code>` always works and lifts exactly one rule.
     marker: ClassVar[str]
 
     def run(
@@ -63,11 +65,12 @@ class FileCheck(Protocol):
 
 @runtime_checkable
 class ProjectCheck(Protocol):
-    """Правило, которому одного файла мало.
+    """A rule for which one file is not enough.
 
-    Манифест зависимостей, согласие двух файлов репозитория между собой — то,
-    что живёт не в исходнике, а в проекте. Такое правило вызывается один раз за
-    прогон и само решает, что ему прочитать; ядро даёт ему корень и настройки.
+    The dependency manifest, two files of the repository agreeing with each
+    other — what lives not in the source but in the project. Such a rule is
+    called once per run and decides itself what to read; the core gives it the
+    root and the settings.
     """
 
     code: ClassVar[str]
@@ -83,17 +86,18 @@ class ProjectCheck(Protocol):
     ) -> Iterator[Violation]: ...
 
 
-# Правило — это одно из двух: судящее файл или судящее проект. Там, где важно
-# лишь то, что у него есть код и описание (список, объяснение), годится любое.
+# A rule is one of two things: it judges a file or it judges the project.
+# Where all that matters is that it has a code and a description (the list,
+# the explanation), either will do.
 type Check = FileCheck | ProjectCheck
 
 
 def section_of(*, check: Check) -> str:
-    """Секция настроек правила: его код, если правило не сказало иначе.
+    """A rule's settings section: its code, unless the rule says otherwise.
 
-    Иначе говорят правила про раскладку: четыре из них читают одну таблицу
-    `[layout]`, потому что описывают одну и ту же директорию с четырёх сторон,
-    и четыре таблицы об одном разъезжались бы между собой. Друг о друге они
-    при этом не знают — знают только, из какой секции читать.
+    The layout rules say otherwise: four of them read one `[layout]` table,
+    because they describe the same directory from four sides, and four tables
+    about one thing would drift apart. They know nothing about each other —
+    only which section to read from.
     """
     return getattr(check, "section", check.code)

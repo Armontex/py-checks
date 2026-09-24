@@ -1,4 +1,4 @@
-"""Вывод нарушений."""
+"""Printing the violations."""
 
 from __future__ import annotations
 
@@ -22,11 +22,12 @@ def report(
     checked: int,
     console: Console | None = None,
 ) -> int:
-    """Печатает нарушения и возвращает код выхода.
+    """Prints the violations and returns the exit code.
 
-    Нарушения идут в stderr обычными строками: их читают редактор и CI, и
-    подсветка не должна мешать разбирать строку. Цвета `rich` отключает сам,
-    когда вывод идёт не в терминал, — а под pre-commit это всегда так.
+    Violations go to stderr as plain lines: the editor and CI read them, and
+    highlighting must not get in the way of parsing a line. `rich` turns
+    colours off by itself when the output is not a terminal — and under
+    pre-commit it never is.
     """
     console = console or Console(
         stderr=True,
@@ -39,7 +40,7 @@ def report(
             highlight=False,
         )
     if violations:
-        console.print(f"\n{len(violations)} нарушени(й) в {checked} файл(ах)", markup=False)
+        console.print(f"\n{len(violations)} violation(s) in {checked} file(s)", markup=False)
         return EXIT_VIOLATION
-    console.print(f"ok: проверено файлов — {checked}", markup=False)
+    console.print(f"ok: {checked} file(s) checked", markup=False)
     return EXIT_OK

@@ -1,9 +1,9 @@
-"""Схема, которую строят миграции, и схема, которую описывают модели."""
+"""The schema the migrations build, and the schema the models describe."""
 
 from __future__ import annotations
 
 import os
-import subprocess  # noqa: S404 — правило состоит в том, чтобы позвать alembic
+import subprocess  # noqa: S404 — calling alembic is what the rule is
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 
 CODE: Final = "schema-drift"
 
-# Чем alembic отвечает, когда дописывать нечего.
+# What alembic answers when there is nothing to add.
 IN_STEP: Final = "No new upgrade operations detected"
 
-# Так выходит удавшаяся команда; к коду выхода самой библиотеки это отношения
-# не имеет.
+# How a successful command exits; it has nothing to do with the library's own
+# exit code.
 DONE: Final = 0
 
 DATABASE: Final = "drift.db"
@@ -37,40 +37,43 @@ class SchemaDriftSettings(CheckSettings):
 
 
 class DriftError(RuntimeError):
-    """Правило не дошло до вердикта.
+    """The rule did not reach a verdict.
 
-    Своя ошибка, чтобы «не удалось посмотреть» никогда не читалось как
-    «смотреть не на что»: молчание правила означает, что расхождения нет.
+    An error of its own, so that "could not look" is never read as "nothing to
+    look at": the rule's silence means there is no disagreement.
     """
 
 
 class SchemaDrift:
-    """Падает, если модели и миграции описывают уже разные схемы.
+    """Fails if the models and the migrations already describe different schemas.
 
-    Модель поменяли, ревизию не написали — и дальше всё зависит от того, где
-    код встретится со схемой. Тесты на своей базе, поднятой из метаданных,
-    зелены; прод поднят миграциями и не знает о колонке, которой модель уже
-    пользуется. Расхождение всплывает не в ревью, а в первом запросе после
-    выкатки.
+    The model was changed, the revision was not written — and from there it
+    all depends on where the code meets the schema. The tests, on their own
+    database built from the metadata, are green; production was built by the
+    migrations and knows nothing of the column the model already uses. The
+    disagreement surfaces not in review but in the first query after the
+    release.
 
-    Статикой это не видно: одна схема написана декларациями, вторая — историей
-    правок, и сравнивает их только тот, кто умеет обе выполнить. Поэтому
-    правило поднимает свою пустую базу во временной директории, накатывает её
-    до `head` и спрашивает `alembic check`, что он дописал бы сам. Своя, а не
-    база разработчика: та стоит на ревизии, на которой её оставили, — ровно то
-    состояние, которому правило и не верит.
+    Static analysis cannot see it: one schema is written as declarations, the
+    other as a history of changes, and only something that can run both can
+    compare them. So the rule brings up an empty database of its own in a
+    temporary directory, migrates it to `head` and asks `alembic check` what
+    it would add itself. Its own, not the developer's database: that one
+    stands at whatever revision it was left at — exactly the state the rule
+    does not trust.
 
-    Живая база и запуск alembic — причина, по которой правило объявлено
-    `ENVIRONMENT`: в хуке на коммит ему не место. Его зовут в CI —
-    `py-checks run --all` или `--select schema-drift`.
+    A live database and a run of alembic are why the rule is declared
+    `ENVIRONMENT`: it has no place in a commit hook. It is called in CI —
+    `py-checks run --all` or `--select schema-drift`.
 
-    Две оговорки. `env.py` проекта обязан читать адрес базы из переменной
-    окружения (`variable`): если он берёт его из своих настроек, правило
-    подсунуть пустую базу не может и накатит миграции на ту, что найдёт.
-    Адрес по умолчанию — SQLite, а ему нужен установленный `aiosqlite`; где
-    его нет, в `url` пишут адрес одноразовой базы CI.
+    Two caveats. The project's `env.py` must read the database address from an
+    environment variable (`variable`): if it takes it from its own settings,
+    the rule cannot slip an empty database underneath and will migrate
+    whichever one it finds. The default address is SQLite, which needs
+    `aiosqlite` installed; where it is missing, `url` holds the address of a
+    throwaway CI database.
 
-    Настройки: `versions`, `models`, `variable`, `url`, `alembic`.
+    Settings: `versions`, `models`, `variable`, `url`, `alembic`.
     """
 
     code: ClassVar[str] = CODE
@@ -118,10 +121,10 @@ class SchemaDrift:
                 limits=limits,
                 message=cls._joined(
                     lines=(
-                        "модели описывают схему, которую миграции не строят",
+                        "the models describe a schema the migrations do not build",
                         found,
-                        "напиши ревизию: `alembic revision --autogenerate`, "
-                        "потом прочитай, что она пишет",
+                        "write a revision: `alembic revision --autogenerate`, "
+                        "then read what it writes",
                     ),
                 ),
             )
@@ -133,7 +136,7 @@ class SchemaDrift:
         root: Path,
         limits: SchemaDriftSettings,
     ) -> str | None:
-        """Что alembic дописал бы к истории, или `None`, когда дописывать нечего."""
+        """What alembic would add to the history, or `None` when there is nothing to add."""
         with cls._database() as path:
             url = limits.url.format(path=path)
             cls._migrated(
@@ -178,7 +181,7 @@ class SchemaDrift:
             with tempfile.TemporaryDirectory() as directory:
                 yield Path(directory) / DATABASE
         except OSError as unwritable:
-            raise DriftError(f"негде держать базу: {unwritable}") from unwritable
+            raise DriftError(f"nowhere to keep the database: {unwritable}") from unwritable
 
     @classmethod
     def _migrated(
@@ -188,7 +191,7 @@ class SchemaDrift:
         url: str,
         limits: SchemaDriftSettings,
     ) -> None:
-        """Поднять пустую базу до `head` или сказать, почему не вышло."""
+        """Bring an empty database up to `head`, or say why that failed."""
         upgraded = cls._finished(
             command=(*limits.alembic, "upgrade", "head"),
             root=root,
@@ -199,7 +202,7 @@ class SchemaDrift:
             raise DriftError(
                 cls._joined(
                     lines=(
-                        f"`alembic upgrade head` вышел с {upgraded.returncode}",
+                        f"`alembic upgrade head` exited with {upgraded.returncode}",
                         cls._said(finished=upgraded),
                     ),
                 )
@@ -231,12 +234,12 @@ class SchemaDrift:
         url: str,
         limits: SchemaDriftSettings,
     ) -> subprocess.CompletedProcess[str]:
-        """alembic зовётся тем же именем, что и в окружении вызвавшего.
+        """alembic is called by the same name as in the caller's environment.
 
-        Прогон уже идёт из окружения проекта, и второй `uv run` внутри него
-        пересобрал бы это окружение посреди проверки.
+        The run is already inside the project's environment, and a second
+        `uv run` inside it would rebuild that environment mid-check.
         """
-        return subprocess.run(  # noqa: S603 — список аргументов собран здесь же
+        return subprocess.run(  # noqa: S603 — the argument list is built right here
             command,
             cwd=root,
             capture_output=True,
@@ -251,7 +254,7 @@ class SchemaDrift:
 
     @staticmethod
     def _joined(*, lines: tuple[str, ...]) -> str:
-        """Строки сообщения без пустых: молчаливый alembic не должен добавлять пустую."""
+        """The message's lines without empty ones: a silent alembic must not add one."""
         return "\n".join(line for line in lines if line)
 
     @staticmethod
@@ -261,7 +264,7 @@ class SchemaDrift:
         limits: SchemaDriftSettings,
         message: str,
     ) -> Violation:
-        """Нарушение указывает на папку ревизий: там же и починка — новой ревизией."""
+        """The violation points at the revisions folder: the fix, a new revision, goes there."""
         return Violation(
             path=root / limits.versions,
             line=1,

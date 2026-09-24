@@ -1,4 +1,4 @@
-"""Функции модуля и то, что о них знает только дерево."""
+"""A module's functions and what only the tree knows about them."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Final
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-# Единственный способ для метода не получить первый аргумент от интерпретатора.
+# The only way for a method not to get its first argument from the interpreter.
 STATIC: Final = "staticmethod"
 
 type Function = ast.FunctionDef | ast.AsyncFunctionDef
@@ -17,11 +17,12 @@ type Function = ast.FunctionDef | ast.AsyncFunctionDef
 
 @dataclass(frozen=True, slots=True)
 class Definition:
-    """Функция, её имя вида `Класс.метод` и то, метод ли она.
+    """A function, its name in the form `Class.method`, and whether it is a method.
 
-    Первый аргумент метода передаёт интерпретатор, и автор подписи тут ни при
-    чём — но узнаётся это по месту, а не по имени. `self` в обычной функции или
-    в `@staticmethod` — обычный аргумент.
+    The first argument of a method is passed by the interpreter, and the
+    author of the signature has nothing to do with it, but that is known by
+    position, not by name. `self` in a plain function or in a `@staticmethod`
+    is an ordinary argument.
     """
 
     name: str
@@ -35,11 +36,11 @@ def definitions(
     prefix: str = "",
     method: bool = False,
 ) -> Iterator[Definition]:
-    """Все функции дерева под именами вида `Класс.метод` или `внешняя.вложенная`.
+    """Every function in the tree, named `Class.method` or `outer.inner`.
 
-    Заодно запоминается, тело какого узла мы разбираем: функция в теле класса —
-    метод, а функция внутри метода — уже нет, и первый аргумент ей никто не
-    передаёт.
+    Along the way it remembers whose body is being read: a function in a class
+    body is a method, while a function inside a method is not, and nobody
+    passes it a first argument.
     """
     for child in ast.iter_child_nodes(node):
         match child:
@@ -69,7 +70,7 @@ def definitions(
 
 
 def receiver(*, definition: Definition) -> int:
-    """Сколько первых аргументов передаёт интерпретатор: один у метода, иначе ноль."""
+    """How many leading arguments the interpreter passes: one for a method, zero otherwise."""
     if not definition.method or static(node=definition.node):
         return 0
     return 1
@@ -88,5 +89,5 @@ def name(*, node: ast.expr) -> str:
 
 
 def signature_end(*, node: Function) -> int:
-    """Последняя строка подписи: на ней стоит пометка, если подпись в столбик."""
+    """The last line of the signature: the mark goes there when the signature is in a column."""
     return max(node.body[0].lineno - 1, node.lineno)

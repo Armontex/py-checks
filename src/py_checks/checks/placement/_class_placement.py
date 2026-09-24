@@ -1,4 +1,4 @@
-"""Класс лежит там, где лежат классы его вида."""
+"""A class lives where classes of its kind live."""
 
 from __future__ import annotations
 
@@ -20,23 +20,24 @@ CODE: Final = "class-placement"
 
 
 class ClassPlacement:
-    """Падает, если класс лежит не там, где лежат классы его вида.
+    """Fails when a class lies somewhere other than where its kind lives.
 
-    Директория называет вид, и читатель находит порт, не открывая файла.
-    Дом объявляется в раскладке: `home` — про вид объявления, `suffix` — про
-    имя. Адресов у одного вида может быть несколько, и тогда дом — любой из
-    них: порт репозитория и его реализация законно лежат в двух местах, а
-    словарь отказов — и в `errors/`, и в `exceptions.py`.
+    The directory names the kind, and the reader finds the port without
+    opening a file. A home is declared in the layout: `home` is about the kind
+    of declaration, `suffix` about the name. One kind may have several
+    addresses, and then any of them is home: a repository port and its
+    implementation lawfully live in two places, and the refusal vocabulary in
+    both `errors/` and `exceptions.py`.
 
-    Вид, о котором раскладка не сказала ни слова, правилу не подсуден: пока
-    `dataclass` не назвал своего дома, он лежит где угодно. Назвал — значит
-    перечислены все дома, в том числе доменный: value object тоже dataclass.
+    A kind the layout says nothing about is not the rule's business: until
+    `dataclass` has named its home, it lives anywhere. Once it has, every home
+    is on the list, the domain included: a value object is a dataclass too.
 
-    `area` сужает притязание до части дерева: соглашение про `dto` написано
-    про слой приложения, а dataclass в загрузчике или в наблюдаемости — это
-    способ сложить три поля рядом, а не предмет разговора.
+    `area` narrows the claim to part of the tree: the `dto` convention is
+    written for the application layer, while a dataclass in the bootstrap or
+    in observability is a way to put three fields side by side, not a subject.
 
-    Настройки: `home`, `suffix` и `area` в общей таблице `[layout]`.
+    Settings: `home`, `suffix` and `area` in the shared `[layout]` table.
     """
 
     code: ClassVar[str] = CODE
@@ -74,6 +75,6 @@ class ClassPlacement:
                 code=CODE,
                 message=(
                     f"{declared.name} {homes[0].said}; "
-                    f"ему место в {', '.join(home.address for home in homes)}"
+                    f"it belongs in {', '.join(home.address for home in homes)}"
                 ),
             )

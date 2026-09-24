@@ -1,16 +1,16 @@
-"""Размещение и форма модуля.
+"""Placement and the shape of a module.
 
-Где лежит класс, что допускает директория, какой класс модуль обязан объявить
-первым. Соглашения, привязанные к раскладке директорий: готовых инструментов
-под них нет — семейство ArchUnit для Python занято импортами, а движки образцов
-(Semgrep, ast-grep) умеют запрещать, но не разрешать.
+Where a class lives, what a directory allows, which class a module must
+declare first. These are conventions tied to the directory layout, and no
+ready tool covers them: the ArchUnit family for Python is busy with imports,
+and pattern engines (Semgrep, ast-grep) can forbid but not permit.
 
-Все четыре правила читают общую таблицу `[layout]` — блок на директорию: они
-говорят об одном и том же с четырёх сторон, и четыре таблицы об одном
-разъезжались бы между собой. Живёт она в `checks/_layout.py`, потому что из
-той же таблицы читает и `model-boundary`: раскладка — слово проекта, а не
-собственность одной группы правил. Таблица проектная: имена `use_cases`, `dto`,
-`schemas` библиотека знать не может. Без неё правила молчат.
+All four rules read one shared `[layout]` table, a block per directory: they
+speak about the same thing from four sides, and four tables about one thing
+would drift apart. It lives in `checks/_layout.py` because `model-boundary`
+reads the same table: the layout is the project's word, not the property of
+one group of rules. The table belongs to the project: the library cannot know
+names like `use_cases`, `dto` or `schemas`. Without it the rules stay silent.
 """
 
 from py_checks.checks._layout import SECTION, Directory, Layout, Operation, Orm

@@ -1,4 +1,4 @@
-"""dataclass объявлен так, чтобы значение оставалось значением."""
+"""A dataclass is declared so that a value stays a value."""
 
 from __future__ import annotations
 
@@ -26,21 +26,22 @@ class FrozenDataclassesSettings(ZonedSettings):
 
 
 class FrozenDataclasses:
-    """Падает, если dataclass в зоне объявлен без нужных аргументов.
+    """Fails when a dataclass in a zone is declared without the required arguments.
 
-    Объект дела — это значение: собрали один раз и не меняли, поэтому
-    существующий объект не может исподтишка съехать в недопустимое состояние.
-    `frozen` это покупает, `slots` не даёт опечатке завести атрибут, которого
-    никто не объявлял, а `kw_only` — перепутать местами два поля одного типа:
-    у значения из четырёх строк порядок помнит только автор.
+    A thing of the business is a value: assembled once and not changed, so an
+    existing object cannot quietly slide into a state that is not allowed.
+    `frozen` buys that, `slots` keeps a typo from inventing an attribute nobody
+    declared, and `kw_only` keeps two fields of the same type from swapping
+    places: in a value of four strings only the author remembers the order.
 
         @dataclass(frozen=True, slots=True, kw_only=True)
         class Price: ...
 
-    Зона проектная: держать значения неизменяемыми имеет смысл там, где живут
-    правила, а не в конфиге и не в проводке. Без зон правило молчит.
+    The zone is the project's: keeping values immutable makes sense where the
+    rules live, not in the config and not in the wiring. Without zones the rule
+    stays silent.
 
-    Настройки: `zones`, `options`.
+    Settings: `zones`, `options`.
     """
 
     code: ClassVar[str] = CODE
@@ -82,14 +83,14 @@ class FrozenDataclasses:
                 path=file.path,
                 code=CODE,
                 message=(
-                    f"dataclass {node.name} объявлен без "
+                    f"dataclass {node.name} is declared without "
                     f"{', '.join(f'{option}=True' for option in missing)}"
                 ),
             )
 
     @staticmethod
     def _decorator(*, node: ast.ClassDef) -> ast.expr | None:
-        """Декоратор `@dataclass`, с аргументами или без."""
+        """The `@dataclass` decorator, with arguments or without."""
         for item in node.decorator_list:
             called = item.func if isinstance(item, ast.Call) else item
             if name(node=called) == DECORATOR:
@@ -98,7 +99,7 @@ class FrozenDataclasses:
 
     @classmethod
     def _enabled(cls, *, node: ast.expr) -> frozenset[str]:
-        """Аргументы декоратора, выставленные в `True`."""
+        """The decorator's arguments set to `True`."""
         if not isinstance(node, ast.Call):
             return frozenset()
         return frozenset(

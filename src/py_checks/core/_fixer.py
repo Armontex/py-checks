@@ -1,4 +1,4 @@
-"""Наложение правок на файлы."""
+"""Applying edits to files."""
 
 from __future__ import annotations
 
@@ -15,11 +15,11 @@ if TYPE_CHECKING:
 
 
 def fix(*, violations: Sequence[Violation]) -> tuple[list[Path], list[Violation]]:
-    """Исправить, что умеем; вернуть изменённые файлы и то, что осталось.
+    """Fix what can be fixed; return the changed files and what is left.
 
-    Нарушение без правки — не провал автофикса, а честный ответ: `*args`
-    исправить нельзя, имена аргументов придумывает автор. Такие нарушения
-    возвращаются и попадают в отчёт как обычно.
+    A violation without an edit is not a failure of the autofix but an honest
+    answer: `*args` cannot be fixed, the argument names are the author's to
+    choose. Such violations are returned and go into the report as usual.
     """
     grouped: dict[Path, list[Violation]] = defaultdict(list)
     for violation in violations:

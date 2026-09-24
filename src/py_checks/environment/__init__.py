@@ -1,10 +1,10 @@
-"""Пример файла окружения, собранный из классов настроек проекта.
+"""An example environment file, built from the project's settings classes.
 
-Имя переменной знает поле — оно объявляет его `validation_alias`, и правило
-`config-fields` за этим следит. Значит, список переменных выводится из тех же
-классов, что их читают, и файл, который его перечисляет, нет смысла вести
-рукой: он расходится молча, а замечают это, когда переменной не оказалось на
-проде.
+The field knows the variable's name — it declares it as `validation_alias`,
+and the `config-fields` rule sees to that. So the list of variables follows
+from the same classes that read them, and a file listing them is not worth
+keeping by hand: it drifts silently, and that is noticed when a variable turns
+out to be missing in production.
 """
 
 from py_checks.environment._constants import FILE, SECTION

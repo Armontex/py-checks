@@ -1,11 +1,12 @@
-"""Совпадение адреса с путём.
+"""Matching an address against a path.
 
-Адрес в настройках — не префикс и не имя директории, а подряд идущие куски
-пути: `application/use_cases` находится и внутри `modules/<имя>/`. Правила
-спрашивают этим, лежит ли файл в названном месте; команда `doctor` — тем же
-самым, существует ли вообще директория, о которой говорит настройка. Вопрос
-один, значит и ответчик один: два похожих сравнения разъехались бы, и `doctor`
-успокаивал бы насчёт адреса, мимо которого правило проходит.
+An address in the settings is not a prefix and not a directory name but
+consecutive pieces of a path: `application/use_cases` is found inside
+`modules/<name>/` as well. Rules use it to ask whether a file sits in the named
+place; the `doctor` command uses the same thing to ask whether the directory a
+setting speaks of exists at all. One question, so one answerer: two similar
+comparisons would drift apart, and `doctor` would give reassurance about an
+address the rule walks past.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from typing import Final
 
 SEPARATOR: Final = "/"
 
-# Один любой кусок пути: `modules/*/domain` — домен любого модуля.
+# Any one piece of a path: `modules/*/domain` is the domain of any module.
 ANY: Final = "*"
 
 
@@ -23,10 +24,11 @@ def depth(
     parts: tuple[str, ...],
     path: str,
 ) -> int | None:
-    """Конец последнего вхождения подряд идущих кусков пути, или `None`.
+    """The end of the last occurrence of consecutive path pieces, or `None`.
 
-    Конец, а не начало: сравнивать вложенность двух адресов разной длины можно
-    только по тому, где они кончаются, — глубже тот, кто кончается позже.
+    The end, not the start: the nesting of two addresses of different length
+    can only be compared by where they end — the one that ends later is
+    deeper.
     """
     needle = tuple(path.split(SEPARATOR))
     span = len(needle)

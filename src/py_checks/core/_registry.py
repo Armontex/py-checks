@@ -1,4 +1,4 @@
-"""Какие проверки существуют и как их находят."""
+"""Which checks exist and how they are found."""
 
 from __future__ import annotations
 
@@ -19,11 +19,12 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class Checks:
-    """Правила, разобранные по тому, что им дают: файл или корень проекта.
+    """The rules, sorted by what they are given: a file or the project root.
 
-    Один и тот же вид описывает и всё, что установлено, и то, что выбрали на
-    этот прогон, — поэтому выбор не превращается в развилку у каждого, кто его
-    получает: прогон, список и объяснение говорят об одном и том же наборе.
+    One and the same shape describes both everything installed and what was
+    picked for this run — so the choice does not turn into a branch for
+    everyone who receives it: the run, the list and the explanation all speak
+    of the same set.
     """
 
     files: dict[str, FileCheck]
@@ -31,11 +32,11 @@ class Checks:
 
     @property
     def listed(self) -> dict[str, Check]:
-        """Все правила по коду, независимо от вида."""
+        """Every rule by code, whatever its kind."""
         return {**self.files, **self.project}
 
     def only(self, *, codes: Collection[str]) -> Checks:
-        """Тот же набор, суженный до названных кодов."""
+        """The same set, narrowed to the named codes."""
         return Checks(
             files={code: check for code, check in self.files.items() if code in codes},
             project={code: check for code, check in self.project.items() if code in codes},
@@ -44,14 +45,15 @@ class Checks:
 
 @cache
 def available() -> Checks:
-    """Все проверки, объявленные через entry points.
+    """Every check declared through entry points.
 
-    Так проект или команда добавляет своё правило: ставит рядом свой пакет с
-    записью в этой же группе, а библиотеку форкать не нужно. Вид правила —
-    файл ему дают или корень проекта — объявляет оно само.
+    This is how a project or a team adds a rule of its own: it installs its
+    own package alongside, with a record in this same group, and the library
+    needs no fork. The kind of rule — whether it is given a file or the
+    project root — the rule declares itself.
 
-    Читается один раз: загрузка означает импорт каждого объявленного модуля, а
-    спрашивают реестр и прогон, и выбор, и объяснение.
+    Read once: loading means importing every declared module, and the
+    registry is asked by the run, the selection and the explanation alike.
     """
     files: dict[str, FileCheck] = {}
     project: dict[str, ProjectCheck] = {}

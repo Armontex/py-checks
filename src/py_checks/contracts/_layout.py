@@ -1,8 +1,9 @@
-"""Где в проекте лежат слои.
+"""Where the project's layers are.
 
-Контракт с несуществующим модулем валит весь прогон import-linter, поэтому
-генератор сначала смотрит, что на диске есть. Подстановка (`pkg.modules.*.domain`)
-ничего не ломает, когда не находит ничего, — её можно писать всегда.
+A contract naming a module that does not exist fails the whole import-linter
+run, so the generator first looks at what is on disk. A wildcard
+(`pkg.modules.*.domain`) breaks nothing when it matches nothing — it can
+always be written.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ def package(
     root: Path,
     src: Path,
 ) -> str | None:
-    """Корневой пакет проекта: единственный пакет внутри `src`."""
+    """The project's root package: the only package inside `src`."""
     source = root / src
     if not source.is_dir():
         return None
@@ -41,7 +42,7 @@ def expressions(
     package: str,
     layer: str,
 ) -> tuple[str, ...]:
-    """Как назвать слой в контракте: сам по себе, внутри модулей, или никак."""
+    """How a contract names the layer: on its own, inside the modules, or not at all."""
     found: list[str] = []
     if (root / src / package / layer).is_dir():
         found.append(f"{package}.{layer}")

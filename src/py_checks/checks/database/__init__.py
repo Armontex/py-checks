@@ -1,9 +1,11 @@
-"""База данных.
+"""The database.
 
-Граница транзакции, материал колонки, форма запроса. Готового тут почти нет:
-`pytest-alembic` отвечает на откат миграции, `alembic check` — на расхождение
-моделей и миграций, но звать его приходится самим: ему нужна живая база,
-поэтому `schema-drift` объявлен `ENVIRONMENT`. Остальное — соглашения проекта.
+The transaction boundary, the material of a column, the shape of a statement.
+Little of this exists off the shelf: `pytest-alembic` answers for rolling a
+migration back, `alembic check` for models and migrations disagreeing, but
+somebody has to call it: it needs a live database, which is why
+`schema-drift` is declared `ENVIRONMENT`. The rest is the project's own
+conventions.
 """
 
 from py_checks.checks.database._bound_checks import BoundChecks, BoundChecksSettings

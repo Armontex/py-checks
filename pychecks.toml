@@ -22,4 +22,7 @@ checks = ["checks", "core", "config"]
 contracts = ["contracts", "config"]
 environment = ["environment", "config"]
 sync = ["sync", "contracts", "environment", "config"]
-cli = ["cli", "sync", "contracts", "environment", "core", "config"]
+# Гейт зовёт mutmut и git и ничего не печатает: что сказать и с каким кодом
+# выйти, решает `cli`.
+mutation = ["mutation", "config"]
+cli = ["cli", "sync", "contracts", "environment", "mutation", "core", "config"]

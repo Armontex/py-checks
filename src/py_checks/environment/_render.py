@@ -1,4 +1,4 @@
-"""Сборка `.env.example` из классов настроек проекта."""
+"""Building `.env.example` from the project's settings classes."""
 
 from __future__ import annotations
 
@@ -23,15 +23,15 @@ if TYPE_CHECKING:
     from py_checks.config import Config
 
 HEADER: Final = """\
-# Переменные окружения, которые читает сервис. Файл собирает `py-checks sync`
-# из классов настроек, перечисленных в [{section}] — править его нечего,
-# следующий sync перезапишет. Значение по умолчанию здесь для того, чтобы его
-# было видно, а не потому, что переменную обязательно задавать.
+# Environment variables the service reads. `py-checks sync` builds this file
+# from the settings classes listed in [{section}] — there is nothing to edit
+# here, the next sync overwrites it. A default is here so that it can be seen,
+# not because the variable has to be set.
 """
 
 SEPARATOR: Final = ":"
 
-# Ширина комментария: та же, по которой переносят текст в самих докстрингах.
+# Comment width: the same that the docstrings themselves are wrapped to.
 WIDTH: Final = 77
 
 
@@ -40,7 +40,7 @@ def render(
     root: Path,
     config: Config,
 ) -> tuple[Path, str] | None:
-    """Путь и текст файла; `None`, если проект не объявил ни одного класса."""
+    """The file's path and text; `None` if the project declared no class."""
     declared = example(config=config)
     if not declared.settings:
         return None
@@ -73,15 +73,16 @@ def _imported(
     root: Path,
     src: Path,
 ) -> type[BaseModel]:
-    """Класс настроек по записи `модуль:Класс`.
+    """A settings class from a `module:Class` record.
 
-    Импорт, а не чтение исходника: имя переменной — значение атрибута поля, и
-    собрано оно вызовом (`AliasChoices(...)`, имя, посчитанное при создании
-    класса). Прочитать его текстом значит выполнить этот вызов самому.
+    An import rather than reading the source: the variable's name is the value
+    of a field attribute, and it is assembled by a call (`AliasChoices(...)`, a
+    name computed when the class is created). Reading it as text would mean
+    performing that call yourself.
     """
     module, _, attribute = path.partition(SEPARATOR)
     if not attribute:
-        message = f"[{SECTION}]: {path!r} — нужна запись вида `модуль:Класс`"
+        message = f"[{SECTION}]: {path!r} — expected a record of the form `module:Class`"
         raise ConfigError(message)
     _reachable(
         root=root,
@@ -90,9 +91,9 @@ def _imported(
     try:
         found = getattr(importlib.import_module(module), attribute)
     except (ImportError, AttributeError) as error:
-        raise ConfigError(f"[{SECTION}]: {path!r} не импортируется: {error}") from error
+        raise ConfigError(f"[{SECTION}]: {path!r} cannot be imported: {error}") from error
     if not (isinstance(found, type) and issubclass(found, BaseModel)):
-        message = f"[{SECTION}]: {path!r} — не модель pydantic"
+        message = f"[{SECTION}]: {path!r} — not a pydantic model"
         raise ConfigError(message)
     return found
 
@@ -102,7 +103,7 @@ def _reachable(
     root: Path,
     src: Path,
 ) -> None:
-    """Дать импорту найти пакет проекта, даже если проект не установлен."""
+    """Let the import find the project's package even if the project is not installed."""
     for directory in (root / src, root):
         name = str(directory)
         if directory.is_dir() and name not in sys.path:
@@ -114,11 +115,11 @@ def _blocks(
     model: type[BaseModel],
     seen: set[type[BaseModel]],
 ) -> list[str]:
-    """Класс и вложенные в него секции, каждая своим куском.
+    """A class and the sections nested in it, each as a block of its own.
 
-    Проекту хватает назвать корневой класс: секции он и так перечислил — в
-    собственных полях, — и повторять их список в настройках значит завести
-    второй, который разойдётся с первым.
+    Naming the root class is enough for a project: it has already listed the
+    sections — in its own fields — and repeating that list in the settings
+    would start a second one that drifts from the first.
     """
     if model in seen:
         return []
@@ -140,28 +141,28 @@ def _blocks(
             continue
         lines.extend(_commented(text=field.description))
         lines.append(f"{name}={_value(field=field)}")
-    # Корень, у которого своих переменных нет, в файл не едет: заголовок с
-    # докстрингом и пустотой под ним ничего не сообщает.
+    # A root with no variables of its own stays out of the file: a heading with
+    # a docstring and nothing under it says nothing.
     own = [] if len(lines) == 1 or not _variables(lines=lines) else ["\n".join(lines) + "\n"]
     return own + nested
 
 
 def _variables(*, lines: list[str]) -> bool:
-    """Есть ли в куске хоть одна переменная, а не одни комментарии."""
+    """Whether the block has at least one variable rather than only comments."""
     return any(not line.startswith("#") for line in lines)
 
 
 def _origin(*, model: type[BaseModel]) -> str:
-    """Как класс записывают в настройках: `модуль:Класс`."""
+    """How the class is written in the settings: `module:Class`."""
     return f"{model.__module__}{SEPARATOR}{model.__qualname__}"
 
 
 def _section(*, field: FieldInfo) -> type[BaseModel] | None:
-    """Вложенная секция настроек, если поле — она.
+    """The nested settings section, if the field is one.
 
-    Секция узнаётся по типу поля: `default_factory` бывает и у обычного
-    значения, а модель в аннотации — это ровно «здесь начинается ещё одна
-    группа переменных».
+    A section is recognised by the field's type: an ordinary value can have a
+    `default_factory` too, while a model in the annotation means exactly
+    "another group of variables starts here".
     """
     annotation = field.annotation
     if isinstance(annotation, type) and issubclass(annotation, BaseModel):
@@ -170,10 +171,10 @@ def _section(*, field: FieldInfo) -> type[BaseModel] | None:
 
 
 def _said(*, model: type[BaseModel]) -> str | None:
-    """Первый абзац докстринга класса: чем эта секция занимается.
+    """The first paragraph of the class docstring: what this section is for.
 
-    Абзац, а не строка: докстринг переносят по ширине файла, и первая строка
-    обрывается на середине фразы.
+    A paragraph, not a line: a docstring is wrapped to the file's width, and
+    its first line breaks off in the middle of a sentence.
     """
     if model.__doc__ is None:
         return None
@@ -182,17 +183,17 @@ def _said(*, model: type[BaseModel]) -> str | None:
 
 
 def _commented(*, text: str | None) -> list[str]:
-    """Текст как комментарий, разложенный по ширине строки."""
+    """Text as a comment, wrapped to the line width."""
     if not text:
         return []
     return [f"# {line}" for line in wrap(text, width=WIDTH)]
 
 
 def _variable(*, field: FieldInfo) -> str | None:
-    """Имя переменной, которую читает поле; `None` — если поле не переменная.
+    """The name of the variable the field reads; `None` if the field is not one.
 
-    Поле, собранное фабрикой, — вложенная секция: переменные читают её
-    собственные поля, а у неё самой их нет.
+    A field built by a factory is a nested section: the variables are read by
+    its own fields, and it has none itself.
     """
     if field.default_factory is not None:
         return None
@@ -205,7 +206,7 @@ def _variable(*, field: FieldInfo) -> str | None:
 
 
 def _value(*, field: FieldInfo) -> str:
-    """Значение по умолчанию так, как его пишут в файле окружения."""
+    """The default, written the way an environment file writes it."""
     default = field.default
     if default is PydanticUndefined or default is None:
         return ""
@@ -221,8 +222,8 @@ def _written(*, value: Any) -> str:
         return _written(value=value.value)
     if isinstance(value, (str, int, float, Path)):
         return str(value)
-    # Составное значение pydantic-settings читает как JSON, а не как строку:
-    # список, записанный через запятую, он в поле не превратит.
+    # pydantic-settings reads a compound value as JSON, not as a string: a
+    # comma-separated list will not become a list in the field.
     return json.dumps(
         value,
         default=str,

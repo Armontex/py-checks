@@ -1,9 +1,10 @@
-"""Сигнатуры и тела.
+"""Signatures and bodies.
 
-Длина функции и модуля, глубина вложенности, требование писать сигнатуру
-полностью и раскладывать её по столбцу. Число аргументов судит
-`operation-shape` — там, где известно, какой класс операция и какая у неё
-дверь; вложенный `with` отдан ruff, правилу `SIM117` с автофиксом.
+The length of a function and of a module, the depth of nesting, and the
+demand that a signature is written out in full and laid out in a column. The
+number of arguments is judged by `operation-shape`, where it is known which
+class is the operation and what its door is; a nested `with` is left to ruff,
+to `SIM117` with its autofix.
 """
 
 from py_checks.checks.signatures._function_length import (

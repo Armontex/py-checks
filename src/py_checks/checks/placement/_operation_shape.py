@@ -1,4 +1,4 @@
-"""Операция — один класс, одна дверь и ничего рядом."""
+"""An operation is one class, one door and nothing beside it."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ STATIC: Final = "staticmethod"
 
 @dataclass(frozen=True, slots=True)
 class Shape:
-    """Форма операции этой директории: имя класса плюс то, что сказано в блоке."""
+    """The operation shape of this directory: the class name plus what the block says."""
 
     address: str
     suffix: str
@@ -40,26 +40,28 @@ class Shape:
 
 
 class OperationShape:
-    """Падает, если операция устроена не как операция.
+    """Fails when an operation is not shaped like an operation.
 
-    Вход двери ограничен по числу аргументов, если предел задан: то, что
-    пришло снаружи, длиннее нескольких полей — это команда, запрос или DTO.
+    The door's entrance is limited in arguments when a limit is set: whatever
+    came from outside and is longer than a few fields is a command, a query or
+    a DTO.
 
-    Рядом с операцией не стоит ничего: ни второй класс, ни функция — ни выше,
-    ни ниже. Хелпер перед предметом — абзац, который читатель пролистывает;
-    хелпер после — тот же хелпер, ничем не разделяемый: нужен операции — стал
-    приватным методом, нужен двоим — переехал туда, где лежит общее.
+    Nothing stands beside the operation: no second class, no function, neither
+    above nor below. A helper before the subject is a paragraph the reader
+    skims; a helper after it is the same helper, shared with nobody: if the
+    operation needs it, it becomes a private method; if two need it, it moves
+    to where the shared code lives.
 
-    Константы и алиасы стоять могут: имя читают там, где им пользуются.
-    Перечисление — не может, в отличие от других директорий: словарь — это
-    класс, и операция, которой он понадобился, называет то, чем её модуль не
-    владеет.
+    Constants and aliases may stand there: a name is read where it is used.
+    An enum may not, unlike in other directories: a vocabulary is a class, and
+    an operation that needed one is naming something its module does not own.
 
-    `__init__.py`, пустой модуль и модуль с подчёркиванием правилу не подсудны.
-    Модуль, не объявивший операции вовсе, — тоже: об этом говорит
-    `required-class`, и второе мнение сообщило бы одну ошибку дважды.
+    `__init__.py`, an empty module and a module with a leading underscore are
+    left alone. So is a module that declared no operation at all: that is
+    `required-class`'s to say, and a second opinion would report one mistake
+    twice.
 
-    Настройка: `operation` в общей таблице `[layout]`, рядом с `suffix`.
+    Settings: `operation` in the shared `[layout]` table, beside `suffix`.
     """
 
     code: ClassVar[str] = CODE
@@ -131,11 +133,11 @@ class OperationShape:
         where: Place,
         layout: dict[str, Directory],
     ) -> Shape | None:
-        """Форма самой внутренней из совпавших директорий.
+        """The shape of the innermost matching directory.
 
-        Блоков, под которые попадает файл, может быть несколько:
-        `application/services` внутри `application` судит то, что названо
-        длиннее и лежит ближе.
+        A file may fall under several blocks: for `application/services`
+        inside `application`, the one with the longer name and the closer
+        place judges.
         """
         found = innermost(
             where=where,
@@ -148,7 +150,7 @@ class OperationShape:
         if found is None:
             return None
         address, directory = found
-        # Оба поля проверены при отборе выше: блок без них сюда не попадает.
+        # Both fields were checked by the filter above: a block without them never gets here.
         operation = directory.operation
         if operation is None or directory.suffix is None:
             return None
@@ -166,12 +168,12 @@ class OperationShape:
         declared: list[Declaration],
         rule: Shape,
     ) -> Declaration | None:
-        """Операция, ради которой существует модуль, — по имени, а не по месту.
+        """The operation the module exists for, found by name, not by position.
 
-        По месту было бы неверно: класс, по ошибке вставший выше операции, —
-        то самое, о чём правило и сообщает, — оказался бы предметом, и модуль
-        услышал бы, что у его словаря нет `execute()`. Одна ошибка — одна
-        жалоба.
+        By position would be wrong: a class placed above the operation by
+        mistake, the very thing the rule reports, would become the subject,
+        and the module would hear that its vocabulary has no `execute()`. One
+        mistake, one complaint.
         """
         classes = [one for one in declared if isinstance(one.node, ast.ClassDef)]
         named = [one for one in classes if one.name.endswith(rule.suffix)]
@@ -186,7 +188,7 @@ class OperationShape:
         subject: Declaration | None,
         rule: Shape,
     ) -> Iterator[Violation]:
-        """Всё, что встало рядом с операцией: второй класс или функция."""
+        """Everything that stands beside the operation: a second class or a function."""
         for one in declared:
             if one.kind is Kind.ALIAS or one is subject:
                 continue
@@ -195,8 +197,8 @@ class OperationShape:
                     file=file,
                     declared=one,
                     message=(
-                        f"{one.name}() стоит рядом с операцией; нужный ей хелпер — "
-                        f"приватный метод, нужный двоим — общий код"
+                        f"{one.name}() stands beside the operation; a helper it needs is "
+                        f"a private method, one that two need is shared code"
                     ),
                 )
                 continue
@@ -204,8 +206,8 @@ class OperationShape:
                 file=file,
                 declared=one,
                 message=(
-                    f"{one.name} стоит рядом с операцией; в {rule.address} модуль "
-                    f"объявляет один класс и больше ничего"
+                    f"{one.name} stands beside the operation; in {rule.address} a module "
+                    f"declares one class and nothing else"
                 ),
             )
 
@@ -218,7 +220,7 @@ class OperationShape:
         node: ast.ClassDef,
         rule: Shape,
     ) -> Iterator[Violation]:
-        """Единственная публичная дверь операции."""
+        """The operation's single public door."""
         if rule.method is None:
             return
         public = cls._public(node=node)
@@ -230,8 +232,8 @@ class OperationShape:
                 file=file,
                 declared=subject,
                 message=(
-                    f"у {subject.name} нет публичного метода; об операции просят "
-                    f"одним, и он называется {rule.method}()"
+                    f"{subject.name} has no public method; an operation is asked "
+                    f"through one, and it is called {rule.method}()"
                 ),
             )
             return
@@ -240,9 +242,9 @@ class OperationShape:
             path=file.path,
             code=CODE,
             message=(
-                f"{subject.name} предлагает {', '.join(f'{name}()' for name in names)}; "
-                f"у операции один публичный метод, и это {rule.method}() — "
-                f"остальные приватны или это другой класс"
+                f"{subject.name} offers {', '.join(f'{name}()' for name in names)}; "
+                f"an operation has one public method, and it is {rule.method}(); "
+                f"make the rest private or move them to another class"
             ),
         )
 
@@ -255,7 +257,7 @@ class OperationShape:
         node: ast.ClassDef,
         rule: Shape,
     ) -> Iterator[Violation]:
-        """Сколько аргументов занимает вход."""
+        """How many arguments the entrance takes."""
         if rule.max_arguments is None:
             return
         for method in cls._public(node=node):
@@ -267,18 +269,18 @@ class OperationShape:
                 path=file.path,
                 code=CODE,
                 message=(
-                    f"{subject.name}.{method.name} — аргументов {count}, предел "
-                    f"{rule.max_arguments}; передай команду, запрос или DTO"
+                    f"{subject.name}.{method.name} takes {count} arguments, the limit is "
+                    f"{rule.max_arguments}; pass a command, a query or a DTO"
                 ),
-                # Пометка снимается с любой строки подписи.
+                # The mark is accepted on any line of the signature.
                 end_line=max(method.body[0].lineno - 1, method.lineno),
             )
 
     @classmethod
     def _arguments(cls, *, node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
-        """Всё, что заполняет вызывающий; первый аргумент метода не в счёт.
+        """Everything the caller fills; the first argument of a method does not count.
 
-        По месту, а не по имени: `self` в `@staticmethod` — обычный аргумент.
+        By position, not by name: `self` in a `@staticmethod` is an ordinary argument.
         """
         receiver = 0 if cls._static(node=node) else 1
         named = [*node.args.posonlyargs, *node.args.args][receiver:]
@@ -302,7 +304,7 @@ class OperationShape:
         node: ast.ClassDef,
         rule: Shape,
     ) -> Iterator[Violation]:
-        """Тип, которого операция не держит, — в поле или в параметре."""
+        """A type the operation does not hold, in a field or in a parameter."""
         for annotation in cls._annotations(node=node):
             held = next(
                 (
@@ -320,17 +322,17 @@ class OperationShape:
                 path=file.path,
                 code=CODE,
                 message=(
-                    f"{subject.name} держит {held}; операции передают то, через что "
-                    f"она пишет, а транзакция остаётся вызывающему"
+                    f"{subject.name} holds {held}; an operation is handed what it writes "
+                    f"through, and the transaction stays with the caller"
                 ),
             )
 
     @staticmethod
     def _public(*, node: ast.ClassDef) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
-        """Методы, до которых может дотянуться вызывающий, в порядке объявления.
+        """The methods a caller can reach, in order of declaration.
 
-        `@property` считается: это то, что с операции читают, а предложить ей
-        нечего, кроме одного.
+        A `@property` counts: it is something read off the operation, and an
+        operation has nothing to offer but the one door.
         """
         return [
             statement
@@ -341,7 +343,7 @@ class OperationShape:
 
     @staticmethod
     def _annotations(*, node: ast.ClassDef) -> Iterator[ast.expr]:
-        """Всё, что класс объявил аннотацией: поля и параметры методов."""
+        """Everything the class declared with an annotation: fields and method parameters."""
         for child in ast.walk(node):
             match child:
                 case ast.AnnAssign(annotation=annotation):
@@ -353,13 +355,13 @@ class OperationShape:
 
     @staticmethod
     def _typed(*, node: ast.expr) -> Iterator[str]:
-        """Имена типов, написанные внутри аннотации."""
+        """The type names written inside an annotation."""
         for child in ast.walk(node):
             match child:
                 case ast.Name(id=name) | ast.Attribute(attr=name):
                     yield name
-                # Отложенная ссылка `uow: "PlacementUnitOfWork"` — та же
-                # зависимость, записанная ради проверяльщика типов.
+                # A forward reference `uow: "PlacementUnitOfWork"` is the same
+                # dependency, written for the type checker.
                 case ast.Constant(value=str() as text):
                     yield text
                 case _:

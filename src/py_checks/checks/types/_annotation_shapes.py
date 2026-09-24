@@ -1,4 +1,4 @@
-"""Форма, которая описывает значение беднее, чем оно есть."""
+"""A shape that describes a value more poorly than the value is."""
 
 from __future__ import annotations
 
@@ -27,24 +27,24 @@ class AnnotationShapesSettings(CheckSettings):
 
 
 class AnnotationShapes:
-    """Падает, если форма названа так, что поля в ней безымянные.
+    """Fails when a shape is named such that its fields have no names.
 
-    Словарь со строковым ключом читается как набор именованных полей, а
-    `TypedDict` или dataclass говорят, каких именно. Ключи бывают и настоящими
-    данными — мешок заголовков, носитель контекста трассировки, — и тогда
-    строка помечается: `# type-ok: annotation-shapes: своя форма у propagator`.
+    A dict with a string key reads as a set of named fields, and a `TypedDict`
+    or a dataclass says which ones. Sometimes the keys are genuine data — a bag
+    of headers, a trace-context carrier — and then the line is marked:
+    `# type-ok: annotation-shapes: the propagator's own shape`.
 
-    Кортеж фиксированной длины — тот, у которого последний аргумент не `...`, —
-    называет поля позициями: `row[2]` не говорит ничего и молча переживает
-    перестановку. Имена дают dataclass или `NamedTuple`, если это обязано
-    остаться кортежем.
+    A fixed-length tuple — one whose last argument is not `...` — names its
+    fields by position: `row[2]` says nothing and survives a reordering in
+    silence. Names come from a dataclass, or from a `NamedTuple` if it has to
+    stay a tuple.
 
-    Судится каждое место, где форма написана, а не только аннотации: словарь,
-    собранный внутри функции, — та же неописанная форма одним вызовом позже, и
-    обычно именно оттуда аннотация и взялась.
+    Every place the shape is written is judged, not only annotations: a dict
+    built inside a function is the same undescribed shape one call later, and
+    that is usually where the annotation came from in the first place.
 
-    Настройки: `keys` — какие ключи читаются как имена полей, `tuples` —
-    судить ли кортежи фиксированной длины.
+    Settings: `keys` — which keys read as field names, `tuples` — whether to
+    judge fixed-length tuples.
     """
 
     code: ClassVar[str] = CODE
@@ -77,8 +77,8 @@ class AnnotationShapes:
                     file=file,
                     node=node,
                     message=(
-                        f"{ast.unparse(node)} читается как набор именованных полей; "
-                        f"какие именно — скажет TypedDict или dataclass"
+                        f"{ast.unparse(node)} reads as a set of named fields; "
+                        f"a TypedDict or a dataclass will say which ones"
                     ),
                 )
             if written == TUPLE and limits.tuples and cls._fixed(arguments=arguments):
@@ -86,8 +86,8 @@ class AnnotationShapes:
                     file=file,
                     node=node,
                     message=(
-                        f"{ast.unparse(node)} называет поля позициями; имена даст dataclass, "
-                        f"а NamedTuple — если это обязано остаться кортежем"
+                        f"{ast.unparse(node)} names its fields by position; a dataclass gives "
+                        f"them names, or a NamedTuple if it has to stay a tuple"
                     ),
                 )
 
@@ -101,7 +101,7 @@ class AnnotationShapes:
 
     @staticmethod
     def _fixed(*, arguments: list[ast.expr]) -> bool:
-        """Кортеж, у которого длина написана: последний аргумент не `...`."""
+        """A tuple whose length is written out: the last argument is not `...`."""
         if not arguments:
             return False
         last = arguments[-1]

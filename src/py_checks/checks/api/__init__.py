@@ -1,8 +1,8 @@
-"""API и события.
+"""API and events.
 
-Вход в процесс объявляет в декораторе всё, что за него решили: механизм у
-фреймворка есть, требования писать — нет, а каждое его умолчание — решение,
-принятое не этим проектом.
+An entrance into the process declares in its decorator everything that was
+decided for it: the framework has the mechanism but does not demand it, and
+each of its defaults is a decision made by somebody other than this project.
 """
 
 from py_checks.checks.api._edge_declarations import (

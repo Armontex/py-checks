@@ -1,4 +1,4 @@
-"""Глубина вложенности управляющих конструкций."""
+"""The nesting depth of control structures."""
 
 from __future__ import annotations
 
@@ -18,9 +18,9 @@ if TYPE_CHECKING:
 
 CODE: Final = "nesting"
 
-# Виды, о которых правило умеет говорить. `with` в списке есть, но держать его
-# в таблице проекту незачем: вложенный `with` ловит ruff `SIM117`, с автофиксом
-# и с готовым ответом — «сделай один `with a, b:`».
+# The kinds the rule can speak about. `with` is on the list, but a project has
+# no reason to keep it in its table: a nested `with` is caught by ruff `SIM117`,
+# with an autofix and a ready answer, "make it one `with a, b:`".
 KINDS: Final[dict[str, tuple[type[ast.stmt], ...]]] = {
     "try": (ast.Try, ast.TryStar),
     "with": (ast.With, ast.AsyncWith),
@@ -30,12 +30,12 @@ KINDS: Final[dict[str, tuple[type[ast.stmt], ...]]] = {
     "match": (ast.Match,),
 }
 
-# Списки инструкций, которые узел держит в себе.
+# The statement lists a node holds inside it.
 BRANCHES: Final[tuple[str, ...]] = ("body", "orelse", "finalbody")
 
 
 class NestingSettings(CheckSettings):
-    """Секция `[nesting]`: конструкция — и её предел вложенности."""
+    """The `[nesting]` section: a construct and its nesting limit."""
 
     model_config = OPEN
 
@@ -49,29 +49,29 @@ class NestingSettings(CheckSettings):
     def _known(self) -> Self:
         unknown = sorted(set(self.limits) - set(KINDS))
         if unknown:
-            message = f"неизвестные конструкции: {', '.join(unknown)}"
+            message = f"unknown constructs: {', '.join(unknown)}"
             raise ValueError(message)
         if any(limit < 1 for limit in self.limits.values()):
-            message = "предел вложенности — целое от единицы"
+            message = "a nesting limit is an integer of at least one"
             raise ValueError(message)
         return self
 
 
 class Nesting:
-    """Падает, если управляющие конструкции вложены глубже предела.
+    """Fails when control structures are nested deeper than the limit.
 
-    Глубина — это место, где логику перестают читать и начинают расшифровывать.
-    Предел у каждого вида свой, потому что стоят они разного: второй `try`
-    внутри первого прячет, какая строка бросила, а второй уровень `if` — это
-    обычная развилка, и лишним становится третий.
+    Depth is where logic stops being read and starts being decoded. Each kind
+    has its own limit because they cost different things: a second `try`
+    inside the first hides which line threw, while a second level of `if` is
+    an ordinary fork, and the third is the one too many.
 
-    `elif` — ветка, а не уровень, и уровнем не считается. Написанный
-    развёрнуто `else:` с `if` внутри — считается: это и есть лишний отступ.
+    An `elif` is a branch, not a level, and is not counted as one. An `else:`
+    written out with an `if` inside is counted: that is the extra indent.
 
-    Вложенный `with` в таблицу лучше не класть: его ловит ruff `SIM117`, с
-    автофиксом и с ответом на месте.
+    A nested `with` is better left out of the table: ruff `SIM117` catches it,
+    with an autofix and the answer on the spot.
 
-    Настройка: имя конструкции — предел: `try = 1`.
+    Settings: the construct's name and its limit, `try = 1`.
     """
 
     code: ClassVar[str] = CODE
@@ -122,7 +122,7 @@ class Nesting:
                     node=node,
                     path=file.path,
                     code=CODE,
-                    message=f"{kind} вложен на {depth}, предел {limits[kind]}",
+                    message=f"{kind} nested {depth} deep, the limit is {limits[kind]}",
                 )
             depths = {**depths, kind: depth}
         for child in cls._children(node=node):
@@ -160,5 +160,5 @@ class Nesting:
         node: ast.If,
         child: ast.stmt,
     ) -> bool:
-        """`elif` стоит в той же колонке, что его `if`; написанный `else: if` — нет."""
+        """An `elif` stands in the same column as its `if`; a written-out `else: if` does not."""
         return isinstance(child, ast.If) and child.col_offset == node.col_offset

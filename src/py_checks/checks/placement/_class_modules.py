@@ -1,4 +1,4 @@
-"""Директория объявляет, что в ней живёт."""
+"""A directory declares what lives in it."""
 
 from __future__ import annotations
 
@@ -20,22 +20,24 @@ CODE: Final = "class-modules"
 
 
 class ClassModules:
-    """Падает, если в модуле лежит то, чего его директория не допускает.
+    """Fails when a module holds what its directory does not allow.
 
-    Директория называет, что в ней живёт, и рядом не садится ничего другого.
-    Хелпер, заехавший в модуль use case, — либо часть класса, и тогда он
-    статический метод внутри, либо общий, и тогда ему место там, где лежит
-    остальное общее. Перечисление, забредшее в `dto/`, — та же история.
+    A directory names what lives in it, and nothing else sits beside that. A
+    helper that drifted into a use case module is either part of the class,
+    and then it is a static method inside it, or shared, and then it belongs
+    where the rest of the shared code lives. An enum that wandered into `dto/`
+    is the same story.
 
-    Импорты, константы, блоки `if TYPE_CHECKING` и докстринг разрешены везде:
-    правило про то, что модуль объявляет, а не про то, чем он пользуется.
+    Imports, constants, `if TYPE_CHECKING` blocks and the docstring are allowed
+    everywhere: the rule is about what a module declares, not what it uses.
 
-    Адрес в заголовке блока — путь, а не имя директории, и это важно:
-    `application/services` держит класс-оркестратор, а `domain/services` —
-    функции, правила, сравнивающие два факта. Одно слово, два разных зверя.
-    Директории, о которой раскладка молчит, правило не касается.
+    The address in a block's heading is a path, not a directory name, and that
+    matters: `application/services` holds an orchestrating class, while
+    `domain/services` holds functions, rules that compare two facts. One word,
+    two different animals. A directory the layout says nothing about is not
+    the rule's business.
 
-    Настройка: `only` в общей таблице `[layout]`.
+    Settings: `only` in the shared `[layout]` table.
     """
 
     code: ClassVar[str] = CODE
@@ -67,7 +69,7 @@ class ClassModules:
             return
         address, directory = found
         for declared in declarations(tree=file.tree):
-            # Вид не виден — судить не о чем: это класс с базой из другого модуля.
+            # No kind to see, nothing to judge: a class with a base from another module.
             if declared.kind is None or declared.kind in directory.only:
                 continue
             yield Violation.from_node(
@@ -75,7 +77,7 @@ class ClassModules:
                 path=file.path,
                 code=CODE,
                 message=(
-                    f"{declared.name} — {declared.kind.said}; в {address} держат "
+                    f"{declared.name}: {declared.kind.said}; {address} holds only "
                     f"{', '.join(sorted(one.said for one in directory.only))}"
                 ),
             )
