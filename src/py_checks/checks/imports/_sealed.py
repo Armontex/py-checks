@@ -1,4 +1,4 @@
-"""Внутри запечатанной зоны чужих пакетов нет."""
+"""No foreign package inside a sealed zone."""
 
 from __future__ import annotations
 
@@ -25,21 +25,21 @@ class SealedSettings(CheckSettings):
 
 
 class SealedImports:
-    """Падает, если запечатанная зона импортирует чужой пакет.
+    """Fails when a sealed zone imports a foreign package.
 
-    Правила и интерфейсы вокруг них не знают ничего, кроме стандартной
-    библиотеки и кода самого сервиса: DTO здесь — dataclass, а не модель
-    фреймворка. Список разрешённого белый, а не чёрный, потому что каждый новый
-    фреймворк иначе попадает внутрь молча.
+    The rules and the interfaces around them know nothing but the standard
+    library and the service's own code: a DTO here is a dataclass, not a
+    framework's model. The list is an allow list, not a deny list, because
+    otherwise every new framework gets inside in silence.
 
-    Разрешения задаются по слою, а не на всю зону: слой, который руководит,
-    обычно имеет право сказать, что произошло, а слой с правилами не знает
-    ничего.
+    Permissions are given per layer, not for the whole zone: the layer that
+    leads usually has the right to say what happened, and the layer with the
+    rules knows nothing.
 
-    Какие зоны запечатаны, знает проект: библиотека не догадывается, что у него
-    называется `modules`. Без `zones` правило молчит.
+    The project knows which zones are sealed: the library cannot guess what it
+    calls `modules`. Without `zones` the rule stays silent.
 
-    Настройки: `zones`, `allow`.
+    Settings: `zones`, `allow`.
     """
 
     code: ClassVar[str] = CODE
@@ -60,10 +60,7 @@ class SealedImports:
             code=CODE,
         )
         where = place(file=file)
-        if where is None or not cls._sealed(
-            where=where,
-            zones=own.zones,
-        ):
+        if where is None or not where.inside(zones=own.zones):
             return
         allowed = cls._allowed(
             where=where,
@@ -77,18 +74,10 @@ class SealedImports:
                 path=file.path,
                 code=CODE,
                 message=(
-                    f"{imported.top} в {where.where}: запечатанная зона знает "
-                    "только стандартную библиотеку и код сервиса"
+                    f"{imported.top} in {where.where}: a sealed zone knows only "
+                    "the standard library and the service's own code"
                 ),
             )
-
-    @staticmethod
-    def _sealed(
-        *,
-        where: Place,
-        zones: tuple[str, ...],
-    ) -> bool:
-        return any(part in zones for part in where.parts)
 
     @staticmethod
     def _allowed(
@@ -96,5 +85,5 @@ class SealedImports:
         where: Place,
         allow: dict[str, tuple[str, ...]],
     ) -> frozenset[str]:
-        """Что можно этому слою: зона у файла одна, а слой внутри неё — свой."""
-        return frozenset(package for part in where.parts for package in allow.get(part, ()))
+        """What this layer may import: a file has one zone, but its own layer inside it."""
+        return frozenset(package for part in where.directories for package in allow.get(part, ()))

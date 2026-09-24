@@ -1,17 +1,17 @@
-"""Маркер, которым строка снимается с проверки.
+"""The mark that lifts a check from a line.
 
-Форма одна на все правила: `# check-ok: <код>[, <код>]: <причина>`. Правило про
-маркеры не знает ничего — нарушения снимает ядро, поэтому и синтаксис, и
-требование причины у всех проверок одинаковые.
+One shape for every rule: `# check-ok: <code>[, <code>]: <reason>`. A rule knows
+nothing about marks — the core lifts violations, so both the syntax and the
+demand for a reason are the same for every check.
 
-Код обязателен: маркер снимает названное правило, а не всё подряд. Причина
-обязательна по той же причине, по которой её требует `# noqa` в ревью: через
-полгода никто не помнит, чья это библиотека диктует подпись.
+The code is required: a mark lifts the named rule, not everything at once. The
+reason is required for the same reason `# noqa` needs one in review: half a
+year later nobody remembers whose library dictates the signature.
 
-У группы правил есть своё короткое слово — `# signature-ok` на весь пакет
-`signatures`. Оно снимает любую проверку группы: человек помнит группу («это
-про подписи»), а не сорок кодов. Канонический `# check-ok: <код>` снимает ровно
-одно правило и работает всегда.
+A group of rules has its own short word — `# signature-ok` for the whole
+`signatures` package. It lifts any check in the group: people remember the
+group ("this is about signatures"), not forty codes. The canonical
+`# check-ok: <code>` lifts exactly one rule and always works.
 """
 
 from __future__ import annotations
@@ -32,17 +32,18 @@ MARKER: Final = "# check-ok:"
 
 CODE: Final = "check-ok"
 
-SHAPE: Final = "`# check-ok: <код>: <причина>`"
+SHAPE: Final = "`# check-ok: <code>: <reason>`"
 
-# Код правила выглядит так и не иначе. Проверка нужна не ради строгости: это
-# же слово стоит в документации и в сообщениях об ошибках, и такая строка не
-# должна читаться как пометка. Всё, что на код не похоже, — просто текст.
+# A rule code looks like this and nothing else. The check is not there for
+# strictness: the same word appears in the docs and in error messages, and such
+# a line must not be read as a mark. Anything that does not look like a code is
+# just text.
 NAME: Final = re.compile(r"[a-z][a-z0-9_-]*")
 
 
 @dataclass(frozen=True, slots=True)
 class Marker:
-    """Что написано в маркере: какие правила он снимает и почему."""
+    """What a mark says: which rules it lifts and why."""
 
     codes: frozenset[str]
     reason: str
@@ -54,13 +55,15 @@ def markers(
     line: str,
     aliases: Mapping[str, frozenset[str]],
 ) -> tuple[Marker, ...]:
-    """Маркеры строки: их может быть несколько.
+    """The marks on a line: there may be several.
 
-    Подпись в столбик собирает пометки в одну строку — `# signature-ok: так
-    зовёт библиотека  # type-ok: сырой ввод`, — и снимать они должны обе.
+    A signature laid out in a column gathers marks onto one line —
+    `# signature-ok: the library calls it this way  # type-ok: raw input` —
+    and both must lift.
 
-    Разбор нарочно не падает на кривой записи: маркер без кода или без причины
-    читается и попадает в `complaints`, иначе о нём никто бы не узнал.
+    Parsing deliberately does not fail on a malformed mark: a mark with no
+    code or no reason is read and ends up in `complaints`, otherwise nobody
+    would hear about it.
     """
     found = sorted(
         _starts(
@@ -124,7 +127,7 @@ def surviving(
     file: ParsedFile,
     aliases: Mapping[str, frozenset[str]],
 ) -> list[Violation]:
-    """Нарушения, которые никто не снял маркером."""
+    """The violations no mark has lifted."""
     return [
         violation
         for violation in violations
@@ -142,11 +145,11 @@ def complaints(
     aliases: Mapping[str, frozenset[str]],
     known: Collection[str],
 ) -> Iterator[Violation]:
-    """Маркер, который ничего не снимает, — молча неработающий маркер.
+    """A mark that lifts nothing is a mark that silently does not work.
 
-    Опечатка в коде правила выглядит как отключённая проверка, а на деле
-    проверка работает и просто не видит пометки. Поэтому такой маркер — сам
-    нарушение.
+    A typo in a rule code looks like a disabled check, while in fact the check
+    runs and simply does not see the mark. So such a mark is a violation
+    itself.
     """
     for number, line in enumerate(file.lines, start=1):
         for marker in markers(
@@ -162,11 +165,11 @@ def complaints(
 
 
 def _named(*, text: str) -> bool:
-    """Похоже ли перечисленное на коды правил.
+    """Whether what is listed looks like rule codes.
 
-    Пустое место после маркера — тоже пометка, только без кода: о ней скажет
-    `complaints`. А вот `# check-ok: <код>` из документации пометкой не
-    считается, иначе библиотека ловила бы собственный текст.
+    Empty space after the mark is a mark too, just without a code: `complaints`
+    will report it. But `# check-ok: <code>` from the docs does not count as a
+    mark, otherwise the library would catch its own text.
     """
     names = list(_codes(text=text))
     return not names or all(NAME.fullmatch(name) for name in names)
@@ -202,11 +205,12 @@ def _span(
     violation: Violation,
     file: ParsedFile,
 ) -> tuple[str, ...]:
-    """Строки, в которых ищем маркер.
+    """The lines searched for a mark.
 
-    Нарушение указывает на первую строку того, что нашло, а пометке место в
-    конце: подпись в столбик несёт её на последней строке. Поэтому проверка,
-    занимающая несколько строк, говорит `end_line`, и маркер ищется во всех.
+    A violation points at the first line of what it found, while the mark
+    belongs at the end: a signature laid out in a column carries it on its last
+    line. So a check that spans several lines gives `end_line`, and the mark is
+    searched for in all of them.
     """
     last = max(violation.end_line or violation.line, violation.line)
     return file.lines[violation.line - 1 : last]
@@ -224,21 +228,21 @@ def _wrong(
             path=path,
             line=line,
             column=marker.column,
-            message=f"маркеру нужен код проверки: {SHAPE}",
+            message=f"the mark needs a check code: {SHAPE}",
         )
     for code in sorted(marker.codes.difference(known)):
         yield _complaint(
             path=path,
             line=line,
             column=marker.column,
-            message=f"нет проверки `{code}`, маркер ничего не снимает",
+            message=f"there is no check `{code}`, the mark lifts nothing",
         )
     if not marker.reason:
         yield _complaint(
             path=path,
             line=line,
             column=marker.column,
-            message=f"маркеру нужна причина: {SHAPE}",
+            message=f"the mark needs a reason: {SHAPE}",
         )
 
 

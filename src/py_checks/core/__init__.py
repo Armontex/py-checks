@@ -1,8 +1,8 @@
-"""Общая часть всех проверок.
+"""The part shared by all checks.
 
-Поиск файлов, разбор исходника один раз на файл, описание нарушения, реестр
-проверок и вывод. Правило знает только своё условие, всё остальное берёт
-отсюда.
+Finding files, parsing the source once per file, describing a violation, the
+check registry and the output. A rule knows only its own condition and takes
+everything else from here.
 """
 
 from py_checks.core._constants import EXIT_OK, EXIT_VIOLATION, GROUP

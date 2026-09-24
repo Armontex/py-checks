@@ -1,4 +1,4 @@
-"""Классы настроек, из которых собирается пример окружения."""
+"""The settings classes the environment example is built from."""
 
 from __future__ import annotations
 
@@ -14,18 +14,19 @@ if TYPE_CHECKING:
 
 
 class Example(CheckSettings):
-    """Секция `[tool.py-checks.env-example]`.
+    """The `[tool.py-checks.env-example]` section.
 
-    `settings` — классы настроек, каждый как `модуль:Класс`. Перечисляются
-    именно секции, а не один корневой класс: корень собирает их фабриками, и
-    его собственные поля — это секции, а не переменные. Пустой список значит
-    «ничего не собирать»: проект без настроек из окружения — обычное дело.
+    `settings` — the settings classes, each as `module:Class`. It is the
+    sections that are listed, not one root class: the root builds them with
+    factories, and its own fields are sections, not variables. An empty list
+    means "build nothing": a project with no settings from the environment is
+    an ordinary thing.
 
-    `path` — куда писать; по умолчанию `.env.example` в корне.
+    `path` — where to write; `.env.example` in the root by default.
 
-    `header` — шапка файла со своим текстом, вместе с `#`. Пустая строка
-    оставляет шапку библиотеки: проекту, который пишет комментарии на другом
-    языке, своя нужна, остальным — нет.
+    `header` — the file's own header text, `#` included. An empty string keeps
+    the library's header: a project that writes its comments in another
+    language needs its own, the rest do not.
     """
 
     settings: tuple[str, ...] = ()

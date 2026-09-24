@@ -1,4 +1,4 @@
-"""Общие настройки проекта."""
+"""The project-wide settings."""
 
 from __future__ import annotations
 
@@ -19,19 +19,21 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class Moved:
-    """Куда переехала секция и чем она там записывается."""
+    """Where a section moved to, and how it is written there."""
 
     into: str
     written: str
 
 
-# Секции, которые больше не читаются. Молчать о них нельзя: незнакомая секция
-# выглядит как работающая настройка, а на деле правило судит по пустой таблице.
+# Sections that are no longer read. Keeping quiet about them is not an option:
+# an unknown section looks like a working setting, while the rule actually
+# judges by an empty table.
 #
-# Четыре правила про раскладку говорили об одной директории с четырёх сторон, и
-# один факт приходилось писать четыре раза в четырёх синтаксисах. `endpoint-
-# declarations` переехал по той же причине с другого конца: маршрут оказался не
-# единственным входом в процесс, а второй вид входа в плоскую секцию не встаёт.
+# Four layout rules described one directory from four sides, and one fact had
+# to be written four times in four syntaxes. `endpoint-declarations` moved for
+# the same reason from the other end: the route turned out not to be the only
+# entrance into the process, and a second kind of entrance does not fit into a
+# flat section.
 RETIRED: Final[dict[str, Moved]] = {
     "class-modules": Moved(
         into="layout",
@@ -39,11 +41,11 @@ RETIRED: Final[dict[str, Moved]] = {
     ),
     "class-placement": Moved(
         into="layout",
-        written="`home` и `suffix`",
+        written="`home` and `suffix`",
     ),
     "required-class": Moved(
         into="layout",
-        written="`required` рядом с `suffix`",
+        written="`required` next to `suffix`",
     ),
     "operation-shape": Moved(
         into="layout",
@@ -51,11 +53,11 @@ RETIRED: Final[dict[str, Moved]] = {
     ),
     "model-boundary": Moved(
         into="layout",
-        written="`orm` и `base`",
+        written="`orm` and `base`",
     ),
     "endpoint-declarations": Moved(
         into="edge-declarations",
-        written="блок вида входа — `route` с теми же ключами",
+        written="a block per kind of entrance — `route` with the same keys",
     ),
 }
 
@@ -65,7 +67,7 @@ def retired(
     checks: Mapping[str, object],
     source: Path | None,
 ) -> None:
-    """Падает, если в настройках остались секции, которые слились в общие таблицы."""
+    """Fails if the settings still hold sections that were merged into shared tables."""
     found = sorted(name for name in RETIRED if name in checks)
     if not found:
         return
@@ -75,18 +77,18 @@ def retired(
         for name in found
     )
     raise ConfigError(
-        f"эти секции больше не читаются, их содержимое переехало в общие таблицы, "
-        f"блок на предмет разговора: {listed}"
+        f"these sections are no longer read, their content moved into shared tables, "
+        f"one block per subject: {listed}"
     )
 
 
 def prefix(*, source: Path | None) -> str:
-    """Как называется секция проверки в том файле, откуда пришли настройки.
+    """What a check's section is called in the file the settings came from.
 
-    В `pyproject.toml` инструменты живут под своей приставкой, потому что файл
-    общий; в своём файле приставки нет — весь файл принадлежит одному
-    инструменту. Сообщение об ошибке обязано звать секцию так, как её и правда
-    зовут в этом файле: иначе оно посылает читателя не туда.
+    In `pyproject.toml` tools live under their own prefix, because the file is
+    shared; in the tool's own file there is no prefix — the whole file belongs
+    to one tool. An error message must name the section the way it is actually
+    named in that file: otherwise it sends the reader to the wrong place.
     """
     if source is None or source.name == PYPROJECT:
         return f"tool.{SECTION}."
@@ -94,11 +96,12 @@ def prefix(*, source: Path | None) -> str:
 
 
 class Config(CheckSettings):
-    """Где искать код и что не проверять.
+    """Where to look for code and what not to check.
 
-    Настройки самих проверок сюда не попадают: они лежат в своих секциях и
-    разбираются моделью той проверки, которой принадлежат. Ядро держит их
-    нетронутыми в `checks` и отдаёт владельцу через `settings_for`.
+    The settings of the checks themselves do not land here: they sit in their
+    own sections and are parsed by the model of the check they belong to. The
+    core keeps them untouched in `checks` and hands them to the owner through
+    `settings_for`.
     """
 
     src: Path = Path("src")
@@ -109,8 +112,8 @@ class Config(CheckSettings):
         default_factory=dict,
         exclude=True,
     )
-    # Файл, из которого настройки прочитаны: он же и место, куда сообщение об
-    # ошибке отправляет читателя.
+    # The file the settings were read from: it is also where an error message
+    # sends the reader.
     origin: Path | None = Field(
         default=None,
         exclude=True,
@@ -118,10 +121,10 @@ class Config(CheckSettings):
 
     @property
     def excluded(self) -> tuple[str, ...]:
-        """Что не проверяем: список по умолчанию плюс добавленный проектом.
+        """What is not checked: the default list plus what the project added.
 
-        `exclude` задаёт весь список целиком, `extend-exclude` добавляет к нему:
-        так проект добавляет свою папку, не переписывая `.venv` и остальное.
+        `exclude` sets the whole list, `extend-exclude` adds to it: that way a
+        project adds its own folder without rewriting `.venv` and the rest.
         """
         return self.exclude + self.extend_exclude
 
@@ -134,7 +137,7 @@ class Config(CheckSettings):
         code: str,
         model: type[CheckSettings],
     ) -> CheckSettings:
-        """Настройки проверки: её секция, проверенная её же моделью."""
+        """A check's settings: its section, validated by its own model."""
         try:
             return model.model_validate(self.section(code=code))
         except ValidationError as error:

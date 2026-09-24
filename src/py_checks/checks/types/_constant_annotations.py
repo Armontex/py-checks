@@ -1,4 +1,4 @@
-"""Имя, написанное как константа, обещает неизменность — и говорит это типом."""
+"""A name written as a constant promises it will not change, and says so by its type."""
 
 from __future__ import annotations
 
@@ -21,8 +21,8 @@ CODE: Final = "constant-annotations"
 FINAL: Final = "Final"
 CLASS_VAR: Final = "ClassVar"
 
-# Имя — это и есть обещание: строчная привязка на уровне модуля объявляет
-# переменную и говорит об этом прямо, и правилу до неё дела нет.
+# The name is the promise itself: a lower-case binding at module level declares
+# a variable and says so plainly, and it is not the rule's business.
 NAME: Final = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
 
@@ -32,21 +32,22 @@ class ConstantAnnotationsSettings(CheckSettings):
 
 
 class ConstantAnnotations:
-    """Падает, если константа не сказала типом, что она константа.
+    """Fails when a constant did not say by its type that it is one.
 
-    Имя `UPPER_SNAKE` — обещание, `Final` — то, что делает обещание
-    проверяемым: без него имя читается как константа, а ведёт себя как
-    переменная, и любой импортировавший модуль волен её перепривязать.
+    An `UPPER_SNAKE` name is a promise; `Final` is what makes the promise
+    checkable: without it the name reads as a constant and behaves as a
+    variable, and anyone who imported the module is free to rebind it.
 
-    В теле класса слово другое, и по причине. `Final` там означает, что
-    атрибут нельзя переопределить вообще (PEP 591), а ограниченные примитивы
-    построены ровно на переопределении: `PositiveDecimal.BOUND` заменяет
-    `BOUND`, объявленный базой. `ClassVar` говорит «принадлежит классу, а не
-    экземпляру» и переопределение оставляет открытым — это верно про оба.
+    Inside a class body the word is a different one, for a reason. `Final`
+    there means the attribute cannot be overridden at all (PEP 591), and
+    bounded primitives are built on exactly that overriding:
+    `PositiveDecimal.BOUND` replaces the `BOUND` declared by the base.
+    `ClassVar` says "belongs to the class, not the instance" and leaves
+    overriding open — which is true of both.
 
-    Перечисления не трогаются: член — это словарь, а не константа рядом с ним.
+    Enums are left alone: a member is a vocabulary, not a constant beside it.
 
-    Настройки: `module`, `inside-class` — какими словами это говорится.
+    Settings: `module`, `inside-class` — the words it is said with.
     """
 
     code: ClassVar[str] = CODE
@@ -95,12 +96,12 @@ class ConstantAnnotations:
                 node=statement,
                 path=file.path,
                 code=CODE,
-                message=f"{name} названо константой, но не объявлено через {wanted}",
+                message=f"{name} is named as a constant but not declared with {wanted}",
             )
 
     @classmethod
     def _constant(cls, *, node: ast.stmt) -> str | None:
-        """Имя константы, которой не хватает слова; иначе `None`."""
+        """The name of a constant that lacks the word; otherwise `None`."""
         match node:
             case ast.Assign(targets=[ast.Name(id=name)]) if NAME.match(name):
                 return name
@@ -111,7 +112,7 @@ class ConstantAnnotations:
 
     @staticmethod
     def _says(*, node: ast.expr) -> bool:
-        """Сказано ли в аннотации то самое слово — голым или с параметром."""
+        """Whether the annotation says that very word — bare or with a parameter."""
         outer = node.value if isinstance(node, ast.Subscript) else node
         match outer:
             case ast.Name(id=name) | ast.Attribute(attr=name):

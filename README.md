@@ -330,6 +330,7 @@ obeys `ignore`, and is lifted by a mark.
 | `py-checks explain <code>` | what a rule asks for and what it can be told |
 | `py-checks sync [--check]` | build the import contracts and `.env.example` |
 | `py-checks doctor` | check the config itself: typos, dead addresses, rules that say nothing |
+| `py-checks mutation diff\|full\|record` | the mutation gate over `mutmut`; needs `python-checks[mutation]` |
 
 ## Development
 

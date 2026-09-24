@@ -1,4 +1,4 @@
-"""Все аргументы передаются по имени."""
+"""Every argument is passed by name."""
 
 from __future__ import annotations
 
@@ -22,28 +22,29 @@ if TYPE_CHECKING:
 
 CODE: Final = "keyword-only-arguments"
 
-# Дандеры, которые зовёт наш собственный код: их вызов — такой же вызов, как
-# любой другой. Остальные дандеры зовёт интерпретатор, и подпись у них не наша.
+# The dunders our own code calls: calling them is a call like any other. The
+# other dunders are called by the interpreter, and their signature is not ours.
 OWN_DUNDERS: Final[frozenset[str]] = frozenset({"__init__", "__new__", "__call__"})
 
 
 class KeywordOnlyArguments:
-    """Падает, если подпись записана не полностью.
+    """Fails when a signature is not written out in full.
 
-    Каждый аргумент передаётся по имени, поэтому место вызова читается как
-    документация, а аргументы можно менять местами, не ломая вызовы:
+    Every argument is passed by name, so a call site reads as documentation,
+    and arguments can be reordered without breaking calls:
 
         def price(*, market: Market, stake: Money) -> Money: ...
 
-    `*args` и `**kwargs` запрещены по той же причине: сборщик принимает что
-    угодно, проверять типы там нечего, а место вызова ничего не объясняет. Их
-    `--fix` не трогает: имена аргументов вместо звёздочек придумывает автор.
+    `*args` and `**kwargs` are banned for the same reason: a collector accepts
+    anything, there are no types to check, and the call site explains nothing.
+    `--fix` leaves them alone: the author picks the argument names that replace
+    the stars.
 
-    Обратный вызов или обёртка, чью подпись диктует библиотека, помечается в
-    подписи: `def f(a): ...  # check-ok: keyword-only-arguments: sqlalchemy`.
-    Слово группы `# signature-ok` библиотека тоже понимает.
+    A callback or a wrapper whose signature a library dictates is marked in
+    the signature: `def f(a): ...  # check-ok: keyword-only-arguments: sqlalchemy`.
+    The group word `# signature-ok` is understood as well.
 
-    Настроек нет.
+    Settings: none.
     """
 
     code: ClassVar[str] = CODE
@@ -81,7 +82,7 @@ class KeywordOnlyArguments:
                 path=file.path,
                 code=CODE,
                 message=(
-                    f"{name} принимает {', '.join(positional)} по позиции; поставь `*` перед ними"
+                    f"{name} takes {', '.join(positional)} by position; put a `*` before them"
                 ),
                 end_line=end_line,
                 edit=cls._star(
@@ -94,7 +95,7 @@ class KeywordOnlyArguments:
                 node=node,
                 path=file.path,
                 code=CODE,
-                message=f"{name} принимает {', '.join(collected)}; перечисли аргументы по имени",
+                message=f"{name} takes {', '.join(collected)}; list the arguments by name",
                 end_line=end_line,
             )
 
@@ -107,14 +108,14 @@ class KeywordOnlyArguments:
 
     @staticmethod
     def _positional(*, definition: Definition) -> tuple[str, ...]:
-        """Аргументы, которые вызывающий может передать по позиции."""
+        """The arguments a caller can pass by position."""
         skip = receiver(definition=definition)
         arguments = [*definition.node.args.posonlyargs, *definition.node.args.args]
         return tuple(argument.arg for argument in arguments[skip:])
 
     @staticmethod
     def _collectors(*, node: Function) -> tuple[str, ...]:
-        """`*args` и `**kwargs` в том виде, в каком их видит вызывающий."""
+        """`*args` and `**kwargs` as the caller sees them."""
         stars = ((node.args.vararg, "*"), (node.args.kwarg, "**"))
         return tuple(f"{star}{argument.arg}" for argument, star in stars if argument)
 
@@ -124,11 +125,12 @@ class KeywordOnlyArguments:
         definition: Definition,
         file: ParsedFile,
     ) -> Edit | None:
-        """Правка: `*` перед первым аргументом, который сейчас идёт по позиции.
+        """The edit: a `*` before the first argument that is now positional.
 
-        Не для всех случаев. При `*args` вторая звезда в подписи не встанет, а
-        при `/` аргументы позиционны по требованию автора, и снимать его
-        требование автофиксу не по чину.
+        Not for every case. With `*args` a second star does not fit in the
+        signature, and with `/` the arguments are positional because the
+        author asked for it, and overruling the author is not an autofix's
+        place.
         """
         node = definition.node
         if node.args.vararg is not None or node.args.posonlyargs:

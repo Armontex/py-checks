@@ -1,15 +1,16 @@
-"""Имена и коды, общие для ядра."""
+"""Names and codes shared across the core."""
 
 from __future__ import annotations
 
 from typing import Final
 
-# Группа entry points, в которой объявляются проверки: своя проверка живёт в
-# отдельном пакете и не требует форка библиотеки. Группа одна на все виды
-# правил — что правилу дают, файл или корень проекта, оно говорит само.
+# The entry point group where checks are declared: a check of one's own lives
+# in a separate package and needs no fork of the library. There is one group
+# for every kind of rule — what a rule is given, a file or the project root,
+# it says itself.
 GROUP: Final = "py_checks.checks"
 
-# Что видит оболочка. Голая единица была бы кодом, смысл которого знает только
-# вызывающий; pre-commit по ней останавливает коммит.
+# What the shell sees. A bare 1 would be a code whose meaning only the caller
+# knows; pre-commit stops the commit on it.
 EXIT_OK: Final = 0
 EXIT_VIOLATION: Final = 1

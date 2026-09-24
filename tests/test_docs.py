@@ -18,6 +18,7 @@ from py_checks.config import load
 from py_checks.contracts import contracts
 from py_checks.core import available, section_of
 from py_checks.environment import example
+from py_checks.mutation import mutation
 
 ROOT: Final = Path(__file__).resolve().parent.parent
 
@@ -62,3 +63,4 @@ def test_the_worked_service_is_a_config_the_library_reads(
         )
     contracts(config=config)
     example(config=config)
+    mutation(config=config)

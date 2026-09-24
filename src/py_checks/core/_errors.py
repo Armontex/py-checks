@@ -1,4 +1,4 @@
-"""Ошибки ядра."""
+"""Errors of the core."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class ParseError(Exception):
-    """Файл не разбирается: синтаксис сломан."""
+    """The file does not parse: the syntax is broken."""
 
     def __init__(
         self,
@@ -23,7 +23,7 @@ class ParseError(Exception):
 
 
 class UnknownCheckError(Exception):
-    """Такой проверки нет."""
+    """There is no such check."""
 
     def __init__(
         self,
@@ -31,5 +31,5 @@ class UnknownCheckError(Exception):
         code: str,
         known: tuple[str, ...],
     ) -> None:
-        super().__init__(f"неизвестная проверка {code!r}; есть: {', '.join(known)}")
+        super().__init__(f"unknown check {code!r}; available: {', '.join(known)}")
         self.code = code

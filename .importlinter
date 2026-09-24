@@ -1,13 +1,13 @@
-# Контракты импортов. Файл собирает `py-checks sync` из того, какие слои
-# есть на диске, и из секции [contracts] — править его нечего, следующий sync
-# перезапишет. Менять нужно секцию.
+# Import contracts. `py-checks sync` builds this file from the layers that
+# exist on disk and from the [contracts] section — there is nothing to edit
+# here, the next sync overwrites it. Change the section instead.
 
 [importlinter]
 root_packages =
     py_checks
 
 [importlinter:contract:layer-checks]
-name = checks не импортирует чужое
+name = checks imports only what it may
 type = forbidden
 allow_indirect_imports = True
 source_modules =
@@ -16,10 +16,11 @@ forbidden_modules =
     py_checks.cli
     py_checks.contracts
     py_checks.environment
+    py_checks.mutation
     py_checks.sync
 
 [importlinter:contract:layer-cli]
-name = cli не импортирует чужое
+name = cli imports only what it may
 type = forbidden
 allow_indirect_imports = True
 source_modules =
@@ -28,7 +29,7 @@ forbidden_modules =
     py_checks.checks
 
 [importlinter:contract:layer-config]
-name = config не импортирует чужое
+name = config imports only what it may
 type = forbidden
 allow_indirect_imports = True
 source_modules =
@@ -39,10 +40,11 @@ forbidden_modules =
     py_checks.contracts
     py_checks.core
     py_checks.environment
+    py_checks.mutation
     py_checks.sync
 
 [importlinter:contract:layer-contracts]
-name = contracts не импортирует чужое
+name = contracts imports only what it may
 type = forbidden
 allow_indirect_imports = True
 source_modules =
@@ -52,10 +54,11 @@ forbidden_modules =
     py_checks.cli
     py_checks.core
     py_checks.environment
+    py_checks.mutation
     py_checks.sync
 
 [importlinter:contract:layer-core]
-name = core не импортирует чужое
+name = core imports only what it may
 type = forbidden
 allow_indirect_imports = True
 source_modules =
@@ -65,10 +68,11 @@ forbidden_modules =
     py_checks.cli
     py_checks.contracts
     py_checks.environment
+    py_checks.mutation
     py_checks.sync
 
 [importlinter:contract:layer-environment]
-name = environment не импортирует чужое
+name = environment imports only what it may
 type = forbidden
 allow_indirect_imports = True
 source_modules =
@@ -78,10 +82,25 @@ forbidden_modules =
     py_checks.cli
     py_checks.contracts
     py_checks.core
+    py_checks.mutation
+    py_checks.sync
+
+[importlinter:contract:layer-mutation]
+name = mutation imports only what it may
+type = forbidden
+allow_indirect_imports = True
+source_modules =
+    py_checks.mutation
+forbidden_modules =
+    py_checks.checks
+    py_checks.cli
+    py_checks.contracts
+    py_checks.core
+    py_checks.environment
     py_checks.sync
 
 [importlinter:contract:layer-sync]
-name = sync не импортирует чужое
+name = sync imports only what it may
 type = forbidden
 allow_indirect_imports = True
 source_modules =
@@ -90,3 +109,4 @@ forbidden_modules =
     py_checks.checks
     py_checks.cli
     py_checks.core
+    py_checks.mutation

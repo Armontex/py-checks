@@ -1,13 +1,14 @@
-"""Раскладка проекта: один блок на директорию.
+"""The project's layout: one block per directory.
 
-Четыре правила говорят об одной и той же вещи с четырёх сторон: что здесь
-может лежать (`class-modules`), что живёт только здесь (`class-placement`),
-что модуль обязан объявить (`required-class`) и какой формы тут операция
-(`operation-shape`). Раньше у каждого была своя таблица, и один факт про
-`use_cases` приходилось писать четыре раза в четырёх синтаксисах, склеивая их
-глазами по строковому ключу.
+Four rules speak of the same thing from four sides: what may lie here
+(`class-modules`), what lives only here (`class-placement`), what a module must
+declare (`required-class`) and what shape an operation has here
+(`operation-shape`). Each used to have a table of its own, and one fact about
+`use_cases` had to be written four times in four syntaxes, stitched together
+by eye on a string key.
 
-Теперь блок один на директорию, а правила читают из него свои колонки:
+Now there is one block per directory, and the rules read their own columns
+from it:
 
 ```toml
 [layout."application/use_cases"]
@@ -17,10 +18,10 @@ required = true
 operation = { method = "execute", max-arguments = 3 }
 ```
 
-Правила при этом друг о друге по-прежнему не знают — они просто читают одну
-таблицу. Адрес в заголовке ищется подряд идущими кусками пути, поэтому
-`application/use_cases` находится и в модульном сервисе, где путь начинается
-с `modules/<имя>/`, а `*` подходит любому одному куску.
+The rules still know nothing of each other — they simply read one table. The
+address in the heading is looked for as consecutive path parts, so
+`application/use_cases` is found in a modular service too, where the path
+starts with `modules/<name>/`, and `*` matches any one part.
 """
 
 from __future__ import annotations
@@ -44,36 +45,37 @@ SECTION: Final = "layout"
 
 
 class Orm(StrEnum):
-    """Чем директория приходится ORM-модели.
+    """What a directory is to an ORM model.
 
-    Дом модели и место, где её собирают, — два конца одного соглашения, и
-    писать их в отдельной таблице значило бы назвать те же две директории
-    второй раз: раскладка уже знает их по имени.
+    The model's home and the place where it is built are two ends of one
+    convention, and writing them in a separate table would name the same two
+    directories a second time: the layout already knows them by name.
     """
 
-    # Здесь модели объявляют: где-то ещё это таблица, которую никто не ждёт по
-    # этому адресу, а autogenerate alembic видит только их пакет.
+    # Models are declared here: anywhere else it is a table nobody expects at
+    # that address, and alembic's autogenerate sees only their package.
     DECLARED = "declared"
 
-    # Здесь модели собирают: собрать модель — значит записать строку.
+    # Models are built here: building a model means writing a row.
     BUILT = "built"
 
 
 class Operation(CheckSettings):
-    """Форма операции, которую держат в этой директории.
+    """The shape of an operation kept in this directory.
 
-    `method` — единственная публичная дверь: сценарий просят об одном деле, и
-    второй публичный метод означает вторую операцию, поделившую с первой
-    конструктор. Пусто — значит число дверей не ограничено: у сервиса модуля
-    их столько, сколько переходов у его сущности.
+    `method` is the only public door: a use case is asked for one thing, and a
+    second public method means a second operation sharing a constructor with
+    the first. Empty means the number of doors is not limited: a module's
+    service has as many as its entity has transitions.
 
-    `forbids` — имена типов, которых операция не держит: `UnitOfWork` ловится
-    и как `IPlacementUnitOfWork`, и как `UnitOfWorkFactory`, потому что
-    запрещено держать транзакцию, а не писать её имя одним конкретным образом.
+    `forbids` is the names of types an operation does not hold: `UnitOfWork` is
+    caught both as `IPlacementUnitOfWork` and as `UnitOfWorkFactory`, because
+    what is forbidden is holding the transaction, not spelling its name one
+    particular way.
 
-    `max_arguments` — сколько аргументов занимает вход. Дверь несёт то, что
-    пришло снаружи, и вход длиннее нескольких полей — вещь с именем: команда,
-    запрос, DTO.
+    `max_arguments` is how many arguments the entrance takes. A door carries
+    what came from outside, and an entrance longer than a few fields is a thing
+    with a name: a command, a query, a DTO.
     """
 
     method: str | None = None
@@ -85,20 +87,21 @@ class Operation(CheckSettings):
 
 
 class Directory(CheckSettings):
-    """Что проект держит в этой директории.
+    """What the project keeps in this directory.
 
-    `only` — виды, которым здесь место, и ничего другого рядом не садится.
-    `home` — виды, которым место ТОЛЬКО здесь: порт, объявленный в другом
-    конце дерева, — это порт, которого читатель не найдёт.
-    `area` — часть дерева, внутри которой дом и имя вообще о чём-то говорят:
-    правило про `dto` написано про слой приложения, а dataclass в загрузчике
-    или в наблюдаемости — просто способ сложить три поля рядом.
-    `suffix` — как зовут класс, ради которого директория существует; он же
-    живёт только здесь.
-    `required` — модуль обязан объявить такой класс, первым и один.
-    `operation` — форма операции, если здесь держат операции.
-    `orm` — чем директория приходится ORM-модели: домом или местом сборки.
-    `base` — базовый класс, по которому модель узнают в доме моделей.
+    `only` — the kinds that belong here, and nothing else sits beside them.
+    `home` — the kinds that belong ONLY here: a port declared at the other end
+    of the tree is a port the reader will not find.
+    `area` — the part of the tree within which home and name mean anything at
+    all: the rule about `dto` is written about the application layer, and a
+    dataclass in the bootstrap or in observability is just a way to put three
+    fields side by side.
+    `suffix` — what the class this directory exists for is called; it too
+    lives only here.
+    `required` — a module must declare such a class, first and alone.
+    `operation` — the shape of an operation, if operations are kept here.
+    `orm` — what the directory is to an ORM model: its home or where it is built.
+    `base` — the base class by which a model is recognised in the models' home.
     """
 
     only: tuple[Kind, ...] = ()
@@ -112,44 +115,46 @@ class Directory(CheckSettings):
 
     @model_validator(mode="after")
     def _named(self) -> Self:
-        """Обязанность и форма опираются на имя: без суффикса их не проверить."""
+        """Obligation and shape rest on the name: without a suffix there is no checking them."""
         if self.suffix is not None:
             return self
         if self.required:
-            message = "`required` без `suffix`: непонятно, какой класс обязан быть"
+            message = "`required` without `suffix`: it is unclear which class must be there"
             raise ValueError(message)
         if self.operation is not None:
-            message = "`operation` без `suffix`: непонятно, какой класс здесь операция"
+            message = (
+                "`operation` without `suffix`: it is unclear which class is the operation here"
+            )
             raise ValueError(message)
         return self
 
     @model_validator(mode="after")
     def _claims(self) -> Self:
-        """Область сужает притязание: без дома и имени сужать нечего."""
+        """An area narrows a claim: without a home and a name there is nothing to narrow."""
         if self.area is not None and not self.home and self.suffix is None:
-            message = "`area` без `home` и `suffix`: эта директория ни на что не притязает"
+            message = "`area` without `home` and `suffix`: this directory claims nothing"
             raise ValueError(message)
         return self
 
     @model_validator(mode="after")
     def _declares(self) -> Self:
-        """`base` — про дом моделей: в месте сборки узнавать по базе нечего."""
+        """`base` is about the models' home: where they are built, there is nothing to spot."""
         if self.base is not None and self.orm is not Orm.DECLARED:
-            message = '`base` без `orm = "declared"`: базу называет дом моделей'
+            message = '`base` without `orm = "declared"`: the base is named by the models\' home'
             raise ValueError(message)
         return self
 
 
 class Layout(CheckSettings):
-    """Секция `[layout]`: адрес директории — и блок про неё.
+    """The `[layout]` section: a directory's address — and a block about it.
 
-    Ключи приходят из проекта, поэтому модель принимает любые: имена
-    директорий — это данные, а не поля. Проверяется содержимое блока.
+    The keys come from the project, so the model accepts any: directory names
+    are data, not fields. What is checked is the content of the block.
     """
 
     model_config = CheckSettings.model_config | {"extra": "allow"}
 
-    # Типизированный `extra` pydantic: ключ — адрес, значение — блок.
+    # pydantic's typed `extra`: the key is an address, the value a block.
     __pydantic_extra__: dict[str, Directory]  # type: ignore[assignment]
 
     @property
@@ -162,7 +167,7 @@ def addressed(
     layout: dict[str, Directory],
     orm: Orm,
 ) -> tuple[str, ...]:
-    """Адреса, объявившие себя этим концом соглашения про ORM-модель."""
+    """The addresses that declared themselves this end of the ORM model convention."""
     return tuple(address for address, directory in layout.items() if directory.orm is orm)
 
 
@@ -171,11 +176,11 @@ def innermost(
     where: Place,
     among: Iterable[tuple[str, Directory]],
 ) -> tuple[str, Directory] | None:
-    """Блок самой внутренней из совпавших директорий.
+    """The block of the innermost matched directory.
 
-    Побеждает самая глубокая: `modules/betslip/application/services` важнее,
-    чем `application`. При равной глубине — более длинный адрес: путь говорит о
-    месте больше, чем одно имя.
+    The deepest wins: `modules/betslip/application/services` beats
+    `application`. At equal depth, the longer address: a path says more about a
+    place than one name.
     """
     matched = [
         (depth, len(address), address, directory)
@@ -190,7 +195,7 @@ def innermost(
 
 @dataclass(frozen=True, slots=True)
 class Claim:
-    """Чей это дом и почему объявление в него просится."""
+    """Whose home this is and why the declaration asks to be in it."""
 
     address: str
     said: str
@@ -202,11 +207,11 @@ def claimants(
     layout: dict[str, Directory],
     where: Place,
 ) -> list[Claim]:
-    """Адреса, объявившие это объявление своим: по имени или по виду.
+    """The addresses that claim this declaration: by name or by kind.
 
-    Блок с `area` притязает только на то, что лежит внутри названной части
-    дерева: соглашение про `dto` написано про слой приложения, и dataclass в
-    загрузчике ему не подсуден.
+    A block with `area` claims only what lies inside the named part of the
+    tree: the convention about `dto` is written about the application layer,
+    and a dataclass in the bootstrap is not its to judge.
     """
     found: list[Claim] = []
     for address, directory in layout.items():
@@ -231,9 +236,11 @@ def _claim(
     declared: Declaration,
     directory: Directory,
 ) -> str | None:
-    """Почему этот адрес считает объявление своим; `None` — не считает."""
+    """Why this address claims the declaration; `None` — it does not."""
     if directory.suffix is not None and declared.name.endswith(directory.suffix):
-        return f"кончается на {directory.suffix}"
+        return f"ends with {directory.suffix}"
     if declared.kind is not None and declared.kind in directory.home:
-        return f"— {declared.kind.said}"
+        said = declared.kind.said
+        # Every kind's name is a plain English noun, so the first letter decides.
+        return f"is {'an' if said[0] in 'aeiou' else 'a'} {said}"
     return None

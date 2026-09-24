@@ -45,3 +45,33 @@ def test_a_file_outside_the_source_root_says_nothing() -> None:
 
 def test_a_file_lying_straight_in_the_source_root_says_nothing() -> None:
     assert place(file=parsed("/repo/src/manage.py", Path("/repo/src"))) is None
+
+
+def zoned_in(path: str, zone: str) -> bool:
+    where = place(file=parsed(f"/repo/src/app/{path}", Path("/repo/src")))
+    assert where is not None
+    return where.inside(zones=[zone])
+
+
+def test_a_zone_is_a_directory_not_a_module_of_the_same_name() -> None:
+    """В player-tenant зона `domain` судила `application/exceptions/domain.py`."""
+    assert zoned_in("domain/order.py", "domain")
+    assert zoned_in("domain/values/money.py", "domain")
+    assert zoned_in("domain/__init__.py", "domain")
+    assert not zoned_in("application/exceptions/domain.py", "domain")
+    assert not zoned_in("infra/database/models.py", "infra/database/models")
+
+
+def test_a_star_takes_the_module_as_well() -> None:
+    """`domain/*` — всё, что в `domain/`, и файл прямо в нём тоже."""
+    assert zoned_in("domain/exceptions.py", "domain/*")
+    assert zoned_in("domain/entities/order.py", "domain/*")
+    assert not zoned_in("application/exceptions/domain.py", "domain/*")
+
+
+def test_an_address_still_names_a_module() -> None:
+    """`declared-in = "shared/money"` — это модуль, и адрес его находит."""
+    where = place(file=parsed("/repo/src/app/shared/money.py", Path("/repo/src")))
+
+    assert where is not None
+    assert where.anywhere(zones=["shared/money"])

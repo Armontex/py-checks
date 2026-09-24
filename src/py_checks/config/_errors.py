@@ -1,12 +1,12 @@
-"""Ошибки чтения настроек."""
+"""Errors in reading the settings."""
 
 from __future__ import annotations
 
 
 class ConfigError(Exception):
-    """Конфиг есть, но прочитать его нельзя.
+    """The config exists but cannot be read.
 
-    Одна ошибка на все случаи: битый TOML, неизвестный ключ, неверное значение.
-    Для того, кто запустил проверку, это одно и то же событие — конфиг надо
-    починить, — а подробности несёт текст.
+    One error for every case: broken TOML, an unknown key, a wrong value. For
+    whoever ran the check it is the same event — the config needs fixing — and
+    the text carries the details.
     """

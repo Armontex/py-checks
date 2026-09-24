@@ -1,4 +1,4 @@
-"""Имена и значения по умолчанию, общие для всего чтения настроек."""
+"""Names and defaults shared by all of the settings reading."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ PYPROJECT: Final = "pyproject.toml"
 
 SECTION: Final = "py-checks"
 
-# Свой файл настроек — как у ruff и mypy: назван именем инструмента, с точкой
-# в начале и без. В нём приставки `[tool.py-checks]` нет: весь файл и есть
-# эта секция, а `[<код>]` в нём — секция проверки.
+# The tool's own settings file — as with ruff and mypy: named after the tool,
+# with or without a leading dot. It has no `[tool.py-checks]` prefix: the whole
+# file is that section, and `[<code>]` in it is a check's section.
 #
-# Имён четыре: полное и короткое, каждое с точкой и без. Угадывать, как проект
-# назовёт свой файл, дешевле, чем отказывать ему за не ту букву, — а лежать
-# сразу двум файлам всё равно запрещено.
+# There are four names: the full and the short one, each with and without the
+# dot. Guessing what a project will call its file is cheaper than refusing it
+# over the wrong letter — and two files at once are forbidden anyway.
 STANDALONE: Final[tuple[str, ...]] = (
     ".py-checks.toml",
     "py-checks.toml",

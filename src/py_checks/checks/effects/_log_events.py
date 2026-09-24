@@ -1,4 +1,4 @@
-"""Строка лога называет событие членом перечисления, а не фразой."""
+"""A log line names its event by an enum member, not by a phrase."""
 
 from __future__ import annotations
 
@@ -32,29 +32,29 @@ class LogEventsSettings(CheckSettings):
         try:
             re.compile(self.receiver)
         except re.error as broken:
-            message = f"receiver — регулярное выражение: {broken}"
+            message = f"receiver is a regular expression: {broken}"
             raise ValueError(message) from broken
         return self
 
 
 class LogEvents:
-    """Падает, если событие в логе названо чем-то кроме члена перечисления.
+    """Fails if an event in the log is named by something other than an enum member.
 
-    Имя события читает не человек: процессор в цепочке structlog превращает
-    `consumer.message.handled` в счётчик, а алерт джойнится по этой строке.
-    Литерал, написанный на месте вызова, определения не имеет, и код, который
-    имя ИЗДАЁТ, ничем не связан с кодом, который его ловит: опечатка не ломает
-    ни одного теста, она просто перестаёт совпадать, и метрика тихо читает
-    ноль.
+    An event's name is not read by a human: a processor in the structlog chain
+    turns `consumer.message.handled` into a counter, and an alert joins on that
+    string. A literal written at the call site has no definition, and the code
+    that EMITS the name is tied to nothing that catches it: a typo breaks no
+    test, it simply stops matching, and the metric quietly reads zero.
 
-    Правило читает ФОРМУ `LogEvent.SOMETHING` и члена не ищет: имени, которого
-    в перечислении нет, pyright откажет, а без него это `AttributeError` на
-    первом же запуске — собирать члены значило бы ловить пойманное дважды.
+    The rule reads the SHAPE `LogEvent.SOMETHING` and does not look for the
+    member: a name that is not in the enum is refused by pyright, and without
+    pyright it is an `AttributeError` on the first run — collecting the members
+    would mean catching what is already caught.
 
-    Чужой логгер — библиотечный или тот, чьим словарём владеет другой проект, —
-    снимается пометкой: `# effect-ok: log-events: не наш логгер`.
+    A third-party logger — a library's, or one whose vocabulary another project
+    owns — is lifted by a mark: `# effect-ok: log-events: not our logger`.
 
-    Настройки: `enum`, `levels`, `receiver`.
+    Settings: `enum`, `levels`, `receiver`.
     """
 
     code: ClassVar[str] = CODE
@@ -93,14 +93,14 @@ class LogEvents:
                 code=CODE,
                 message=(
                     f"{ast.unparse(node.func)}({ast.unparse(node.args[0])}...): "
-                    f"имя события — член {limits.enum}, а не фраза; по нему джойнятся "
-                    f"счётчик и алерт"
+                    f"an event's name is a member of {limits.enum}, not a phrase; a counter "
+                    f"and an alert join on it"
                 ),
             )
 
     @staticmethod
     def _receiver(*, node: ast.expr) -> str:
-        """Чей это метод: `logger`, `log`, `self._logger`, `_LOGGER`."""
+        """Whose method this is: `logger`, `log`, `self._logger`, `_LOGGER`."""
         match node:
             case ast.Name(id=name) | ast.Attribute(attr=name):
                 return name

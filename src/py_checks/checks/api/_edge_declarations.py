@@ -1,4 +1,4 @@
-"""Вход в процесс объявляет в декораторе всё, что за него решили."""
+"""An entrance into the process declares in its decorator everything decided for it."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ STATUS: Final = "status_code"
 
 
 class Framework(StrEnum):
-    """Фреймворк, которым написан вход."""
+    """The framework an entrance is written with."""
 
     FASTAPI = "fastapi"
     FASTSTREAM = "faststream"
@@ -33,37 +33,40 @@ class Framework(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class Shape:
-    """Как фреймворк записывает вход. Это знание библиотеки, а не проекта.
+    """How a framework writes an entrance. This is the library's knowledge, not the project's.
 
-    Проект решает, что вход обязан объявить; что такое «вход» у FastAPI и у
-    FastStream — решено их авторами, и таблица, которую проект писал бы об
-    этом, была бы пересказом чужой документации, стареющим вместе с ней.
+    The project decides what an entrance must declare; what an "entrance" is
+    in FastAPI and in FastStream was decided by their authors, and a table the
+    project wrote about it would be a retelling of somebody else's
+    documentation, going stale along with it.
     """
 
-    # Имена методов, которыми вход объявляют: `broker.subscriber`, `router.post`.
-    # Имя объекта слева не читается — это имя переменной, а правило про то, как
-    # называют переменную, было бы правилом про орфографию.
+    # The method names an entrance is declared with: `broker.subscriber`,
+    # `router.post`. The object name on the left is not read — it is a variable
+    # name, and a rule about what a variable is called would be a rule about
+    # spelling.
     methods: tuple[str, ...]
 
-    # Только декоратором. У маршрута это обязательно: его `methods` — `get`,
-    # `post`, `delete`, то есть имена, которыми зовут и клиента HTTP, и правило,
-    # читающее любой `.post(...)`, нашло бы маршрут в первом же адаптере к
-    # соседнему сервису. Подписку так не спутать ни с чем, а пишут её и
-    # декоратором, и вызовом: её держат в переменной и применяют к обработчику
-    # отдельно, потому что до старта у неё берут клиента.
+    # Only as a decorator. For a route this is a must: its `methods` are `get`,
+    # `post`, `delete`, the same names an HTTP client goes by, and a rule
+    # reading every `.post(...)` would find a route in the first adapter that
+    # talks to a neighbouring service. A subscription cannot be mistaken for
+    # anything like that, and it is written both as a decorator and as a call:
+    # it is kept in a variable and applied to the handler separately, because
+    # its client is taken before the start.
     decorated: bool
 
-    # Слово, которым сообщение зовёт первый аргумент.
+    # The word a message uses for the first argument.
     subject: str
 
-    # Имя первого аргумента, если он пишется словом; `None` — он позиционный.
+    # The first argument's name if it is written by keyword; `None` — positional.
     named: str | None
 
-    # Аргумент, объявляющий тело ответа, и статусы, у которых тела не бывает.
+    # The argument declaring the response body, and the statuses that never have one.
     body: str | None = None
     bodiless: tuple[int, ...] = ()
 
-    # Флаг, которым вход говорит, что в схеме его нет.
+    # The flag an entrance uses to say it is not in the schema.
     exempt: str | None = None
 
 
@@ -71,7 +74,7 @@ KNOWN: Final[dict[str, Shape]] = {
     Framework.FASTAPI: Shape(
         methods=("get", "post", "put", "patch", "delete", "head", "options", "trace"),
         decorated=True,
-        subject="путь",
+        subject="path",
         named="path",
         body="response_model",
         bodiless=(
@@ -84,24 +87,25 @@ KNOWN: Final[dict[str, Shape]] = {
     Framework.FASTSTREAM: Shape(
         methods=("subscriber",),
         decorated=False,
-        subject="топик",
+        subject="topic",
         named=None,
     ),
 }
 
 
 class Edge(CheckSettings):
-    """Что вход этого фреймворка обязан назвать.
+    """What an entrance of this framework must name.
 
-    Каждое имя здесь — решение, у которого в библиотеке фреймворка есть
-    умолчание, и умолчание это принято не тем, кто пишет сервис.
+    Every name here is a decision that has a default in the framework's
+    library, and that default was made by somebody other than whoever writes
+    the service.
     """
 
     required: tuple[str, ...] = ()
 
 
 class Edges(CheckSettings):
-    """Таблица входов: блок на фреймворк.
+    """The entrance table: one block per framework.
 
     ```toml
     [edge-declarations.fastapi]
@@ -117,12 +121,12 @@ class Edges(CheckSettings):
 
     @model_validator(mode="after")
     def _known(self) -> Self:
-        """Имя блока — фреймворк, о котором библиотека что-то знает."""
+        """A block's name is a framework the library knows something about."""
         unknown = sorted(set(self.frameworks) - set(KNOWN))
         if unknown:
             listed = ", ".join(repr(name) for name in unknown)
             known = ", ".join(sorted(KNOWN))
-            message = f"{listed}: про такой фреймворк правило не знает; известны {known}"
+            message = f"{listed}: the rule does not know this framework; it knows {known}"
             raise ValueError(message)
         return self
 
@@ -132,36 +136,38 @@ class Edges(CheckSettings):
 
 
 class EdgeDeclarations:
-    """Падает, если вход в процесс не сказал, как он себя ведёт.
+    """Fails when an entrance into the process did not say how it behaves.
 
-    Декоратор входа — это контракт. У маршрута его читает тот, кто читает
-    сгенерированную схему: соседний сервис, человек, пишущий клиент, — и поле,
-    которого в декораторе нет, для него не существует, что бы ни возвращало
-    тело функции. У подписки его читает тот, кто разбирается, почему запись
-    обработана дважды или не обработана вовсе.
+    An entrance's decorator is a contract. For a route it is read by whoever
+    reads the generated schema — a neighbouring service, a person writing a
+    client — and a field that is not in the decorator does not exist for them,
+    whatever the function body returns. For a subscription it is read by
+    whoever is working out why a record was handled twice or not at all.
 
-    Механизм у фреймворка есть, требования писать — нет, и каждое умолчание
-    там — решение, принятое не этим проектом. Маршрут без `summary` попадёт в
-    схему с именем функции вместо описания, а с пустым `responses` — с
-    обещанием, что отказов у него не бывает. Подписка без `ack_policy` вернёт
-    брокеру запись, которую он только что доставил, а без `auto_offset_reset`
-    пропустит то отставание, ради которого новая группа и заводится.
+    The framework has the mechanism but demands none of it, and each default
+    there is a decision made by somebody other than this project. A route with
+    no `summary` lands in the schema with the function's name in place of a
+    description, and with an empty `responses` it lands with a promise that it
+    never refuses. A subscription with no `ack_policy` hands the broker back
+    the record it has just delivered, and with no `auto_offset_reset` it skips
+    the backlog a new group exists to read.
 
-    Что такое вход у FastAPI и у FastStream — знает библиотека: имена методов,
-    декоратор это или вызов, как пишется первый аргумент. Проект называет одно:
-    что вход обязан объявить.
+    The library knows what an entrance is in FastAPI and in FastStream: the
+    method names, whether it is a decorator or a call, how the first argument
+    is written. The project names one thing: what an entrance must declare.
 
-    Тело объявляется отдельно от прочего и не требуется там, где его не
-    бывает: 204, 205 и 304 — это статусы без тела, и модель ответа рядом с
-    ними обещает то, что протокол запрещает. Статус, записанный не числом и не
-    членом `HTTPStatus`, читается как неизвестный, а неизвестный считается
-    имеющим тело: проверка, сработавшая зря, снимается пометкой, а
-    промолчавшая — это контракт, которого никто не хватится.
+    The body is declared apart from the rest and is not required where there
+    is none: 204, 205 and 304 are statuses without a body, and a response
+    model next to them promises what the protocol forbids. A status written as
+    neither a number nor an `HTTPStatus` member reads as unknown, and an
+    unknown one is taken to have a body: a check that fired needlessly is
+    lifted by a mark, while one that stayed silent is a contract nobody will
+    miss.
 
-    Вход, выведенный из схемы (`include_in_schema=False`), правило не трогает:
-    схема — это то, что оно защищает, а такого маршрута в ней нет.
+    An entrance taken out of the schema (`include_in_schema=False`) the rule
+    leaves alone: the schema is what it protects, and such a route is not in it.
 
-    Настройки: блок на фреймворк, в нём `required`.
+    Settings: one block per framework, with `required` in it.
     """
 
     code: ClassVar[str] = CODE
@@ -203,7 +209,7 @@ class EdgeDeclarations:
 
     @staticmethod
     def _decorators(*, tree: ast.Module) -> set[ast.Call]:
-        """Вызовы, стоящие декоратором: остальное для такого входа — не он."""
+        """Calls that stand as a decorator: for such an entrance anything else is not it."""
         return {
             decorator
             for node in ast.walk(tree)
@@ -218,7 +224,7 @@ class EdgeDeclarations:
         call: ast.Call,
         frameworks: dict[str, Edge],
     ) -> tuple[Shape, Edge] | None:
-        """Вход какого фреймворка тут объявлен; `None` — не вход."""
+        """Which framework's entrance is declared here; `None` — not an entrance."""
         if not isinstance(call.func, ast.Attribute):
             return None
         for name, edge in frameworks.items():
@@ -253,14 +259,14 @@ class EdgeDeclarations:
             named=named,
         )
         for wanted in edge.required:
-            # Написанный позиционно там, где так не пишут, уже назван выше;
-            # второе замечание о том же входе читается как второй промах.
+            # One written positionally where it should not be was named above
+            # already; a second remark about the same entrance reads as a second miss.
             if wanted in declared or (wanted == shape.named and call.args):
                 continue
             yield cls._violation(
                 call=call,
                 file=file,
-                message=f"{named} не объявляет {wanted}=",
+                message=f"{named} does not declare {wanted}=",
             )
         yield from cls._bodied(
             call=call,
@@ -279,20 +285,20 @@ class EdgeDeclarations:
         shape: Shape,
         named: str,
     ) -> Iterator[Violation]:
-        """Первый аргумент: написан не так, как его пишут, или не написан."""
+        """The first argument: written the wrong way, or not written at all."""
         if shape.named is not None:
             if call.args:
                 yield cls._violation(
                     call=call,
                     file=file,
-                    message=f"{named} передаёт {shape.subject} позиционно; напиши {shape.named}=",
+                    message=f"{named} gives the {shape.subject} positionally; write {shape.named}=",
                 )
             return
         if not call.args:
             yield cls._violation(
                 call=call,
                 file=file,
-                message=f"{named} не называет {shape.subject}; он пишется первым аргументом",
+                message=f"{named} does not name the {shape.subject}; it goes first, without a name",
             )
 
     @classmethod
@@ -313,8 +319,8 @@ class EdgeDeclarations:
             call=call,
             file=file,
             message=(
-                f"{named} не объявляет {shape.body}= и отвечает телом; "
-                f"без него отвечают {', '.join(str(status) for status in shape.bodiless)}"
+                f"{named} does not declare {shape.body}= and answers with a body; "
+                f"only {', '.join(str(status) for status in shape.bodiless)} go without it"
             ),
         )
 
@@ -338,7 +344,7 @@ class EdgeDeclarations:
         call: ast.Call,
         exempt: str | None,
     ) -> bool:
-        """Вход сказал, что в схеме его нет."""
+        """The entrance said it is not in the schema."""
         return exempt is not None and any(
             keyword.arg == exempt
             and isinstance(keyword.value, ast.Constant)
@@ -352,11 +358,12 @@ class EdgeDeclarations:
         call: ast.Call,
         shape: Shape,
     ) -> str:
-        """`POST '/tickets'`, `SUBSCRIBER 'bets.placed'` — как бы ни был записан.
+        """`POST '/tickets'`, `SUBSCRIBER 'bets.placed'` — however it is written.
 
-        Предмет объявления читается и из позиции, и из слова: сообщение обязано
-        назвать вход и в том файле, где слова как раз нет, — «GET не объявляет
-        summary» в модуле с шестью GET не называет ничего.
+        The subject of the declaration is read both from the position and from
+        the keyword: a message has to name the entrance even in a file where
+        the keyword is missing — "GET does not declare summary" in a module
+        with six GETs names nothing.
         """
         attribute = call.func
         method = attribute.attr.upper() if isinstance(attribute, ast.Attribute) else ""
@@ -366,7 +373,7 @@ class EdgeDeclarations:
 
     @staticmethod
     def _status(*, call: ast.Call) -> int | None:
-        """Статус, если он записан так, что его видно по файлу."""
+        """The status, if it is written so that the file shows it."""
         for keyword in call.keywords:
             if keyword.arg != STATUS:
                 continue

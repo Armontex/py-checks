@@ -1,4 +1,4 @@
-"""Конфиги, которые собирает библиотека."""
+"""The configs the library builds."""
 
 from __future__ import annotations
 
@@ -13,13 +13,14 @@ if TYPE_CHECKING:
 
 
 def planned(*, root: Path) -> dict[Path, str]:
-    """Что библиотека собирает для этого проекта.
+    """What the library builds for this project.
 
-    Настройки ruff, pyright и прочих инструментов сюда не входят: их приносит
-    шаблон, и дальше это файлы проекта. Собирается то, что обязано совпадать с
-    кодом и расходится молча: контракты импортов — с раскладкой на диске (слой,
-    которого нет, роняет весь прогон import-linter), `.env.example` — с полями
-    классов настроек (переменная, которой нет в файле, обнаруживается на проде).
+    The settings of ruff, pyright and other tools are not part of it: the
+    template brings them, and from then on they are the project's files. What
+    is built is what has to match the code and drifts silently: the import
+    contracts — with the layout on disk (a missing layer brings down the whole
+    import-linter run), `.env.example` — with the fields of the settings
+    classes (a variable missing from the file is discovered in production).
     """
     config = load(root=root)
     built: dict[Path, str] = {}
@@ -40,12 +41,12 @@ def planned(*, root: Path) -> dict[Path, str]:
 
 
 def stale(*, root: Path) -> list[Path]:
-    """Файлы, которые разошлись с тем, что собралось бы сейчас."""
+    """Files that have drifted from what would be built now."""
     return [path for path, text in planned(root=root).items() if _read(path=path) != text]
 
 
 def write(*, root: Path) -> list[Path]:
-    """Собрать заново; вернуть то, что изменилось."""
+    """Build again; return what changed."""
     changed: list[Path] = []
     for path, text in planned(root=root).items():
         if _read(path=path) != text:

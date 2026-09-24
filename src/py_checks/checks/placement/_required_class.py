@@ -1,4 +1,4 @@
-"""Модуль объявляет тот класс, ради которого его директория существует."""
+"""A module declares the class its directory exists for."""
 
 from __future__ import annotations
 
@@ -19,35 +19,35 @@ if TYPE_CHECKING:
 
 CODE: Final = "required-class"
 
-# Вид объявления, которому позволено стоять выше требуемого класса. Алиас и
-# перечисление — словарь, а не второй предмет разговора: тело класса
-# выполняется в момент объявления, поэтому имена, которые требуемый класс
-# называет у себя внутри, ниже него написать нельзя.
+# The kinds of declaration allowed to stand above the required class. An alias
+# and an enum are vocabulary, not a second subject: a class body executes at
+# declaration time, so the names the required class uses inside itself cannot
+# be written below it.
 VOCABULARY: Final[frozenset[Kind]] = frozenset({Kind.ALIAS, Kind.ENUM})
 
 
 class RequiredClass:
-    """Падает, если модуль не объявил класс, ради которого лежит в этой директории.
+    """Fails when a module did not declare the class its directory exists for.
 
-    Файл в `use_cases` существует ради сценария, файл в `repositories` — ради
-    репозитория, файл в `config` — ради группы настроек. Модуль, который
-    объявил что-то другое, либо назван не так, либо лежит не там.
+    A file in `use_cases` exists for a use case, a file in `repositories` for
+    a repository, a file in `config` for a group of settings. A module that
+    declared something else is either misnamed or in the wrong place.
 
-    Класс идёт первым и идёт один. Первым — потому что читатель, открывший
-    `repositories/order.py`, ищет репозиторий, а хелпер перед ним читается как
-    что-то более важное. Один — потому что имя файла и есть то, как читатель
-    находит класс: три сценария в одном модуле отвечают на вопрос «где
-    `ResolveLimitsUseCase`» словами «прочти все три».
+    The class comes first and comes alone. First, because a reader who opens
+    `repositories/order.py` is looking for the repository, and a helper above
+    it reads as something more important. Alone, because the file name is how
+    the reader finds the class: three use cases in one module answer the
+    question "where is `ResolveLimitsUseCase`" with "read all three".
 
-    Выше требуемого класса разрешены константы, алиасы и перечисления: имя
-    читают там, где им пользуются, а значение вторым предметом разговора не
-    становится.
+    Constants, aliases and enums are allowed above the required class: a name
+    is read where it is used, and a value does not become a second subject.
 
-    `__init__.py` ничего не объявляет, а переэкспортирует; пустой модуль ещё
-    ничего не обещал; модуль с подчёркиванием (`_base.py`) держит машинерию
-    своей директории, а не один из её классов. Эти трое правилу не подсудны.
+    `__init__.py` re-exports rather than declares; an empty module has not
+    promised anything yet; a module with a leading underscore (`_base.py`)
+    holds its directory's machinery, not one of its classes. The rule leaves
+    these three alone.
 
-    Настройки: `required` и `suffix` в общей таблице `[layout]`.
+    Settings: `required` and `suffix` in the shared `[layout]` table.
     """
 
     code: ClassVar[str] = CODE
@@ -102,8 +102,8 @@ class RequiredClass:
                 file=file,
                 node=declared[0],
                 message=(
-                    f"модуль объявляет {cls._listed(declared=declared)}, "
-                    f"а в этой директории объявляют класс ...{suffix}"
+                    f"the module declares {cls._listed(declared=declared)}, "
+                    f"but a module in this directory declares a ...{suffix} class"
                 ),
             )
             return
@@ -112,8 +112,8 @@ class RequiredClass:
                 file=file,
                 node=required[1],
                 message=(
-                    f"в модуле {cls._listed(declared=required)} — "
-                    f"один ...{suffix} на модуль, и модуль назван его именем"
+                    f"the module holds {cls._listed(declared=required)}; "
+                    f"one ...{suffix} per module, and the module is named after it"
                 ),
             )
             return
@@ -126,8 +126,8 @@ class RequiredClass:
                 file=file,
                 node=ahead,
                 message=(
-                    f"{ahead.name} объявлен выше ...{suffix}, ради которого "
-                    f"существует модуль; хелперам место ниже"
+                    f"{ahead.name} is declared above the ...{suffix} the module "
+                    f"exists for; helpers belong below it"
                 ),
             )
 
@@ -137,7 +137,7 @@ class RequiredClass:
         declared: list[Declaration],
         suffix: str,
     ) -> Declaration | None:
-        """Первое объявление, вставшее выше требуемого класса."""
+        """The first declaration that stands above the required class."""
         for one in declared:
             if one.name.endswith(suffix):
                 return None

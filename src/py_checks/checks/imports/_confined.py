@@ -1,4 +1,4 @@
-"""Пакет живёт там, где ему место."""
+"""A package lives where it belongs."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ CODE: Final = "confined-imports"
 
 
 class ConfinedSettings(CheckSettings):
-    """Секция `[confined-imports]`: пакет — и места, где его можно звать."""
+    """The `[confined-imports]` section: a package and the places it may be called from."""
 
     model_config = OPEN
 
@@ -34,19 +34,20 @@ class ConfinedSettings(CheckSettings):
 
 
 class ConfinedImports:
-    """Падает, если пакет импортируется вне отведённых ему мест.
+    """Fails when a package is imported outside the places set aside for it.
 
-    Фреймворк, расползшийся по всем слоям, — это фреймворк, который нельзя
-    заменить: замена превращается в правку всего сервиса. Пока ORM живёт в
-    `infra/database`, а веб-стек на краю, каждый из них меняется в одном месте.
+    A framework that has spread through every layer is a framework that cannot
+    be replaced: the replacement becomes an edit of the whole service. While
+    the ORM lives in `infra/database` and the web stack at the edge, each of
+    them changes in one place.
 
-    Где чьё место, знает проект: у сервиса это `infra/database`, у утилиты
-    такого слоя нет вовсе. Имя пакета — ключ в секции, значение — места, где
-    ему можно быть; пустой список значит «нигде» — так держат убранную
-    библиотеку, чтобы она не вернулась. Пакета, которого в секции нет, правило
-    не касается.
+    The project knows what belongs where: a service has `infra/database`, a
+    command-line utility has no such layer at all. The package name is the key
+    in the section, the value is the places it may be; an empty list means
+    "nowhere" — that is how a library that was taken out is kept out. A
+    package not in the section is not the rule's business.
 
-    Настройка: имя пакета — список мест.
+    Settings: package name — list of places.
     """
 
     code: ClassVar[str] = CODE
@@ -89,9 +90,9 @@ class ConfinedImports:
         path: Path,
     ) -> Violation:
         message = (
-            f"{imported.top} в {where.where}; ему место в {', '.join(allowed)}"
+            f"{imported.top} in {where.where}; it belongs in {', '.join(allowed)}"
             if allowed
-            else f"{imported.top} в {where.where}; этот пакет убран, импортировать его негде"
+            else f"{imported.top} in {where.where}; the package was taken out, it belongs nowhere"
         )
         return Violation.from_node(
             node=imported.node,

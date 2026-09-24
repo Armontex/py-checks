@@ -174,7 +174,7 @@ def test_a_name_that_does_not_import_says_so(tmp_path: Path) -> None:
         '\n[tool.py-checks.env-example]\nsettings = ["app.config:Nothing"]\n',
     )
 
-    with pytest.raises(ConfigError, match="не импортируется"):
+    with pytest.raises(ConfigError, match="cannot be imported"):
         render(root=root, config=load(root=root))
 
 
@@ -187,5 +187,5 @@ def test_a_name_without_the_class_says_what_the_record_looks_like(tmp_path: Path
         """),
     )
 
-    with pytest.raises(ConfigError, match="модуль:Класс"):
+    with pytest.raises(ConfigError, match="module:Class"):
         render(root=root, config=load(root=root))

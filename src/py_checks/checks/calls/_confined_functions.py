@@ -1,4 +1,4 @@
-"""У некоторых функций законных мест вызова ровно столько, сколько перечислено."""
+"""Some functions have exactly as many lawful call sites as are listed."""
 
 from __future__ import annotations
 
@@ -20,26 +20,27 @@ CODE: Final = "confined-functions"
 
 
 class ConfinedFunctionsSettings(CheckSettings):
-    calls: dict[str, tuple[str, ...]] = {}  # noqa: RUF012 — pydantic копирует значение сам
+    calls: dict[str, tuple[str, ...]] = {}  # noqa: RUF012 — pydantic copies the value itself
     declared_in: str | None = None
 
 
 class ConfinedFunctions:
-    """Падает, если названная функция позвана не оттуда, откуда ей можно.
+    """Fails if a named function is called from somewhere it may not be.
 
-    Написано ради конверсии денег. Сервис считает в одной валюте, и гарантия
-    за этой фразой — не имя типа: это то, что у конверсии одна реализация и
-    места её вызова можно перечислить. Где угодно ещё конверсия — это сумма в
-    чьей-то валюте посреди расчёта, и ошибка, которую она даёт, — число,
-    верное ровно до того дня, когда встретятся две валюты.
+    Written for money conversion. A service counts in one currency, and the
+    guarantee behind that sentence is not the name of a type: it is that
+    conversion has one implementation and its call sites can be listed.
+    Anywhere else, a conversion is an amount in somebody's currency in the
+    middle of a calculation, and the error it gives is a number that is right
+    up to the day two currencies meet.
 
-    Место — кусок пути, а не файл: край — это место в замысле, и файл, который
-    разделили надвое, краем быть не перестал.
+    A place is a piece of a path, not a file: an edge is a place in the design,
+    and a file split in two has not stopped being an edge.
 
-    `declared-in` — модуль, где функция объявлена: там она написана, а не позвана, и
-    правило его не трогает.
+    `declared-in` is the module where the function is declared: there it is
+    written, not called, and the rule leaves it alone.
 
-    Настройки: `calls`, `declared-in`.
+    Settings: `calls`, `declared-in`.
     """
 
     code: ClassVar[str] = CODE
@@ -80,7 +81,7 @@ class ConfinedFunctions:
                 node=node,
                 path=file.path,
                 code=CODE,
-                message=f"{called}() зовут не отсюда; её места — {', '.join(allowed)}",
+                message=f"{called}() is not called from here; its places are {', '.join(allowed)}",
             )
 
     @staticmethod

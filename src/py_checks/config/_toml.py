@@ -1,4 +1,4 @@
-"""Типы значений, какими их отдаёт `tomllib`."""
+"""The value types as `tomllib` returns them."""
 
 from __future__ import annotations
 
@@ -17,8 +17,9 @@ type TomlValue = (
 )
 
 type TomlTable = dict[str, TomlValue]
-"""Таблица TOML: секция конфига до того, как её разобрала модель.
+"""A TOML table: a config section before a model has parsed it.
 
-Не `dict[str, Any]`: `Any` отключает проверку типов у всех, кто такую таблицу
-получит, а здесь заранее известно, что значения бывают ровно этих видов.
+Not `dict[str, Any]`: `Any` switches off type checking for everyone who gets
+such a table, while here it is known in advance that values are of exactly
+these kinds.
 """

@@ -1,8 +1,9 @@
-"""Имена: как их читают в дереве и как сверяют с записанным в настройках.
+"""Names: how they are read in the tree and matched against the settings.
 
-Правила говорят именами: «база называется `Base`», «эта колонка объявлена
-`mapped_column`», «`datetime.now` берут портом». Спросить у узла, как его
-зовут, — не дело каждого правила: способ один на язык, и живёт он здесь.
+Rules speak in names: "the base is called `Base`", "this column is declared
+with `mapped_column`", "`datetime.now` is taken as a port". Asking a node what
+it is called is not every rule's business: there is one way per language, and
+it lives here.
 """
 
 from __future__ import annotations
@@ -18,13 +19,14 @@ ANY: Final = "*"
 
 
 def name(*, node: ast.expr) -> str:
-    """Как это зовут; пустая строка, если именем это не назвать.
+    """What this is called; an empty string if it cannot be called by a name.
 
-    Строковая аннотация (`-> "Order"`) — это имя, написанное буквами:
-    отличать её от обычной незачем, автор имел в виду то же самое. А вот вызов
-    и подписанное выражение именем не считаются: `tuple(...)[:1]` — это срез
-    списка, и правило про формы типов не должно принять его за объявление.
-    Развернуть их просит тот, кто читает базы и декораторы, — `names`.
+    A string annotation (`-> "Order"`) is a name spelled out in letters: there
+    is no reason to tell it from an ordinary one, the author meant the same
+    thing. A call and a subscript, though, do not count as names:
+    `tuple(...)[:1]` is a slice of a list, and a rule about type shapes must not
+    take it for a declaration. Unwrapping them is asked for by whoever reads
+    bases and decorators — `names`.
     """
     match node:
         case ast.Name(id=found) | ast.Attribute(attr=found) | ast.Constant(value=str() as found):
@@ -34,10 +36,10 @@ def name(*, node: ast.expr) -> str:
 
 
 def names(*, nodes: Iterable[ast.expr]) -> Iterator[str]:
-    """Имена перечисленного: баз класса, декораторов.
+    """The names of what is listed: a class's bases, decorators.
 
-    Здесь имя и правда стоит за вызовом и за подстановкой: `@dataclass(frozen=True)`
-    — это `dataclass`, `Generic[T]` — это `Generic`.
+    Here the name really does stand behind a call and a subscript:
+    `@dataclass(frozen=True)` is `dataclass`, `Generic[T]` is `Generic`.
     """
     for node in nodes:
         if found := name(node=_head(node=node)):
@@ -45,7 +47,7 @@ def names(*, nodes: Iterable[ast.expr]) -> Iterator[str]:
 
 
 def _head(*, node: ast.expr) -> ast.expr:
-    """Из чего сделано выражение: с кого начали, прежде чем звать и подставлять."""
+    """What an expression is made of: what it started from before calls and subscripts."""
     match node:
         case ast.Call(func=inner) | ast.Subscript(value=inner):
             return _head(node=inner)
@@ -54,12 +56,12 @@ def _head(*, node: ast.expr) -> ast.expr:
 
 
 def walked(*, node: ast.expr) -> Iterator[str]:
-    """Все имена внутри выражения, на любой глубине и в порядке написания.
+    """Every name inside an expression, at any depth and in written order.
 
-    `dict[str, Order | None]` — это `dict`, `str`, `Order`: правило про
-    аннотации смотрит на то, что в ней названо, а не на её форму. Имя, взятое
-    в кавычки, — такое же имя: ссылка вперёд написана строкой не по смыслу, а
-    потому что в этом месте класса ещё нет.
+    `dict[str, Order | None]` is `dict`, `str`, `Order`: a rule about
+    annotations looks at what is named in one, not at its shape. A name in
+    quotes is the same name: a forward reference is written as a string not
+    for meaning, but because the class does not exist yet at that point.
     """
     for child in ast.walk(node):
         if isinstance(child, ast.Name | ast.Attribute | ast.Constant) and (
@@ -73,10 +75,10 @@ def matches(
     called: str,
     pattern: str,
 ) -> bool:
-    """Хвост имени: `datetime.now` — это и `datetime.datetime.now`.
+    """The tail of a name: `datetime.now` is also `datetime.datetime.now`.
 
-    `random.*` подходит любому вызову модуля целиком: важен не последний
-    кусок, а то, у кого его взяли.
+    `random.*` matches any call of the whole module: what matters is not the
+    last part but what it was taken from.
     """
     parts = called.split(DOT)
     wanted = pattern.split(DOT)
