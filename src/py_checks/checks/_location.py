@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from py_checks.config import CheckSettings
-from py_checks.core import depth
+from py_checks.core import ANY, depth
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -32,10 +32,18 @@ INSIDE: Final = 2
 
 @dataclass(frozen=True, slots=True)
 class Place:
-    """A file's root package and its address inside that package."""
+    """A file's root package, its address inside it and the directories it lies in.
+
+    The directories are kept apart from the address because a zone is a
+    directory: `domain` means `domain/` and what is under it, not a module
+    that happens to be called `domain.py` in `application/exceptions/`. The
+    file's own name answers only to `*`: `domain/*` still takes
+    `domain/exceptions.py`, since `*` is any piece and a module is one.
+    """
 
     package: str
     parts: tuple[str, ...]
+    directories: tuple[str, ...]
 
     @property
     def where(self) -> str:
@@ -48,12 +56,24 @@ class Place:
         wanted = tuple(prefix.split(SEPARATOR))
         return self.parts[: len(wanted)] == wanted
 
-    def anywhere(self, *, zones: Iterable[str]) -> bool:
+    def inside(self, *, zones: Iterable[str]) -> bool:
         """Whether the file lies in at least one of these zones.
 
-        Zones add up rather than argue: a rule works where it was asked to, and
-        is silent everywhere else.
+        Only directories count; the file's own name matches `*` and nothing
+        else. Zones add up rather than argue: a rule works where it was asked
+        to, and is silent everywhere else.
         """
+        return any(
+            depth(
+                parts=self.parts if zone.split(SEPARATOR)[-1] == ANY else self.directories,
+                path=zone,
+            )
+            is not None
+            for zone in zones
+        )
+
+    def anywhere(self, *, zones: Iterable[str]) -> bool:
+        """Whether the file is at one of these addresses, a directory or a module."""
         return any(self.holds(path=zone) for zone in zones)
 
     def holds(self, *, path: str) -> bool:
@@ -104,7 +124,7 @@ def zoned(
 ) -> Place | None:
     """The file's address if it is in one of the zones; otherwise `None`: nothing to say."""
     where = place(file=file)
-    if where is None or not where.anywhere(zones=zones):
+    if where is None or not where.inside(zones=zones):
         return None
     return where
 
@@ -125,6 +145,7 @@ def place(*, file: ParsedFile) -> Place | None:
     return Place(
         package=relative[0],
         parts=parts,
+        directories=relative[1:-1],
     )
 
 

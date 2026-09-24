@@ -1005,6 +1005,12 @@ shared = ["str", "int", "float", "Decimal"]
 **Why.** A zone is a path, and a `*` in it matches any one piece. Zones add
 up: a file in `modules/pricing/domain` falls under both lines at once.
 
+A zone is made of directories. `domain` takes `domain/` and everything under
+it, but not `application/exceptions/domain.py`: a module that happens to share
+a layer's name is not that layer. The file's own name answers only to `*`, so
+`domain/*` still takes `domain/exceptions.py`. The same holds for every
+`zones` key and for `sealed-imports`.
+
 Class fields are judged; `ClassVar` and `Final` are not fields — they belong
 to the class rather than to an instance, cross no boundary and are not the
 rule's business. An annotation is seen through: `tuple[str, ...]` is the same

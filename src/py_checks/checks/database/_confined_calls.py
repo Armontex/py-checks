@@ -113,6 +113,6 @@ class ConfinedCalls:
     ) -> bool:
         if rule.owner is not None and file.path.stem == rule.owner:
             return False
-        if where.anywhere(zones=rule.skip):
+        if where.inside(zones=rule.skip):
             return False
-        return where.anywhere(zones=rule.zones)
+        return where.inside(zones=rule.zones)

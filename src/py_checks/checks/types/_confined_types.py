@@ -110,7 +110,7 @@ class ConfinedTypes:
     ) -> frozenset[str]:
         """Everything banned in this place: zones add up rather than compete."""
         return frozenset(
-            name for zone, names in zones.items() if where.holds(path=zone) for name in names
+            name for zone, names in zones.items() if where.inside(zones=(zone,)) for name in names
         )
 
     @staticmethod

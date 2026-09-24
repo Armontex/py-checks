@@ -60,10 +60,7 @@ class SealedImports:
             code=CODE,
         )
         where = place(file=file)
-        if where is None or not cls._sealed(
-            where=where,
-            zones=own.zones,
-        ):
+        if where is None or not where.inside(zones=own.zones):
             return
         allowed = cls._allowed(
             where=where,
@@ -83,18 +80,10 @@ class SealedImports:
             )
 
     @staticmethod
-    def _sealed(
-        *,
-        where: Place,
-        zones: tuple[str, ...],
-    ) -> bool:
-        return any(part in zones for part in where.parts)
-
-    @staticmethod
     def _allowed(
         *,
         where: Place,
         allow: dict[str, tuple[str, ...]],
     ) -> frozenset[str]:
         """What this layer may import: a file has one zone, but its own layer inside it."""
-        return frozenset(package for part in where.parts for package in allow.get(part, ()))
+        return frozenset(package for part in where.directories for package in allow.get(part, ()))
