@@ -13,7 +13,7 @@ from rich.console import Console
 
 from py_checks.config import ConfigError, find_root, load, prefix
 from py_checks.contracts import SECTION as CONTRACTS
-from py_checks.core import EXIT_OK, EXIT_VIOLATION, available, depth, section_of
+from py_checks.core import ANY, EXIT_OK, EXIT_VIOLATION, SEPARATOR, available, depth, section_of
 from py_checks.environment import SECTION as ENV_EXAMPLE
 from py_checks.mutation import SECTION as MUTATION
 
@@ -215,31 +215,39 @@ def _nowhere(*, config: Config) -> Iterator[Complaint]:
     """An address that nothing on disk answers to.
 
     A directory was renamed, the layout block stayed — and the rule looks where
-    nothing has been for a long time, and stays silent about it.
+    nothing has been for a long time, and stays silent about it. A zone is
+    asked the way the rules ask it: a module answers only to a trailing `*`,
+    so a zone that exists only as `domain.py` is a zone nothing lies in.
     """
     places = _places(src=config.src)
     if not places:
         return
     named = prefix(source=config.origin)
-    for section, address in sorted(_addressed(config=config)):
+    for section, address, zone in sorted(_addressed(config=config)):
+        modules = not zone or address.split(SEPARATOR)[-1] == ANY
         if any(
             depth(
                 parts=parts,
                 path=address,
             )
             is not None
-            for parts in places
+            for parts, directory in places
+            if directory or modules
         ):
             continue
         yield Complaint(
             said="address that is not on disk",
-            about=f"[{named}{section}] — {address!r} not found in {config.src}",
+            about=(
+                f"[{named}{section}] — {address!r} "
+                f"{'is not a directory' if zone else 'not found'} in {config.src}"
+            ),
         )
 
 
-def _addressed(*, config: Config) -> Iterator[tuple[str, str]]:
-    """The addresses written in the settings: shared table blocks and zone lists.
+def _addressed(*, config: Config) -> Iterator[tuple[str, str, bool]]:
+    """The addresses written in the settings, and whether each is a zone.
 
+    Shared table blocks and zone lists.
     Only these two: the other keys are names of packages, types, constructs,
     and they cannot be told from a path without knowing the rule. A zone inside
     an array of tables (`[[confined-calls.rules]]`) is the same zone, hence the
@@ -250,9 +258,11 @@ def _addressed(*, config: Config) -> Iterator[tuple[str, str]]:
         if section in OWNED:
             continue
         if section in shared:
-            yield from ((section, key) for key, value in table.items() if isinstance(value, dict))
+            yield from (
+                (section, key, False) for key, value in table.items() if isinstance(value, dict)
+            )
         for value in [table, *(one for one in table.values() if isinstance(one, list))]:
-            yield from ((section, one) for one in _zones(value=value))
+            yield from ((section, one, True) for one in _zones(value=value))
 
 
 def _zones(*, value: TomlValue) -> Iterator[str]:
@@ -275,21 +285,22 @@ def _shared() -> set[str]:
     }
 
 
-def _places(*, src: Path) -> list[tuple[str, ...]]:
-    """The path parts of every directory and every module under the source root.
+def _places(*, src: Path) -> list[tuple[tuple[str, ...], bool]]:
+    """The path parts of every directory and module under the source root, and which is which.
 
-    Modules count the same as directories: `exceptions` is both a directory and
-    `exceptions.py`, and to the refusal vocabulary it is one and the same place.
+    To an address a module counts the same as a directory: `exceptions` is both
+    a directory and `exceptions.py`, and to the refusal vocabulary it is one
+    and the same place. To a zone it does not.
     """
     if not src.is_dir():
         return []
     found = [
-        path.relative_to(src).with_suffix("").parts
+        (path.relative_to(src).with_suffix("").parts, path.is_dir())
         for path in src.rglob("*")
         if path.is_dir() or path.suffix == SUFFIX
     ]
     # The first part is the root package, and addresses are written inwards from it.
-    return [parts[1:] for parts in found if len(parts) > 1]
+    return [(parts[1:], directory) for parts, directory in found if len(parts) > 1]
 
 
 def register(*, app: typer.Typer) -> None:

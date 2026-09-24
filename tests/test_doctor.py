@@ -166,6 +166,22 @@ def test_an_address_without_a_directory_is_reported(project: Path) -> None:
     assert "'application/handlers' not found" in result.output
 
 
+def test_a_zone_that_is_only_a_module_is_reported(project: Path) -> None:
+    """Правило зону `domain` в `domain.py` не найдёт — значит, и doctor не должен."""
+    (project / "src" / "app" / "application").mkdir()
+    (project / "src" / "app" / "application" / "domain.py").write_text("")
+    settings(
+        project=project,
+        written='src = "src"\n\n[statement-keys]\nzones = ["domain", "application/*"]\n',
+    )
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 1
+    assert "'domain' is not a directory" in result.output
+    assert "application/*" not in result.output
+
+
 def test_a_key_that_is_not_an_address_is_left_alone(project: Path) -> None:
     """Ключ обычной секции — имя типа, а не путь: его на диске искать нечего."""
     settings(
