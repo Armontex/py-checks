@@ -23,7 +23,8 @@
 ## Команды
 
 ```bash
-uv run pytest -q                 # тесты
+uv run pytest -q                 # тесты, с покрытием и его полом
+uv run pytest -q tests/test_x.py --no-cov   # один файл: пол судит всё дерево
 uv run ruff check . && uv run ruff format .
 uv run pyright                   # strict
 uv run py-checks run             # библиотека проверяет сама себя

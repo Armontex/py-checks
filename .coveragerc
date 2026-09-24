@@ -3,6 +3,9 @@ source = src/py_checks
 branch = True
 
 [report]
+# Пол, а не цель: замерено 93.8% на 189 тестах. Поднимается вместе с тем,
+# что им закрыто; опускается — только правкой с объяснением почему.
+fail_under = 93
 exclude_also =
     if TYPE_CHECKING:
     \.\.\.$
