@@ -1,4 +1,4 @@
-"""Слово, которым снимается любая проверка этой группы."""
+"""The word that lifts any rule of this group."""
 
 from __future__ import annotations
 

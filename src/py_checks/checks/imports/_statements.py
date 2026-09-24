@@ -1,4 +1,4 @@
-"""Импорты файла в том виде, в каком о них говорят правила."""
+"""A file's imports in the form the rules talk about them."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ STDLIB: Final[frozenset[str]] = frozenset(sys.stdlib_module_names)
 
 @dataclass(frozen=True, slots=True)
 class Imported:
-    """Один импорт: узел, полное имя и пакет, которому оно принадлежит."""
+    """One import: the node, the full name and the package it belongs to."""
 
     node: ast.stmt
     module: str
@@ -30,10 +30,10 @@ class Imported:
 
 
 def imports(*, tree: ast.Module) -> Iterator[Imported]:
-    """Все импорты модуля, кроме относительных.
+    """Every import of the module except relative ones.
 
-    Относительный импорт — это всегда сосед по пакету, то есть код самого
-    проекта: для правил про чужие пакеты он ничего не значит.
+    A relative import is always a neighbour in the same package, that is, the
+    project's own code: to rules about foreign packages it means nothing.
     """
     for node in ast.walk(tree):
         match node:

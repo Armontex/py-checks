@@ -1,4 +1,4 @@
-"""Длина функции."""
+"""The length of a function."""
 
 from __future__ import annotations
 
@@ -28,17 +28,18 @@ class FunctionLengthSettings(CheckSettings):
 
 
 class FunctionLength:
-    """Падает, если функция длиннее лимита.
+    """Fails when a function is longer than the limit.
 
-    Функция за пределом прячет внутри себя вторую. Считается тело как
-    написано — пустые строки и комментарии тоже держат в голове, — а подпись и
-    декораторы нет: они описывают функцию, а не работу, которую она делает.
+    A function over the limit hides a second one inside it. The body is
+    counted as written, since blank lines and comments are held in the head
+    too, but the signature and decorators are not: they describe the function,
+    not the work it does.
 
-    Похожее правило есть у ruff, `PLR0915`, но оно считает инструкции, а не
-    строки: замер на четырёх сервисах дал ноль срабатываний при пределе в
-    полсотни, а самая длинная функция там — 91 строка и две инструкции.
+    Ruff has a similar rule, `PLR0915`, but it counts statements, not lines:
+    measured on four services, it fired zero times at a limit of fifty, and
+    the longest function there is 91 lines and two statements.
 
-    Настройка: `max-lines`.
+    Settings: `max-lines`.
     """
 
     code: ClassVar[str] = CODE
@@ -66,22 +67,22 @@ class FunctionLength:
                 node=definition.node,
                 path=file.path,
                 code=CODE,
-                # Пометке место в конце подписи: на строке `def` она не всегда
-                # помещается, а подпись, разложенная по столбцу, кончается
-                # совсем не там, куда указывает нарушение.
+                # The mark belongs at the end of the signature: it does not
+                # always fit on the `def` line, and a signature laid out in a
+                # column ends far from where the violation points.
                 end_line=signature_end(node=definition.node),
                 message=(
-                    f"{definition.name}: строк {length}, предел {limits.max_lines}; "
-                    "вынеси часть в отдельную функцию"
+                    f"{definition.name}: {length} lines, the limit is {limits.max_lines}; "
+                    "move part of it into a separate function"
                 ),
             )
 
     @staticmethod
     def _length(*, definition: Definition) -> int:
-        """Строки тела: от первой инструкции до последней строки функции.
+        """The body's lines: from the first statement to the function's last line.
 
-        Подпись не считается: разложенная по столбцу, она добавила бы функции
-        десяток строк, которых в ней никто не читает как работу.
+        The signature is not counted: laid out in a column, it would add a
+        dozen lines to the function that nobody reads as work.
         """
         node = definition.node
         end = node.end_lineno

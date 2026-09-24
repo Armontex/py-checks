@@ -1,15 +1,17 @@
-"""Мутационный гейт: пуш не оставляет строки, поломку которой не заметит ни один тест.
+"""The mutation gate: a push leaves no line whose breakage no test would notice.
 
-Выживший мутант — строка, которую поменяли, а тесты прошли. Их список заменяет
-чтение тестов глазами с вопросом «а они вообще что-нибудь проверяют?».
+A surviving mutant is a line that was changed while the tests still passed.
+Their list replaces reading the tests by eye with the question "do they check
+anything at all?".
 
-Гейт — запись, а не ноль: `record` пишет, сколько выживших числится за каждым
-модулем, а `diff` и `full` отказывают, если где-то их стало больше. Поднять
-запись — правка с объяснением, какой из выживших не стоит теста.
+The gate is a record, not zero: `record` writes how many survivors each module
+has, and `diff` and `full` refuse if any module has more. Raising the record
+is a change that explains which survivor is not worth a test.
 
-mutmut зовётся процессом, как `schema-drift` зовёт alembic: библиотека читает
-его вывод, а не импортирует его. Совместимая версия закреплена в extra
-`python-checks[mutation]` — формат вывода и есть договор между ними.
+mutmut is called as a process, the way `schema-drift` calls alembic: the
+library reads its output rather than importing it. The compatible version is
+pinned in the `python-checks[mutation]` extra — the output format is the
+contract between the two.
 """
 
 from py_checks.mutation._constants import BASELINE, SECTION

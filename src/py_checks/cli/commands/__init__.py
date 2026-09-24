@@ -1,8 +1,8 @@
-"""Команды, по модулю на команду.
+"""The commands, one module per command.
 
-Модуль команды сам знает своё имя и свои опции: `_app` только собирает
-приложение из их `register`. Когда у команды появятся подкоманды, её `register`
-вызовет `add_typer`, и собирающий код это не заметит.
+A command's module knows its own name and its own options: `_app` only builds
+the application from their `register`. When a command grows subcommands, its
+`register` will call `add_typer`, and the building code will not notice.
 """
 
 from typing import Final

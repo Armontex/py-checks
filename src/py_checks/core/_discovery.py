@@ -1,4 +1,4 @@
-"""Какие файлы проверяем."""
+"""Which files are checked."""
 
 from __future__ import annotations
 
@@ -17,12 +17,12 @@ def python_files(
     default: Path,
     exclude: Iterable[str] = (),
 ) -> list[Path]:
-    """Все `.py` из переданных путей, без исключённых.
+    """Every `.py` under the given paths, minus the excluded ones.
 
-    pre-commit передаёт список изменённых файлов, поэтому путь может быть и
-    файлом, и директорией. Когда путей нет — запуск руками, — берём `default`
-    (обычно `src`), а не весь репозиторий: иначе в выборку попадут `.venv` и
-    прочее чужое.
+    pre-commit passes the list of changed files, so a path may be a file or a
+    directory. When there are no paths — a run by hand — `default` is taken
+    (usually `src`), not the whole repository: otherwise `.venv` and other
+    code that is not ours would be picked up.
     """
     roots = list(paths) if paths else [default]
     patterns = tuple(exclude)

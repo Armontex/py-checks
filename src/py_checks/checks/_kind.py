@@ -1,8 +1,8 @@
-"""Что объявлено в модуле: класс, порт, dataclass, алиас.
+"""What a module declares: a class, a port, a dataclass, an alias.
 
-Правила размещения говорят о видах объявлений, а не о синтаксисе: «в `dto/`
-лежат dataclass-ы», «в `ports/` — протоколы». Вид узнаётся один раз здесь, и
-этим же знанием пользуются все правила группы.
+The placement rules speak of kinds of declaration, not of syntax: "`dto/` holds
+dataclasses", "`ports/` holds protocols". The kind is recognised once, here,
+and every rule of the group uses the same knowledge.
 """
 
 from __future__ import annotations
@@ -27,12 +27,12 @@ ENUMS: Final[frozenset[str]] = frozenset(
 
 ERROR_BASES: Final[frozenset[str]] = frozenset({"Exception", "BaseException"})
 
-# Исключение проекта наследуется от своего же корня (`class NotFound(DomainError)`),
-# а не от `Exception`, — но имя корня кончается так же, и по нему вид узнаётся,
-# не читая чужой модуль.
+# A project's exception inherits from its own root (`class NotFound(DomainError)`),
+# not from `Exception` — but the root's name ends the same way, and the kind is
+# recognised by it without reading another module.
 ERROR_SUFFIXES: Final[tuple[str, ...]] = ("Error", "Exception")
 
-# Присваивание, которым объявляют имя для типа, а не значение.
+# An assignment that declares a name for a type, not a value.
 ALIAS_ANNOTATION: Final = "TypeAlias"
 ALIAS_FACTORIES: Final[frozenset[str]] = frozenset(
     {"TypeVar", "NewType", "ParamSpec", "TypeAliasType"},
@@ -54,7 +54,7 @@ ALIAS_CONSTRUCTORS: Final[frozenset[str]] = frozenset(
 
 
 class Kind(StrEnum):
-    """Виды объявлений, о которых говорят правила размещения."""
+    """The kinds of declaration the placement rules speak of."""
 
     CLASS = "class"
     PORT = "port"
@@ -67,29 +67,29 @@ class Kind(StrEnum):
 
     @property
     def said(self) -> str:
-        """Как вид называется в сообщении: `str.title` занят самим `str`."""
+        """What the kind is called in a message: `str.title` is taken by `str` itself."""
         return NAMES[self]
 
 
 NAMES: Final[dict[Kind, str]] = {
-    Kind.CLASS: "класс",
-    Kind.PORT: "порт",
+    Kind.CLASS: "class",
+    Kind.PORT: "port",
     Kind.DATACLASS: "dataclass",
-    Kind.MODEL: "модель",
-    Kind.ALIAS: "алиас",
-    Kind.ENUM: "перечисление",
-    Kind.ERROR: "исключение",
-    Kind.FUNCTION: "функция",
+    Kind.MODEL: "model",
+    Kind.ALIAS: "alias",
+    Kind.ENUM: "enum",
+    Kind.ERROR: "exception",
+    Kind.FUNCTION: "function",
 }
 
 
 @dataclass(frozen=True, slots=True)
 class Declaration:
-    """Объявление верхнего уровня: имя, вид и узел.
+    """A top-level declaration: the name, the kind and the node.
 
-    `kind` пуст, когда вид по одному файлу не виден: класс с базой из другого
-    модуля. Имя у такого всё равно есть, и правило, которое смотрит на суффикс,
-    им пользуется.
+    `kind` is empty when one file does not show the kind: a class with a base
+    from another module. Such a class still has a name, and a rule that looks at
+    the suffix uses it.
     """
 
     name: str
@@ -98,10 +98,11 @@ class Declaration:
 
 
 def declarations(*, tree: ast.Module) -> Iterator[Declaration]:
-    """Всё, что модуль объявляет.
+    """Everything a module declares.
 
-    Импорты, константы, блоки `if TYPE_CHECKING` и докстринг сюда не попадают:
-    они разрешены везде, и правилам размещения о них говорить нечего.
+    Imports, constants, `if TYPE_CHECKING` blocks and the docstring are left
+    out: they are allowed everywhere, and the placement rules have nothing to
+    say about them.
     """
     for node in tree.body:
         match node:
@@ -129,12 +130,12 @@ def declarations(*, tree: ast.Module) -> Iterator[Declaration]:
 
 
 def _class(*, node: ast.ClassDef) -> Kind | None:
-    """Вид класса; `None`, если по одному файлу его не видно.
+    """The class's kind; `None` if one file does not show it.
 
-    База, объявленная в другом модуле, — это вид, которого отсюда не видно:
-    `class CodeMismatchResponse(ErrorResponse)` — pydantic-модель, но узнать
-    это можно только прочитав тот модуль. Про такой класс правило молчит:
-    заблудившийся хелпер, ради которого оно написано, базы обычно не имеет.
+    A base declared in another module is a kind that cannot be seen from here:
+    `class CodeMismatchResponse(ErrorResponse)` is a pydantic model, but that
+    can only be learned by reading that module. The rule is silent about such
+    a class: the stray helper it was written for usually has no base.
     """
     bases = frozenset(names(nodes=node.bases))
     if bases & ABSTRACT or _metaclass(node=node):
@@ -164,10 +165,11 @@ def _metaclass(*, node: ast.ClassDef) -> bool:
 
 
 def _alias(*, node: ast.AnnAssign | ast.Assign) -> bool:
-    """Присваивание, объявляющее имя для типа.
+    """An assignment that declares a name for a type.
 
-    Три вида: с аннотацией `TypeAlias`, вызов фабрики вроде `NewType`, и голое
-    `Row = dict[str, int]` — имя для формы, а не значение.
+    Three kinds: annotated with `TypeAlias`, a call of a factory such as
+    `NewType`, and a bare `Row = dict[str, int]` — a name for a shape, not a
+    value.
     """
     if isinstance(node, ast.AnnAssign) and name(node=node.annotation) == ALIAS_ANNOTATION:
         return True

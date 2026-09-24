@@ -1,4 +1,4 @@
-"""Вызов, который принадлежит одному модулю, и больше никому."""
+"""A call that belongs to one module and to nobody else."""
 
 from __future__ import annotations
 
@@ -20,23 +20,23 @@ CODE: Final = "confined-calls"
 
 
 class Confined(ZonedSettings):
-    """Имена методов, зона, где они запрещены, и модуль, который ими владеет.
+    """Method names, the zone that bans them, and the module that owns them.
 
-    `owner` — имя модуля без расширения. Правило его не касается: там вызов и
-    должен стоять, потому и владелец.
+    `owner` is the module's name without the extension. The rule leaves it
+    alone: that is where the call belongs, which is what makes it the owner.
 
-    `skip` — куски зоны, где правило молчит. Имя метода — всё, что видно по
-    одному файлу, и край брокера тому пример: `commit()` у консьюмера
-    подтверждает смещение, а не транзакцию базы.
+    `skip` holds the pieces of the zone where the rule is silent. A method's
+    name is all one file shows, and the broker's edge is the example: a
+    consumer's `commit()` acknowledges an offset, not a database transaction.
 
-    `because` — причина в отказе: она объясняет, кто владеет этим вызовом, и
-    печатается тому, кто его написал не там.
+    `because` is the reason in the refusal: it explains who owns this call,
+    and it is printed to whoever wrote it in the wrong place.
     """
 
     methods: tuple[str, ...]
     skip: tuple[str, ...] = ()
     owner: str | None = None
-    because: str = "этим владеет другой модуль"
+    because: str = "another module owns this"
 
 
 class ConfinedCallsSettings(CheckSettings):
@@ -44,20 +44,20 @@ class ConfinedCallsSettings(CheckSettings):
 
 
 class ConfinedCalls:
-    """Падает, если названный метод позвали не там, где ему место.
+    """Fails if a named method was called somewhere it does not belong.
 
-    Написано ради границы транзакции. Ставка — это одна транзакция: списать
-    деньги, записать ставку, записать событие, которое расскажет об этом
-    остальной платформе. Репозиторий, коммитящий в середине, превращает её в
-    три, и сальдо перестаёт сходиться со ставками. `begin` запрещён рядом с
-    `commit` и `rollback` по той же причине с другого конца: вызывающий уже
-    открыл транзакцию, а вторая внутри либо падает, либо тихо делает вложенную.
+    Written for the transaction boundary. A bet is one transaction: take the
+    money, write the bet, write the event that tells the rest of the platform.
+    A repository committing halfway turns it into three, and the balance stops
+    agreeing with the bets. `begin` is banned next to `commit` and `rollback`
+    for the same reason from the other end: the caller has already opened a
+    transaction, and a second one inside either fails or quietly nests.
 
-    Имя метода — всё, что видно по одному файлу: чей это объект, сказал бы
-    только вывод типов. Поэтому правило и сужено зоной — там, где `commit()`
-    может быть только у сессии.
+    A method's name is all one file shows: whose object it is would take type
+    inference to say. That is why the rule is narrowed by a zone — one where
+    `commit()` can only be the session's.
 
-    Настройка: `rules`.
+    Settings: `rules`.
     """
 
     code: ClassVar[str] = CODE

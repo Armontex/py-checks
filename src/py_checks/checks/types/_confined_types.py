@@ -1,4 +1,4 @@
-"""Тип, которому не место в этой части дерева."""
+"""A type that does not belong in this part of the tree."""
 
 from __future__ import annotations
 
@@ -19,16 +19,16 @@ if TYPE_CHECKING:
 
 CODE: Final = "confined-types"
 
-# Имя, которое говорит, что значение принадлежит классу, а не экземпляру:
-# такое поле — не состояние, переходящее границу, и правило его не касается.
+# A name that says the value belongs to the class rather than to an instance:
+# such a field is not state crossing a boundary, and not the rule's business.
 ASIDE: Final[frozenset[str]] = frozenset({"ClassVar", "Final"})
 
 
 class ConfinedTypesSettings(CheckSettings):
-    """Секция `[confined-types]`: адрес — и типы, которых там не бывает.
+    """The `[confined-types]` section: an address and the types never found there.
 
-    Ключи приносит проект, поэтому подтаблицы нет: имя директории и есть
-    настройка, а не значение под её именем.
+    The keys come from the project, so there is no sub-table: the directory
+    name is the setting itself, not a value under its name.
     """
 
     model_config = OPEN
@@ -41,25 +41,25 @@ class ConfinedTypesSettings(CheckSettings):
 
 
 class ConfinedTypes:
-    """Падает, если поле в этой части дерева объявлено запрещённым здесь типом.
+    """Fails when a field in this part of the tree is declared with a type banned here.
 
-    Одно правило на два случая, которые раньше писались по отдельности.
-    `float` в домене: двоичная плавающая точка не держит цену, а ошибка
-    округления в хранимом состоянии — это деньги, которые перестают сходиться.
-    Голые `str`, `int`, `Decimal` там, где живут контракты: `int` говорит, что
-    версия может быть −10000, `str` — что тег может быть пустым, `Decimal` —
-    что коэффициент может быть отрицательным или NaN. Ничего из этого про дело
-    не верно, а тип — последнее место, где это можно сказать один раз, а не
-    перепроверять глазами.
+    One rule for two cases that used to be written separately. `float` in the
+    domain: binary floating point does not hold a price, and a rounding error
+    in stored state is money that stops adding up. Bare `str`, `int`,
+    `Decimal` where the contracts live: `int` says the version may be −10000,
+    `str` that the tag may be empty, `Decimal` that the coefficient may be
+    negative or NaN. None of that is true of the business, and the type is the
+    last place where it can be said once instead of re-checked by eye.
 
-    Какие типы где запрещены — дело проекта: в одном сервисе деньги считают
-    везде, в другом `float` в отчёте законен. Без таблицы правило молчит.
+    Which types are banned where is the project's call: one service counts
+    money everywhere, in another a `float` in a report is lawful. Without the
+    table the rule stays silent.
 
-    Аннотация просматривается насквозь: `tuple[str, ...]` — та же голая строка
-    этажом ниже. Судятся поля класса; `ClassVar` и `Final` — не поля: они
-    принадлежат классу, а не экземпляру.
+    An annotation is seen through: `tuple[str, ...]` is the same bare string
+    one floor down. Class fields are judged; `ClassVar` and `Final` are not
+    fields: they belong to the class rather than to an instance.
 
-    Настройка: адрес (можно с `*`: `modules/*/domain`) — и список имён.
+    Settings: an address (`*` allowed: `modules/*/domain`) and a list of names.
     """
 
     code: ClassVar[str] = CODE
@@ -97,8 +97,8 @@ class ConfinedTypes:
                 path=file.path,
                 code=CODE,
                 message=(
-                    f"{name} объявлено через {', '.join(sorted(found))}; "
-                    f"здесь тип называет, что значение может держать"
+                    f"{name} is declared with {', '.join(sorted(found))}; "
+                    f"here the type names what the value may hold"
                 ),
             )
 
@@ -108,14 +108,14 @@ class ConfinedTypes:
         where: Place,
         zones: dict[str, tuple[str, ...]],
     ) -> frozenset[str]:
-        """Всё, что запрещено в этом месте: зоны складываются, а не спорят."""
+        """Everything banned in this place: zones add up rather than compete."""
         return frozenset(
             name for zone, names in zones.items() if where.holds(path=zone) for name in names
         )
 
     @staticmethod
     def _fields(*, tree: ast.Module) -> Iterator[tuple[str, ast.AnnAssign]]:
-        """Поля классов модуля под именами вида `Класс.поле`."""
+        """The module's class fields, named as `Class.field`."""
         for node in ast.walk(tree):
             if not isinstance(node, ast.ClassDef):
                 continue

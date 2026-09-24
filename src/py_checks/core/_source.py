@@ -1,4 +1,4 @@
-"""Разобранный файл, который получают проверки."""
+"""The parsed file the checks receive."""
 
 from __future__ import annotations
 
@@ -14,17 +14,17 @@ if TYPE_CHECKING:
 
 
 class ParsedFile:
-    """Файл, прочитанный один раз и разобранный не больше одного раза.
+    """A file read once and parsed no more than once.
 
-    Дерево строится лениво и запоминается: проверок на файл много, а разбор
-    один. Файлам, которым дерево не нужно (длина модуля, например), платить за
-    него не приходится.
+    The tree is built lazily and remembered: there are many checks per file,
+    and one parse. Checks that need no tree (module length, for one) do not
+    pay for it.
 
-    Деревьев два, и оба ленивые. `tree` — обычный `ast`: быстрый, его хватает,
-    когда правило только смотрит. `module` — дерево `libcst`, в котором есть
-    комментарии, кавычки и пробелы: такое дерево можно переписать и отдать
-    обратно текстом, ничего чужого не потеряв. Правило берёт то, что ему нужно,
-    и за второй разбор платит только оно.
+    There are two trees, both lazy. `tree` is the plain `ast`: fast, and enough
+    when a rule only looks. `module` is the `libcst` tree, which keeps comments,
+    quotes and whitespace: such a tree can be rewritten and handed back as
+    text without losing anything that is not ours. A rule takes what it needs,
+    and only that rule pays for the second parse.
     """
 
     __slots__ = ("_lines", "_module", "_text", "_tree", "path", "source")
@@ -37,9 +37,10 @@ class ParsedFile:
         source: Path | None = None,
     ) -> None:
         self.path = path
-        # Корень исходников проекта: по нему правила, которые говорят о месте
-        # («ORM живёт в `infra/database`»), считают адрес файла. Угадывать его
-        # по `__init__.py` нельзя — папка без него встречается и внутри пакета.
+        # The root of the project's sources: rules that speak about place ("the
+        # ORM lives in `infra/database`") work out a file's address from it. It
+        # cannot be guessed from `__init__.py` — a folder without one turns up
+        # inside a package too.
         self.source = source
         self._text = text
         self._tree: ast.Module | None = None

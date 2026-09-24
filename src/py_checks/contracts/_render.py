@@ -1,4 +1,4 @@
-"""Сборка файла контрактов для import-linter."""
+"""Building the import-linter contracts file."""
 
 from __future__ import annotations
 
@@ -16,9 +16,9 @@ if TYPE_CHECKING:
     from py_checks.config import Config
 
 HEADER: Final = """\
-# Контракты импортов. Файл собирает `py-checks sync` из того, какие слои
-# есть на диске, и из секции [{section}] — править его нечего, следующий sync
-# перезапишет. Менять нужно секцию.
+# Import contracts. `py-checks sync` builds this file from the layers that
+# exist on disk and from the [{section}] section — there is nothing to edit
+# here, the next sync overwrites it. Change the section instead.
 """
 
 
@@ -27,10 +27,10 @@ def render(
     root: Path,
     config: Config,
 ) -> str | None:
-    """Файл контрактов; `None`, если проверять нечего.
+    """The contracts file; `None` if there is nothing to check.
 
-    Нечего — это либо проект, который не объявил ни одного слоя, либо
-    раскладка, в которой объявленных слоёв нет на диске.
+    Nothing means either a project that declared no layer at all, or a layout
+    in which none of the declared layers is on disk.
     """
     name = package(
         root=root,
@@ -46,9 +46,9 @@ def render(
     if not blocks:
         return None
     head = contracts(config=config).header.strip() or HEADER.format(
-        # Секция зовётся по-разному в манифесте и в своём файле настроек:
-        # написать одно имя значит послать читателя не туда в половине
-        # проектов.
+        # The section is named differently in the manifest and in its own
+        # settings file: writing one name would send the reader to the wrong
+        # place in half the projects.
         section=f"{prefix(source=config.origin)}{SECTION}"
     )
     return "\n".join(
@@ -122,7 +122,7 @@ def _layer(
     layer: str,
     forbidden: Iterable[str],
 ) -> str | None:
-    """Контракт «этому слою нельзя вот это»."""
+    """The contract "this layer may not import that"."""
     sources = expressions(
         root=root,
         src=config.src,
@@ -144,12 +144,12 @@ def _layer(
     return _block(
         head=f"[importlinter:contract:layer-{layer}]",
         scalars={
-            "name": f"{layer} не импортирует чужое",
+            "name": f"{layer} imports only what it may",
             "type": "forbidden",
-            # Только прямые импорты. Непрямую цепочку тут проверять нечего:
-            # `presentation` зовёт `application`, а `application` знает
-            # `domain` — по таблице это и есть правильная работа, и запрет
-            # непрямых связей запретил бы её же.
+            # Direct imports only. There is no indirect chain to check here:
+            # `presentation` calls `application`, and `application` knows
+            # `domain` — by the table that is exactly the intended work, and
+            # forbidding indirect links would forbid it too.
             "allow_indirect_imports": "True",
         },
         lists={"source_modules": list(sources), "forbidden_modules": targets},
@@ -162,7 +162,7 @@ def _independence(
     config: Config,
     package: str,
 ) -> list[str]:
-    """Модули друг о друге не знают: соседа зовут через порт, а не по имени."""
+    """Modules do not know each other: a neighbour is called via a port, not by name."""
     if not modules(
         root=root,
         src=config.src,
@@ -172,7 +172,7 @@ def _independence(
     return [
         _block(
             head="[importlinter:contract:modules]",
-            scalars={"name": "модули независимы", "type": "independence"},
+            scalars={"name": "modules are independent", "type": "independence"},
             lists={"modules": [f"{package}.{MODULES}.*"]},
         ),
     ]
@@ -183,17 +183,17 @@ def _migrations(
     root: Path,
     package: str,
 ) -> list[str]:
-    """Миграция описывает схему, а не зовёт приложение: код уедет, схема останется.
+    """A migration describes the schema without calling the app: code moves on, schema stays.
 
-    Смотрим только на `versions`: `env.py` — не история, а то, что её запускает,
-    и метаданные моделей он импортирует по своей работе.
+    Only `versions` is looked at: `env.py` is not the history but what runs
+    it, and importing the model metadata is part of its job.
     """
     if not migrations(root=root):
         return []
     return [
         _block(
             head=f"[importlinter:contract:{MIGRATIONS}]",
-            scalars={"name": "миграции не знают приложение", "type": "forbidden"},
+            scalars={"name": "migrations do not know the application", "type": "forbidden"},
             lists={
                 "source_modules": [f"{MIGRATIONS}.{VERSIONS}"],
                 "forbidden_modules": [package],
@@ -208,10 +208,11 @@ def _block(
     scalars: Mapping[str, str],
     lists: Mapping[str, Sequence[str]],
 ) -> str:
-    """Один раздел ini.
+    """One ini section.
 
-    Списки пишутся в столбик даже из одного значения: import-linter разбирает
-    поле-список, написанное в строку, посимвольно — и ищет пакет `p`.
+    Lists are written one value per line, even a single value: import-linter
+    reads a list field written on one line character by character — and looks
+    for a package `p`.
     """
     lines = [head, *(f"{key} = {value}" for key, value in scalars.items())]
     for key, values in lists.items():

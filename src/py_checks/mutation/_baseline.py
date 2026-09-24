@@ -1,4 +1,4 @@
-"""Запись выживших по модулям: с ней сравнивают, её пишет `record`."""
+"""The record of survivors per module: compared against, written by `record`."""
 
 from __future__ import annotations
 
@@ -12,10 +12,10 @@ if TYPE_CHECKING:
 
 
 def recorded(*, path: Path) -> dict[str, int]:
-    """Сколько выживших числится за каждым модулем.
+    """How many survivors are on record for each module.
 
-    Записи, которой ещё нет, соответствует пустая: это правда о проекте, чей
-    первый модуль ещё не написан.
+    A record that does not exist yet stands for an empty one: that is the truth
+    about a project whose first module is not written yet.
     """
     if not path.is_file():
         return {}
@@ -24,7 +24,7 @@ def recorded(*, path: Path) -> dict[str, int]:
         isinstance(count, int)
         for count in read.values()  # pyright: ignore[reportUnknownVariableType]
     ):
-        raise GateError(f"{path}: ожидался объект «модуль → число выживших»")
+        raise GateError(f"{path}: expected an object mapping a module to its survivor count")
     return {str(module): int(count) for module, count in read.items()}  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
 
 

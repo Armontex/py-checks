@@ -1,4 +1,4 @@
-"""Нарушение и то, как оно выглядит в выводе."""
+"""A violation and how it looks in the output."""
 
 from __future__ import annotations
 
@@ -15,18 +15,20 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class Violation:
-    """Одно нарушение: где, чем и почему.
+    """One violation: where, by what rule and why.
 
-    Строка и колонка нумеруются с единицы, как их показывает редактор. У `ast`
-    колонка начинается с нуля, поэтому узлы дерева превращаются в нарушение
-    через `from_node`, а не вручную.
+    Line and column count from 1, as the editor shows them. In `ast` the
+    column starts at 0, so tree nodes become a violation through `from_node`,
+    not by hand.
 
-    `end_line` нужен только тем нарушениям, которые занимают несколько строк:
-    по нему ядро ищет маркер во всей подписи, а не в одной её первой строке.
+    `end_line` is needed only by violations that span several lines: the core
+    uses it to look for a mark across the whole signature, not just its first
+    line.
 
-    `edit` есть у нарушения, которое правило умеет исправить. Правку несёт само
-    нарушение, а не отдельный проход: тот, кто нашёл место, знает о нём больше
-    всех, и второй раз разбирать файл ради починки незачем.
+    `edit` is present on a violation the rule knows how to fix. The violation
+    carries the edit itself, not a separate pass: whoever found the place knows
+    the most about it, and there is no reason to parse the file a second time
+    to fix it.
     """
 
     path: Path
@@ -61,10 +63,10 @@ class Violation:
         )
 
     def render(self, *, root: Path | None = None) -> str:
-        """`путь:строка:колонка: код: сообщение`.
+        """`path:line:column: code: message`.
 
-        Формат выбран не ради красоты: по нему строку понимают редактор, `grep`
-        и CI, и по ней можно перейти к месту одним щелчком.
+        The format is not chosen for looks: the editor, `grep` and CI all
+        understand a line by it, and it takes one click to jump to the place.
         """
         path = self.path
         if root is not None:

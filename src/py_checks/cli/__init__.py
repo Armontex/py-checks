@@ -1,7 +1,7 @@
-"""Командная строка.
+"""The command line.
 
-Точка входа, через которую проверки вызывает pre-commit, и команды для ручного
-запуска: прогнать проверки, показать список, объяснить правило.
+The entry point pre-commit calls the checks through, and the commands for a
+manual run: run the checks, show the list, explain a rule.
 """
 
 from py_checks.cli._app import app, main

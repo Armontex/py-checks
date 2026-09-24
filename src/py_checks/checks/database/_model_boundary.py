@@ -1,4 +1,4 @@
-"""ORM-модель не выходит за пределы слоя, который её понимает."""
+"""An ORM model does not leave the layer that understands it."""
 
 from __future__ import annotations
 
@@ -26,13 +26,13 @@ PRIVATE: Final = "_"
 DOT: Final = "."
 SEPARATOR: Final = "/"
 
-# Как зовут базовый класс моделей, если дом не сказал иначе.
+# What the models' base class is called, unless the home says otherwise.
 BASE: Final = "Base"
 
 
 @dataclass(frozen=True, slots=True)
 class Boundary:
-    """Два конца соглашения про модель, прочитанные из раскладки."""
+    """The two ends of the agreement about a model, read from the layout."""
 
     declared: tuple[str, ...]
     built: tuple[str, ...]
@@ -40,33 +40,34 @@ class Boundary:
 
 
 class ModelBoundary:
-    """Падает, если ORM-модель объявлена, собрана или отдана не там.
+    """Fails if an ORM model is declared, built or handed out in the wrong place.
 
-    Модель — это описание таблицы, и три правила держат её описанием.
+    A model is a description of a table, and three rules keep it one.
 
-    Объявляется она там, где объявляются модели: где-то ещё это таблица,
-    которую никто не ждёт по этому адресу, а autogenerate alembic видит только
-    те модели, до которых дотянулись импорты их пакета.
+    It is declared where models are declared: anywhere else it is a table
+    nobody expects at that address, and alembic's autogenerate sees only the
+    models the imports of their package reach.
 
-    Собирается она только в репозиториях: собрать модель — значит записать
-    строку, и модель, собранная в другом месте, либо не делает ничего — никто
-    снаружи не держит сессию, чтобы её добавить, — либо это строка, записанная
-    слоем, у которого нет транзакции, чтобы её записать.
+    It is built only in repositories: to build a model is to write a row, and
+    a model built anywhere else either does nothing — nobody outside holds a
+    session to add it to — or it is a row written by a layer with no
+    transaction to write it in.
 
-    Публичный метод репозитория её не возвращает. Модель уносит с собой
-    сессию: обращение к атрибуту после закрытия транзакции либо падает, либо
-    лезет в базу из слоя, которому туда нельзя, а через связи оттуда достижима
-    половина схемы, и запрос уходит из кода, который ни о каком соединении не
-    просил. Репозитории возвращают DTO, идентификаторы, количества — всё, с чем
-    слой базы уже закончил.
+    A repository's public method does not return it. A model carries the
+    session with it: touching an attribute after the transaction closed either
+    fails or goes to the database from a layer that may not, and half the
+    schema is reachable from there by relationships — a query leaving code
+    that never asked for a connection. Repositories return DTOs, identifiers,
+    counts — everything the database layer has finished with.
 
-    Модель узнаётся двумя способами, и оба видны в одном файле: объявление —
-    по базе `Base`, использование — по импорту из пакета моделей. Имя ни при
-    чём: `SettingsModel` в настройках и `DeviceModel` в домене — не таблицы.
+    A model is recognised in two ways, both visible in one file: declaration
+    by the `Base` parent, use by the import from the models package. The name
+    has nothing to do with it: `SettingsModel` in the settings and
+    `DeviceModel` in the domain are not tables.
 
-    Настройки: `orm` в общей таблице `[layout]` — `"declared"` у дома моделей
-    и `"built"` там, где их собирают; `base` рядом с домом, если базовый класс
-    зовут не `Base`.
+    Settings: `orm` in the shared `[layout]` table — `"declared"` on the
+    models' home and `"built"` where they are built; `base` next to the home,
+    if the base class is not called `Base`.
     """
 
     code: ClassVar[str] = CODE
@@ -119,7 +120,7 @@ class ModelBoundary:
 
     @staticmethod
     def _boundary(*, layout: dict[str, Directory]) -> Boundary:
-        """Дом моделей, место сборки и имя базы — всё из блоков раскладки."""
+        """The models' home, where they are built, the base's name — all from the layout."""
         declared = addressed(
             layout=layout,
             orm=Orm.DECLARED,
@@ -145,7 +146,7 @@ class ModelBoundary:
         where: Place,
         limits: Boundary,
     ) -> Iterator[Violation]:
-        """Модель, объявленная не в доме моделей."""
+        """A model declared outside the models' home."""
         if where.anywhere(
             zones=limits.declared,
         ):
@@ -159,8 +160,8 @@ class ModelBoundary:
                     path=file.path,
                     code=CODE,
                     message=(
-                        f"{node.name} объявлена вне {', '.join(limits.declared)}; "
-                        f"autogenerate видит только модели их пакета"
+                        f"{node.name} is declared outside {', '.join(limits.declared)}; "
+                        f"autogenerate sees only the models of their package"
                     ),
                     end_line=node.body[0].lineno,
                 )
@@ -174,7 +175,7 @@ class ModelBoundary:
         limits: Boundary,
         models: frozenset[str],
     ) -> Iterator[Violation]:
-        """Модель, собранная там, где нечем записать строку."""
+        """A model built where there is nothing to write the row with."""
         if where.anywhere(
             zones=limits.built + limits.declared,
         ):
@@ -189,8 +190,8 @@ class ModelBoundary:
                     path=file.path,
                     code=CODE,
                     message=(
-                        f"{built}(...) собирается вне {', '.join(limits.built)}; "
-                        f"собрать модель — значит записать строку"
+                        f"{built}(...) is built outside {', '.join(limits.built)}; "
+                        f"to build a model is to write a row"
                     ),
                 )
 
@@ -203,7 +204,7 @@ class ModelBoundary:
         limits: Boundary,
         models: frozenset[str],
     ) -> Iterator[Violation]:
-        """Модель, отданная наружу публичным методом репозитория."""
+        """A model handed out by a repository's public method."""
         if not where.anywhere(
             zones=limits.built,
         ):
@@ -224,8 +225,8 @@ class ModelBoundary:
                 path=file.path,
                 code=CODE,
                 message=(
-                    f"{node.name} возвращает {returned}; модель уносит с собой сессию — "
-                    f"отдавай DTO, идентификатор, количество"
+                    f"{node.name} returns {returned}; a model carries the session with it — "
+                    f"return a DTO, an identifier, a count"
                 ),
                 end_line=node.body[0].lineno,
             )
@@ -237,7 +238,7 @@ class ModelBoundary:
         file: ParsedFile,
         limits: Boundary,
     ) -> frozenset[str]:
-        """Имена, пришедшие импортом из пакета моделей."""
+        """Names imported from the models package."""
         names: set[str] = set()
         for node in ast.walk(file.tree):
             if not isinstance(node, ast.ImportFrom) or node.module is None:
@@ -266,5 +267,5 @@ class ModelBoundary:
         node: ast.expr,
         models: frozenset[str],
     ) -> str | None:
-        """Имя модели, названное где-нибудь внутри аннотации."""
+        """A model's name, named anywhere inside the annotation."""
         return next((found for found in walked(node=node) if found in models), None)

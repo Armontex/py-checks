@@ -503,17 +503,17 @@ config itself and says where the quiet comes from:
 $ py-checks doctor
 py-checks.toml
 
-  опечатка в имени секции
-    [class-lenght] — такой секции нет; ближайшие: module-length, function-length
+  typo in a section name
+    [class-lenght] — no such section; closest: module-length, function-length
 
-  правило включено, но молчит
-    [statement-keys] — зон не названо: судить негде
-    [layout] — секция пуста, а умолчаний у правила нет
+  rule is on but silent
+    [statement-keys] — no zones named: nowhere to judge
+    [layout] — the section is empty and the rule has no defaults
 
-  адрес, которого нет на диске
-    [layout] — 'application/handlers' не нашлось в src
+  address that is not on disk
+    [layout] — 'application/handlers' not found in src
 
-замечаний — 3
+complaint(s): 3
 ```
 
 Four questions, all of them about the file rather than the tree: a section
@@ -540,15 +540,15 @@ py-checks mutation record   # a full pass, written down as the new record
 ```
 
 Each pass also says what it tried and how that ended — for information, not as
-a verdict. `убито` is what mutmut itself counts as killed: a failed test, a
-timeout, a mutant the type checker refused. `осталось` is the survivors the
+a verdict. `killed` is what mutmut itself counts as killed: a failed test, a
+timeout, a mutant the type checker refused. `left` is the survivors the
 gate judges. Anything else — `suspicious`, a segfault — is shown apart rather
 than folded into either:
 
 ```
 $ py-checks mutation full
-мутантов: запущено 2643, убито 2630, осталось 13
-ok: 13 выживш(их), как в записи
+mutants: run 2643, killed 2630, left 13
+ok: 13 survivor(s), as recorded
 ```
 
 It is an extra rather than part of the core: `pip install

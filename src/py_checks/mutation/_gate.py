@@ -1,4 +1,4 @@
-"""Три вопроса гейта: что сломала ветка, что по всему дереву, и записать."""
+"""The three things the gate does: judge the branch, judge the whole tree, write the record."""
 
 from __future__ import annotations
 
@@ -21,11 +21,11 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class Verdict:
-    """Что прогон сказал о модулях, которые судил, рядом с тем, что записано.
+    """What the run said about the modules it judged, beside what is recorded.
 
-    Судят по модулю, а не по сумме: сумма стоит на месте, когда в одном модуле
-    выживших прибавилось, а в другом столько же убыло, — и новая дыра проходит
-    под прикрытием чужой работы.
+    Judged per module, not by the total: the total stays put when one module
+    gains survivors and another loses as many — and the new hole goes through
+    under cover of somebody else's work.
     """
 
     counted: dict[str, int]
@@ -35,7 +35,7 @@ class Verdict:
 
     @property
     def grown(self) -> dict[str, tuple[int, int]]:
-        """Модули, где выживших больше записанного: сейчас и по записи."""
+        """Modules with more survivors than recorded: now and on record."""
         return {
             module: (now, self.recorded.get(module, 0))
             for module, now in sorted(self.counted.items())
@@ -49,7 +49,7 @@ class Verdict:
 
 @dataclass(frozen=True, slots=True)
 class Diffed:
-    """Вердикт по ветке и то, с чем её сравнивали."""
+    """The verdict on a branch and what it was compared against."""
 
     against: str
     verdict: Verdict
@@ -57,7 +57,7 @@ class Diffed:
 
 @dataclass(frozen=True, slots=True)
 class Gate:
-    """Гейт одного проекта: его корень, настройки и то, как звать mutmut."""
+    """One project's gate: its root, its settings and how mutmut is called."""
 
     root: Path
     config: Config
@@ -69,10 +69,11 @@ class Gate:
         return self.root / self.settings.baseline
 
     def full(self) -> Verdict:
-        """Всё, что мутируется, против записи — модуль за модулем.
+        """Everything that is mutated, against the record — module by module.
 
-        Модуль из записи, где выживших не осталось, тоже попадает в счёт, с
-        нулём: иначе убыль в нём не видна, и запись так и носит отвоёванное.
+        A module on record with no survivors left is counted too, with zero:
+        otherwise its decrease is not seen, and the record goes on carrying
+        ground already won.
         """
         report = self.mutmut.report()
         alive = survivors(report=report)
@@ -86,12 +87,12 @@ class Gate:
         )
 
     def diff(self, *, against: str | None) -> Diffed | None:
-        """Только модули, которые тронула ветка, — то, что гоняет пуш.
+        """Only the modules the branch touched — what a push runs.
 
-        По модулю, а не в сумме, потому что у правки нет суммы, с которой
-        её сравнить: правка в одном файле не должна оставлять В ЭТОМ ФАЙЛЕ
-        больше выживших, чем записано. `None` — сравнивать не с чем, и
-        вызывающий решает сам, гнать ли всё.
+        Per module, not in total, because a change has no total to be compared
+        with: a change in one file must not leave IN THAT FILE more survivors
+        than are recorded. `None` — nothing to compare against, and the caller
+        decides for itself whether to run everything.
         """
         target = against or against_ref(
             shell=self.mutmut.shell,
@@ -117,7 +118,7 @@ class Gate:
         )
 
     def record(self) -> dict[str, int]:
-        """Полный прогон, и его итог по модулям — в файл записи."""
+        """A full run, and its result per module written to the record file."""
         counted = by_module(alive=survivors(report=self.mutmut.report()))
         write(
             path=self.baseline,
@@ -132,11 +133,11 @@ def _changed(
     modules: tuple[str, ...],
     before: dict[str, int],
 ) -> Verdict:
-    """Вердикт по модулям ветки.
+    """The verdict on the branch's modules.
 
-    Отчёт печатает весь кэш, и модули, которых ветка не трогала, тоже; судят
-    здесь только то, что она поменяла. Пустой список модулей — пустой вердикт:
-    прогонять было нечего, и mutmut не звали.
+    The report prints the whole cache, modules the branch did not touch
+    included; only what it changed is judged here. An empty list of modules is
+    an empty verdict: there was nothing to run, and mutmut was not called.
     """
     alive = [mutant for mutant in survivors(report=report) if module_of(mutant=mutant) in modules]
     reported = by_module(alive=alive)
@@ -157,7 +158,7 @@ def gate(
     config: Config,
     children: int | None = None,
 ) -> Gate:
-    """Гейт проекта. `children` из командной строки побеждает настройку."""
+    """The project's gate. `children` from the command line wins over the setting."""
     settings = mutation(config=config)
     return Gate(
         root=root,

@@ -236,7 +236,7 @@ def test_no_tests_counts_as_alive(tmp_path: Path) -> None:
 def test_a_run_that_died_is_refused_not_read_as_zero(tmp_path: Path) -> None:
     root = project(root=tmp_path, reports=[""], exit_code=2)
 
-    with pytest.raises(GateError, match="завершился с кодом 2"):
+    with pytest.raises(GateError, match="exited with code 2"):
         gate_of(root=root).full()
 
 
@@ -245,7 +245,7 @@ def test_mutants_never_tried_are_refused(tmp_path: Path) -> None:
     это не отличить от прогона с выжившими, по строке `not checked` — да."""
     root = project(root=tmp_path, reports=["app.logic.limits.a: not checked"] * 2)
 
-    with pytest.raises(GateError, match="не попробовал 1"):
+    with pytest.raises(GateError, match="did not try 1"):
         gate_of(root=root).full()
 
 
@@ -325,7 +325,7 @@ def test_a_branch_that_grows_a_module_is_refused(
     result = runner.invoke(app, ["mutation", "diff", "--against", "develop"])
 
     assert result.exit_code == 1
-    assert "больше, чем записано" in result.output
+    assert "more than recorded" in result.output
     assert "app.logic.limits" in result.output
 
 
@@ -338,7 +338,7 @@ def test_a_branch_within_its_record_passes(tmp_path: Path, monkeypatch: pytest.M
     result = runner.invoke(app, ["mutation", "diff", "--against", "develop"])
 
     assert result.exit_code == 0, result.output
-    assert "ok: 1 выживш" in result.output
+    assert "ok: 1 survivor(s)" in result.output
 
 
 def test_full_below_the_record_asks_for_a_new_one(
@@ -352,7 +352,7 @@ def test_full_below_the_record_asks_for_a_new_one(
     result = runner.invoke(app, ["mutation", "full"])
 
     assert result.exit_code == 0, result.output
-    assert "по записи 3" in result.output
+    assert "3 on record" in result.output
     assert "mutation record" in result.output
 
 
@@ -376,7 +376,7 @@ def test_record_says_what_it_wrote(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     result = runner.invoke(app, ["mutation", "record"])
 
     assert result.exit_code == 0, result.output
-    assert "записан mutation-baseline.json: 1 выживш" in result.output
+    assert "recorded mutation-baseline.json: 1 survivor(s)" in result.output
 
 
 def test_a_tool_that_could_not_answer_is_a_refusal_not_a_pass(
@@ -390,7 +390,7 @@ def test_a_tool_that_could_not_answer_is_a_refusal_not_a_pass(
         result = runner.invoke(app, ["mutation", command])
 
         assert result.exit_code == 1, command
-        assert "мутационный гейт" in result.output
+        assert "mutation gate" in result.output
 
 
 def test_diff_with_nothing_to_compare_against_runs_everything(
@@ -404,7 +404,7 @@ def test_diff_with_nothing_to_compare_against_runs_everything(
     result = runner.invoke(app, ["mutation", "diff"])
 
     assert result.exit_code == 0, result.output
-    assert "гоню всё" in result.output
+    assert "running all" in result.output
 
 
 def test_diff_where_nothing_mutated_changed_says_so(
@@ -419,7 +419,7 @@ def test_diff_where_nothing_mutated_changed_says_so(
     result = runner.invoke(app, ["mutation", "diff", "--against", "develop"])
 
     assert result.exit_code == 0, result.output
-    assert "мутируемое не менялось" in result.output
+    assert "nothing mutable changed" in result.output
 
 
 def test_full_counts_what_was_tried_killed_and_left(
@@ -443,7 +443,7 @@ def test_full_counts_what_was_tried_killed_and_left(
     result = runner.invoke(app, ["mutation", "full"])
 
     assert result.exit_code == 0, result.output
-    assert "мутантов: запущено 6, убито 3, осталось 2, прочее 1" in result.output
+    assert "mutants: run 6, killed 3, left 2, other 1" in result.output
 
 
 def test_diff_counts_only_the_modules_it_judged(
@@ -464,5 +464,5 @@ def test_diff_counts_only_the_modules_it_judged(
     result = runner.invoke(app, ["mutation", "diff", "--against", "develop"])
 
     assert result.exit_code == 0, result.output
-    assert "в изменённых модулях: запущено 2, убито 1, осталось 1" in result.output
-    assert "прочее" not in result.output
+    assert "in changed modules: run 2, killed 1, left 1" in result.output
+    assert "other" not in result.output

@@ -1,4 +1,4 @@
-"""SQL, написанный строкой там, где хватило бы выражения."""
+"""SQL written as a string where an expression would do."""
 
 from __future__ import annotations
 
@@ -17,12 +17,13 @@ if TYPE_CHECKING:
 
 CODE: Final = "raw-sql"
 
-# Вызов — и то, что пишут вместо строки. Каждый берёт SQL первым позиционным.
+# The call, and what is written instead of the string. Each takes the SQL as
+# its first positional argument.
 CALLS: Final[dict[str, str]] = {
-    "CheckConstraint": "выражение по колонке, например and_(margin >= NOTHING, margin < WHOLE)",
-    "text": "select()/insert(), собранный из атрибутов модели",
-    "literal_column": "сама маппед-колонка",
-    "column": "сама маппед-колонка",
+    "CheckConstraint": "a column expression, e.g. and_(margin >= NOTHING, margin < WHOLE)",
+    "text": "select()/insert() built from the model's attributes",
+    "literal_column": "the mapped column itself",
+    "column": "the mapped column itself",
 }
 
 
@@ -31,34 +32,36 @@ class RawSqlSettings(CheckSettings):
 
 
 class RawSql:
-    """Падает, если SQL написан строкой там, где хватило бы выражения.
+    """Fails if SQL is written as a string where an expression would do.
 
-    CHECK, записанный как `"margin >= 0 AND margin < 1"`, — это второе
-    определение правила, которое домен уже сформулировал, на языке, который в
-    репозитории никто не проверяет. Переименуй колонку — строка по-прежнему
-    компилируется; сдвинь границу — строка по-прежнему называет старое число, и
-    расхождение всплывает нарушением ограничения на строке, которая была верна
-    по всем правилам, известным коду.
+    A CHECK written as `"margin >= 0 AND margin < 1"` is a second definition
+    of a rule the domain has already stated, in a language nobody in the
+    repository checks. Rename the column and the string still compiles; move
+    the bound and the string still names the old number, and the disagreement
+    surfaces as a constraint violation on a row that was correct by every rule
+    the code knew.
 
-    Записанное выражением — `CheckConstraint(and_(margin >= NOTHING, margin <
-    WHOLE))` — оно состоит из атрибута, который pyright и так проверяет, и
-    констант, которыми сущность отказывает, так что разъехаться им негде.
+    Written as an expression — `CheckConstraint(and_(margin >= NOTHING, margin
+    < WHOLE))` — it is made of an attribute pyright already checks and of the
+    constants the entity refuses by, so there is nowhere for them to drift
+    apart.
 
-    То же про `text()`, `literal_column()` и `column()`: запрос, собранный
-    строкой, — запрос, который никто не проверяет, а собранный из значения,
-    пришедшего откуда угодно, — инъекция, ждущая забывчивого вызывающего.
+    The same goes for `text()`, `literal_column()` and `column()`: a query
+    built as a string is a query nobody checks, and one built from a value
+    that came from anywhere is an injection waiting for a forgetful caller.
 
-    Где выражения честно нет — `SELECT 1` для пробы живости, чтение служебной
-    таблицы alembic, — на строке пишут причину:
-    `# db-ok: raw-sql: проба живости, формы ORM нет`. Пометка снимается с любой
-    строки самого вызова и не достаёт дальше него: пометка на объемлющей
-    инструкции извиняет её, а не SQL внутри.
+    Where there honestly is no expression — `SELECT 1` for a liveness probe,
+    reading alembic's own table — the reason goes on the line:
+    `# db-ok: raw-sql: a liveness probe has no ORM form`. The mark is lifted
+    from any line of the call itself and reaches no further: a mark on the
+    enclosing statement excuses that statement, not the SQL inside.
 
-    Миграции правилу не подсудны: миграция — это история, она может не иметь
-    права импортировать те самые константы, поэтому её SQL выписан словами и
-    заморожен в день рождения. Это `exclude` проекта, а не дело правила.
+    Migrations are outside the rule's jurisdiction: a migration is history, it
+    may have no right to import those very constants, so its SQL is written
+    out in words and frozen on the day it was born. That is the project's
+    `exclude`, not the rule's business.
 
-    Настройка: `instead`.
+    Settings: `instead`.
     """
 
     code: ClassVar[str] = CODE
@@ -88,14 +91,14 @@ class RawSql:
                 node=node,
                 path=file.path,
                 code=CODE,
-                # Пометка снимается с любой строки самого вызова.
+                # The mark is lifted from any line of the call itself.
                 end_line=node.end_lineno or node.lineno,
-                message=f"{written}(...) со строкой SQL; вместо неё — {instead[written]}",
+                message=f"{written}(...) with an SQL string; instead: {instead[written]}",
             )
 
     @staticmethod
     def _sql(*, node: ast.expr) -> bool:
-        """Строковый литерал или строка, собранная из литералов."""
+        """A string literal, or a string built from literals."""
         match node:
             case ast.Constant(value=str()):
                 return True

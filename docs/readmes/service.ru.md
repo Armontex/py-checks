@@ -496,17 +496,17 @@ extend-exclude = ["generated"]   # сверх исключений по умол
 $ py-checks doctor
 py-checks.toml
 
-  опечатка в имени секции
-    [class-lenght] — такой секции нет; ближайшие: module-length, function-length
+  typo in a section name
+    [class-lenght] — no such section; closest: module-length, function-length
 
-  правило включено, но молчит
-    [statement-keys] — зон не названо: судить негде
-    [layout] — секция пуста, а умолчаний у правила нет
+  rule is on but silent
+    [statement-keys] — no zones named: nowhere to judge
+    [layout] — the section is empty and the rule has no defaults
 
-  адрес, которого нет на диске
-    [layout] — 'application/handlers' не нашлось в src
+  address that is not on disk
+    [layout] — 'application/handlers' not found in src
 
-замечаний — 3
+complaint(s): 3
 ```
 
 Четыре вопроса, и все — про файл, а не про дерево: имя секции, которую никто
@@ -533,15 +533,15 @@ py-checks mutation record   # полный прогон, записанный к
 ```
 
 Каждый прогон заодно говорит, сколько мутантов попробовал и чем это кончилось, —
-справка, а не вердикт. «Убито» — то, что убитым считает сам mutmut: упавший
+справка, а не вердикт. `killed` — то, что убитым считает сам mutmut: упавший
 тест, зависший тест, мутант, которого не пропустила проверка типов.
-«Осталось» — выжившие, по которым судит гейт. Всё прочее — `suspicious`,
+`left` — выжившие, по которым судит гейт. Всё прочее — `suspicious`,
 segfault — показывается отдельно, а не растворяется ни в одной из двух кучек:
 
 ```
 $ py-checks mutation full
-мутантов: запущено 2643, убито 2630, осталось 13
-ok: 13 выживш(их), как в записи
+mutants: run 2643, killed 2630, left 13
+ok: 13 survivor(s), as recorded
 ```
 
 Это extra, а не часть ядра: `pip install "python-checks[mutation]"`.

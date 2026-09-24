@@ -1,43 +1,43 @@
 # serializer version: 1
 # name: test_check_output_matches_the_snapshot[annotation_shapes]
   list([
-    'bad/loose.py:4:16: annotation-shapes: dict[str, object] читается как набор именованных полей; какие именно — скажет TypedDict или dataclass',
-    'bad/loose.py:8:20: annotation-shapes: tuple[str, int] называет поля позициями; имена даст dataclass, а NamedTuple — если это обязано остаться кортежем',
-    'bad/loose.py:12:29: annotation-shapes: dict[str, str] читается как набор именованных полей; какие именно — скажет TypedDict или dataclass',
+    'bad/loose.py:4:16: annotation-shapes: dict[str, object] reads as a set of named fields; a TypedDict or a dataclass will say which ones',
+    'bad/loose.py:8:20: annotation-shapes: tuple[str, int] names its fields by position; a dataclass gives them names, or a NamedTuple if it has to stay a tuple',
+    'bad/loose.py:12:29: annotation-shapes: dict[str, str] reads as a set of named fields; a TypedDict or a dataclass will say which ones',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[bound_checks]
   list([
-    'bad/infra/database/models/bet.py:19:5: bound-checks: stake объявлено как PositiveDecimal, но CHECK не несёт; добавь bound_check(column=stake, primitive=PositiveDecimal) в __table_args__',
-    'bad/infra/database/models/bet.py:20:5: bound-checks: market объявлено как NonEmptyString, а его bound_check называет PositiveDecimal; аннотация и CHECK читают одну границу',
+    'bad/infra/database/models/bet.py:19:5: bound-checks: stake is declared as PositiveDecimal but carries no CHECK; add bound_check(column=stake, primitive=PositiveDecimal) to __table_args__',
+    'bad/infra/database/models/bet.py:20:5: bound-checks: market is declared as NonEmptyString, but its bound_check names PositiveDecimal; the annotation and the CHECK read one bound',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[class_modules]
   list([
-    'bad/application/services/pricing.py:9:1: class-modules: helper — функция; в application/services держат класс',
-    'bad/dto/orders.py:7:1: class-modules: Status — перечисление; в dto держат dataclass, алиас',
-    'bad/dto/orders.py:16:1: class-modules: OrderMissing — исключение; в dto держат dataclass, алиас',
-    'bad/errors/orders.py:8:1: class-modules: refused — функция; в errors держат исключение',
-    'bad/ports/bets.py:14:1: class-modules: SecondWriter — класс; в ports держат алиас, порт',
-    'bad/use_cases/resolve.py:4:1: class-modules: rounded — функция; в use_cases держат класс',
+    'bad/application/services/pricing.py:9:1: class-modules: helper: function; application/services holds only class',
+    'bad/dto/orders.py:7:1: class-modules: Status: enum; dto holds only alias, dataclass',
+    'bad/dto/orders.py:16:1: class-modules: OrderMissing: exception; dto holds only alias, dataclass',
+    'bad/errors/orders.py:8:1: class-modules: refused: function; errors holds only exception',
+    'bad/ports/bets.py:14:1: class-modules: SecondWriter: class; ports holds only alias, port',
+    'bad/use_cases/resolve.py:4:1: class-modules: rounded: function; use_cases holds only class',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[class_placement]
   list([
-    'bad/application/handlers/work.py:7:1: class-placement: BetWriter — порт; ему место в application/ports',
-    'bad/application/handlers/work.py:12:1: class-placement: PlaceOrder — dataclass; ему место в application/dto',
-    'bad/application/handlers/work.py:16:1: class-placement: PlaceBetUseCase кончается на UseCase; ему место в application/use_cases',
-    'bad/application/handlers/work.py:21:1: class-placement: PricingService кончается на Service; ему место в application/services',
-    'bad/application/handlers/work.py:26:1: class-placement: OrderRepository кончается на Repository; ему место в infra/database/repositories',
-    'bad/domain/rules.py:11:1: class-placement: MoneyError — исключение; ему место в errors, exceptions',
+    'bad/application/handlers/work.py:7:1: class-placement: BetWriter — port; it belongs in application/ports',
+    'bad/application/handlers/work.py:12:1: class-placement: PlaceOrder — dataclass; it belongs in application/dto',
+    'bad/application/handlers/work.py:16:1: class-placement: PlaceBetUseCase ends with UseCase; it belongs in application/use_cases',
+    'bad/application/handlers/work.py:21:1: class-placement: PricingService ends with Service; it belongs in application/services',
+    'bad/application/handlers/work.py:26:1: class-placement: OrderRepository ends with Repository; it belongs in infra/database/repositories',
+    'bad/domain/rules.py:11:1: class-placement: MoneyError — exception; it belongs in errors, exceptions',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[config_fields]
   list([
-    'bad/config/kafka.py:7:5: config-fields: KafkaSettings.brokers не называет validation_alias=; без него имя переменной знает один pydantic, а `.env.example` собирается из этих же полей',
-    'bad/config/kafka.py:8:5: config-fields: KafkaSettings.pool_size не называет validation_alias=; без него имя переменной знает один pydantic, а `.env.example` собирается из этих же полей',
-    'bad/config/kafka.py:9:5: config-fields: KafkaSettings.topic объявлено не через Field(...)',
-    'bad/config/kafka.py:10:5: config-fields: KafkaSettings.retries объявлено без значения; поле настроек объявляют через Field(...)',
+    "bad/config/kafka.py:7:5: config-fields: KafkaSettings.brokers does not name validation_alias=; without it only pydantic knows the variable's name, and `.env.example` is built from these same fields",
+    "bad/config/kafka.py:8:5: config-fields: KafkaSettings.pool_size does not name validation_alias=; without it only pydantic knows the variable's name, and `.env.example` is built from these same fields",
+    'bad/config/kafka.py:9:5: config-fields: KafkaSettings.topic is not declared with Field(...)',
+    'bad/config/kafka.py:10:5: config-fields: KafkaSettings.retries is declared with no value; declare settings fields with Field(...)',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[confined_calls]
@@ -48,179 +48,179 @@
 # ---
 # name: test_check_output_matches_the_snapshot[confined_functions]
   list([
-    'bad/modules/pricing/domain/ladder.py:9:16: confined-functions: to_eur() зовут не отсюда; её места — modules/cashout/application',
-    'bad/modules/pricing/domain/ladder.py:9:50: confined-functions: money.from_eur() зовут не отсюда; её места — modules/cashout/application',
+    'bad/modules/pricing/domain/ladder.py:9:16: confined-functions: to_eur() is not called from here; its places are modules/cashout/application',
+    'bad/modules/pricing/domain/ladder.py:9:50: confined-functions: money.from_eur() is not called from here; its places are modules/cashout/application',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[confined_imports]
   list([
-    'bad/application/service.py:4:1: confined-imports: fastapi в application/service; ему место в presentation, bootstrap',
-    'bad/presentation/handlers.py:3:1: confined-imports: agents в presentation/handlers; этот пакет убран, импортировать его негде',
-    'bad/presentation/handlers.py:4:1: confined-imports: sqlalchemy в presentation/handlers; ему место в infra/database, ioc',
+    'bad/application/service.py:4:1: confined-imports: fastapi in application/service; it belongs in presentation, bootstrap',
+    'bad/presentation/handlers.py:3:1: confined-imports: agents in presentation/handlers; the package was taken out, it belongs nowhere',
+    'bad/presentation/handlers.py:4:1: confined-imports: sqlalchemy in presentation/handlers; it belongs in infra/database, ioc',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[confined_types]
   list([
-    'bad/modules/betslip/domain/selection.py:8:5: confined-types: Selection.market объявлено через str; здесь тип называет, что значение может держать',
-    'bad/modules/betslip/domain/selection.py:9:5: confined-types: Selection.odds объявлено через float; здесь тип называет, что значение может держать',
-    'bad/modules/betslip/domain/selection.py:10:5: confined-types: Selection.version объявлено через int; здесь тип называет, что значение может держать',
-    'bad/modules/betslip/domain/selection.py:11:5: confined-types: Selection.tags объявлено через str; здесь тип называет, что значение может держать',
+    'bad/modules/betslip/domain/selection.py:8:5: confined-types: Selection.market is declared with str; here the type names what the value may hold',
+    'bad/modules/betslip/domain/selection.py:9:5: confined-types: Selection.odds is declared with float; here the type names what the value may hold',
+    'bad/modules/betslip/domain/selection.py:10:5: confined-types: Selection.version is declared with int; here the type names what the value may hold',
+    'bad/modules/betslip/domain/selection.py:11:5: confined-types: Selection.tags is declared with str; here the type names what the value may hold',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[constant_annotations]
   list([
-    'bad/promise.py:5:1: constant-annotations: LIMIT названо константой, но не объявлено через Final',
-    'bad/promise.py:6:1: constant-annotations: TOPICS названо константой, но не объявлено через Final',
-    'bad/promise.py:10:5: constant-annotations: BOUND названо константой, но не объявлено через ClassVar',
-    'bad/promise.py:11:5: constant-annotations: SCALE названо константой, но не объявлено через ClassVar',
+    'bad/promise.py:5:1: constant-annotations: LIMIT is named as a constant but not declared with Final',
+    'bad/promise.py:6:1: constant-annotations: TOPICS is named as a constant but not declared with Final',
+    'bad/promise.py:10:5: constant-annotations: BOUND is named as a constant but not declared with ClassVar',
+    'bad/promise.py:11:5: constant-annotations: SCALE is named as a constant but not declared with ClassVar',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[determinism]
   list([
-    'bad/infra/database/repositories/orders.py:9:48: determinism: func.gen_random_uuid() не детерминирован; идентификатор строки выдаёт тот, кто её собрал',
-    'bad/infra/database/repositories/orders.py:9:82: determinism: func.now() не детерминирован; время строки — из порта Clock, а не из базы',
-    'bad/modules/orders/application/place.py:8:20: determinism: uuid4() не детерминирован; выдай идентификатор из IdGenerator и передай его',
-    'bad/modules/orders/application/place.py:12:23: determinism: datetime.now() не детерминирован; возьми порт Clock и позови его',
-    'bad/modules/orders/application/place.py:13:20: determinism: random.choice() не детерминирован; прими значение аргументом',
+    'bad/infra/database/repositories/orders.py:9:48: determinism: func.gen_random_uuid() is not deterministic; идентификатор строки выдаёт тот, кто её собрал',
+    'bad/infra/database/repositories/orders.py:9:82: determinism: func.now() is not deterministic; время строки — из порта Clock, а не из базы',
+    'bad/modules/orders/application/place.py:8:20: determinism: uuid4() is not deterministic; выдай идентификатор из IdGenerator и передай его',
+    'bad/modules/orders/application/place.py:12:23: determinism: datetime.now() is not deterministic; возьми порт Clock и позови его',
+    'bad/modules/orders/application/place.py:13:20: determinism: random.choice() is not deterministic; прими значение аргументом',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[edge_declarations]
   list([
-    "bad/presentation/api/v1/routers/tickets.py:10:2: edge-declarations: POST '/tickets' передаёт путь позиционно; напиши path=",
-    "bad/presentation/api/v1/routers/tickets.py:20:2: edge-declarations: GET '/tickets' не объявляет summary=",
-    "bad/presentation/api/v1/routers/tickets.py:20:2: edge-declarations: GET '/tickets' не объявляет responses=",
-    "bad/presentation/api/v1/routers/tickets.py:20:2: edge-declarations: GET '/tickets' не объявляет response_model= и отвечает телом; без него отвечают 204, 205, 304",
-    'bad/presentation/consumers/bets.py:7:18: edge-declarations: SUBSCRIBER не называет топик; он пишется первым аргументом',
-    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' не объявляет parser=",
-    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' не объявляет decoder=",
-    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' не объявляет ack_policy=",
-    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' не объявляет no_reply=",
-    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' не объявляет auto_offset_reset=",
+    "bad/presentation/api/v1/routers/tickets.py:10:2: edge-declarations: POST '/tickets' gives the path positionally; write path=",
+    "bad/presentation/api/v1/routers/tickets.py:20:2: edge-declarations: GET '/tickets' does not declare summary=",
+    "bad/presentation/api/v1/routers/tickets.py:20:2: edge-declarations: GET '/tickets' does not declare responses=",
+    "bad/presentation/api/v1/routers/tickets.py:20:2: edge-declarations: GET '/tickets' does not declare response_model= and answers with a body; only 204, 205, 304 go without it",
+    'bad/presentation/consumers/bets.py:7:18: edge-declarations: SUBSCRIBER does not name the topic; it goes first, without a name',
+    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' does not declare parser=",
+    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' does not declare decoder=",
+    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' does not declare ack_policy=",
+    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' does not declare no_reply=",
+    "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' does not declare auto_offset_reset=",
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[frozen_dataclasses]
   list([
-    'bad/modules/betslip/domain/selection.py:7:1: frozen-dataclasses: dataclass Selection объявлен без frozen=True, slots=True, kw_only=True',
-    'bad/modules/betslip/domain/selection.py:13:1: frozen-dataclasses: dataclass Outcome объявлен без slots=True, kw_only=True',
-    'bad/modules/betslip/domain/selection.py:18:1: frozen-dataclasses: dataclass Draft объявлен без frozen=True',
-    'bad/modules/betslip/domain/selection.py:23:1: frozen-dataclasses: dataclass Ticket объявлен без kw_only=True',
+    'bad/modules/betslip/domain/selection.py:7:1: frozen-dataclasses: dataclass Selection is declared without frozen=True, slots=True, kw_only=True',
+    'bad/modules/betslip/domain/selection.py:13:1: frozen-dataclasses: dataclass Outcome is declared without slots=True, kw_only=True',
+    'bad/modules/betslip/domain/selection.py:18:1: frozen-dataclasses: dataclass Draft is declared without frozen=True',
+    'bad/modules/betslip/domain/selection.py:23:1: frozen-dataclasses: dataclass Ticket is declared without kw_only=True',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[function_length]
   list([
-    'bad/too_long.py:1:1: function-length: walks_far: строк 7, предел 5; вынеси часть в отдельную функцию',
-    'bad/too_long.py:12:5: function-length: Holder.method: строк 6, предел 5; вынеси часть в отдельную функцию',
+    'bad/too_long.py:1:1: function-length: walks_far: 7 lines, the limit is 5; move part of it into a separate function',
+    'bad/too_long.py:12:5: function-length: Holder.method: 6 lines, the limit is 5; move part of it into a separate function',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[keyword_only_arguments]
   list([
-    'bad/positional.py:4:1: keyword-only-arguments: price принимает market, stake по позиции; поставь `*` перед ними',
-    'bad/positional.py:9:5: keyword-only-arguments: Rule.__init__ принимает name по позиции; поставь `*` перед ними',
-    'bad/positional.py:12:5: keyword-only-arguments: Rule.apply принимает rule по позиции; поставь `*` перед ними',
-    'bad/positional.py:16:1: keyword-only-arguments: collect принимает *args, **kwargs; перечисли аргументы по имени',
-    'bad/positional.py:20:1: keyword-only-arguments: spread принимает first, second по позиции; поставь `*` перед ними',
-    'bad/positional.py:29:5: keyword-only-arguments: Static.parse принимает self по позиции; поставь `*` перед ними',
-    'bad/positional.py:33:1: keyword-only-arguments: handler принимает self по позиции; поставь `*` перед ними',
-    'bad/positional.py:39:9: keyword-only-arguments: Outer.method.inner принимает self по позиции; поставь `*` перед ними',
+    'bad/positional.py:4:1: keyword-only-arguments: price takes market, stake by position; put a `*` before them',
+    'bad/positional.py:9:5: keyword-only-arguments: Rule.__init__ takes name by position; put a `*` before them',
+    'bad/positional.py:12:5: keyword-only-arguments: Rule.apply takes rule by position; put a `*` before them',
+    'bad/positional.py:16:1: keyword-only-arguments: collect takes *args, **kwargs; list the arguments by name',
+    'bad/positional.py:20:1: keyword-only-arguments: spread takes first, second by position; put a `*` before them',
+    'bad/positional.py:29:5: keyword-only-arguments: Static.parse takes self by position; put a `*` before them',
+    'bad/positional.py:33:1: keyword-only-arguments: handler takes self by position; put a `*` before them',
+    'bad/positional.py:39:9: keyword-only-arguments: Outer.method.inner takes self by position; put a `*` before them',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[log_events]
   list([
-    "bad/modules/orders/application/place.py:8:9: log-events: logger.info('order.placed'...): имя события — член LogEvent, а не фраза; по нему джойнятся счётчик и алерт",
-    "bad/modules/orders/application/place.py:9:9: log-events: self._logger.warning(f'заказ {order_id} медленный'...): имя события — член LogEvent, а не фраза; по нему джойнятся счётчик и алерт",
+    "bad/modules/orders/application/place.py:8:9: log-events: logger.info('order.placed'...): an event's name is a member of LogEvent, not a phrase; a counter and an alert join on it",
+    "bad/modules/orders/application/place.py:9:9: log-events: self._logger.warning(f'заказ {order_id} медленный'...): an event's name is a member of LogEvent, not a phrase; a counter and an alert join on it",
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[model_boundary]
   list([
-    'bad/infra/database/repositories/orders.py:5:5: model-boundary: get возвращает OrderModel; модель уносит с собой сессию — отдавай DTO, идентификатор, количество',
-    'bad/modules/orders/application/place.py:9:27: model-boundary: OrderModel(...) собирается вне infra/database/repositories; собрать модель — значит записать строку',
-    'bad/modules/orders/application/place.py:12:1: model-boundary: DraftModel объявлена вне infra/database/models; autogenerate видит только модели их пакета',
+    'bad/infra/database/repositories/orders.py:5:5: model-boundary: get returns OrderModel; a model carries the session with it — return a DTO, an identifier, a count',
+    'bad/modules/orders/application/place.py:9:27: model-boundary: OrderModel(...) is built outside infra/database/repositories; to build a model is to write a row',
+    'bad/modules/orders/application/place.py:12:1: model-boundary: DraftModel is declared outside infra/database/models; autogenerate sees only the models of their package',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[model_columns]
   list([
-    'bad/infra/database/models/bet.py:29:5: model-columns: Decimal говорит вид, а не правило; возьми примитив с его границей',
-    'bad/infra/database/models/bet.py:30:5: model-columns: str говорит вид, а не правило; возьми примитив с его границей',
-    'bad/infra/database/models/bet.py:32:5: model-columns: str говорит вид, а не правило; возьми примитив с его границей',
-    'bad/infra/database/models/bet.py:32:5: model-columns: аннотация и nullable= расходятся; во время работы побеждает то, чего проверяльщик типов не видит',
-    'bad/infra/database/models/bet.py:31:35: model-columns: server_default= заполняет колонку за писателя, который её не написал; передай значение в запросе',
+    'bad/infra/database/models/bet.py:29:5: model-columns: Decimal says a kind, not a rule; take a primitive with its bound',
+    'bad/infra/database/models/bet.py:30:5: model-columns: str says a kind, not a rule; take a primitive with its bound',
+    'bad/infra/database/models/bet.py:32:5: model-columns: str says a kind, not a rule; take a primitive with its bound',
+    'bad/infra/database/models/bet.py:32:5: model-columns: the annotation and nullable= disagree; at run time the one the type checker cannot see wins',
+    'bad/infra/database/models/bet.py:31:35: model-columns: server_default= fills the column in for a writer who did not write it; pass the value in the statement',
     'bad/infra/database/models/bet.py:29:44: model-columns: Float дрейфует; состояние точно, используй Numeric',
     'bad/infra/database/models/bet.py:30:41: model-columns: голый Enum — нативный тип Postgres; используй stored_enum()',
-    'bad/infra/database/models/bet.py:31:49: model-columns: DateTime без timezone=True хранит наивную метку времени; скажи timezone=True',
+    'bad/infra/database/models/bet.py:31:49: model-columns: DateTime without timezone=True stores a naive timestamp; say timezone=True',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[module_length]
   list([
-    'bad/too_long.py:11:1: module-length: 13 строк, предел 10',
+    'bad/too_long.py:11:1: module-length: 13 lines, the limit is 10',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[nesting]
   list([
-    'bad/deep.py:6:9: nesting: try вложен на 2, предел 1',
-    'bad/deep.py:17:13: nesting: if вложен на 3, предел 2',
-    'bad/deep.py:27:13: nesting: if вложен на 3, предел 2',
+    'bad/deep.py:6:9: nesting: try nested 2 deep, the limit is 1',
+    'bad/deep.py:17:13: nesting: if nested 3 deep, the limit is 2',
+    'bad/deep.py:27:13: nesting: if nested 3 deep, the limit is 2',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[operation_shape]
   list([
-    'bad/application/services/limits.py:5:14: operation-shape: LimitsService держит UnitOfWorkFactory; операции передают то, через что она пишет, а транзакция остаётся вызывающему',
-    'bad/application/use_cases/cancel_bet.py:5:5: operation-shape: CancelBetUseCase предлагает execute(), retry(); у операции один публичный метод, и это execute() — остальные приватны или это другой класс',
-    'bad/application/use_cases/cancel_bet.py:12:1: operation-shape: _rounded() стоит рядом с операцией; нужный ей хелпер — приватный метод, нужный двоим — общий код',
-    'bad/application/use_cases/reconcile.py:5:5: operation-shape: ReconcileUseCase.execute — аргументов 4, предел 3; передай команду, запрос или DTO',
-    'bad/application/use_cases/settle_bet.py:6:1: operation-shape: Outcome стоит рядом с операцией; в use_cases модуль объявляет один класс и больше ничего',
-    'bad/application/use_cases/settle_bet.py:11:32: operation-shape: SettleBetUseCase держит PlacementUnitOfWork; операции передают то, через что она пишет, а транзакция остаётся вызывающему',
+    'bad/application/services/limits.py:5:14: operation-shape: LimitsService holds UnitOfWorkFactory; an operation is handed what it writes through, and the transaction stays with the caller',
+    'bad/application/use_cases/cancel_bet.py:5:5: operation-shape: CancelBetUseCase offers execute(), retry(); an operation has one public method, and it is execute(); make the rest private or move them to another class',
+    'bad/application/use_cases/cancel_bet.py:12:1: operation-shape: _rounded() stands beside the operation; a helper it needs is a private method, one that two need is shared code',
+    'bad/application/use_cases/reconcile.py:5:5: operation-shape: ReconcileUseCase.execute takes 4 arguments, the limit is 3; pass a command, a query or a DTO',
+    'bad/application/use_cases/settle_bet.py:6:1: operation-shape: Outcome stands beside the operation; in use_cases a module declares one class and nothing else',
+    'bad/application/use_cases/settle_bet.py:11:32: operation-shape: SettleBetUseCase holds PlacementUnitOfWork; an operation is handed what it writes through, and the transaction stays with the caller',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[raw_sql]
   list([
-    'bad/infra/database/models.py:20:12: raw-sql: text(...) со строкой SQL; вместо неё — select()/insert(), собранный из атрибутов модели',
-    'bad/infra/database/models.py:16:23: raw-sql: CheckConstraint(...) со строкой SQL; вместо неё — выражение по колонке, например and_(margin >= NOTHING, margin < WHOLE)',
+    "bad/infra/database/models.py:20:12: raw-sql: text(...) with an SQL string; instead: select()/insert() built from the model's attributes",
+    'bad/infra/database/models.py:16:23: raw-sql: CheckConstraint(...) with an SQL string; instead: a column expression, e.g. and_(margin >= NOTHING, margin < WHOLE)',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[refusals]
   list([
-    'bad/modules/betslip/application/use_cases/place.py:7:13: refusals: бросает ValueError, а кода на нём нет: снаружи об этом отказе известно только то, что он случился. Ответь своей ошибкой с refusal=',
-    'bad/modules/betslip/application/use_cases/place.py:9:13: refusals: бросает BetslipChangedError без refusal=; код — то, на что ветвится вызывающий, а фраза — человеку',
-    'bad/modules/betslip/application/use_cases/place.py:10:9: refusals: бросает BetslipChangedError классом, без refusal=',
+    'bad/modules/betslip/application/use_cases/place.py:7:13: refusals: raises ValueError, which carries no code: all the outside knows about this refusal is that it happened. Answer with an error of your own with refusal=',
+    'bad/modules/betslip/application/use_cases/place.py:9:13: refusals: raises BetslipChangedError without refusal=; the code is what the caller branches on, the sentence is for a person',
+    'bad/modules/betslip/application/use_cases/place.py:10:9: refusals: raises BetslipChangedError as a bare class, without refusal=',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[required_class]
   list([
-    'bad/config/kafka.py:4:1: required-class: Topics объявлен выше ...Settings, ради которого существует модуль; хелперам место ниже',
-    'bad/repositories/order.py:4:1: required-class: _rows объявлен выше ...Repository, ради которого существует модуль; хелперам место ниже',
-    'bad/use_cases/bets.py:8:1: required-class: в модуле PlaceBetUseCase, CancelBetUseCase — один ...UseCase на модуль, и модуль назван его именем',
-    'bad/use_cases/pricing.py:4:1: required-class: модуль объявляет PricingHelper, а в этой директории объявляют класс ...UseCase',
+    'bad/config/kafka.py:4:1: required-class: Topics is declared above the ...Settings the module exists for; helpers belong below it',
+    'bad/repositories/order.py:4:1: required-class: _rows is declared above the ...Repository the module exists for; helpers belong below it',
+    'bad/use_cases/bets.py:8:1: required-class: the module holds PlaceBetUseCase, CancelBetUseCase; one ...UseCase per module, and the module is named after it',
+    'bad/use_cases/pricing.py:4:1: required-class: the module declares PricingHelper, but a module in this directory declares a ...UseCase class',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[sealed_imports]
   list([
-    'bad/modules/chat/application/service.py:4:1: sealed-imports: fastapi в modules/chat/application/service: запечатанная зона знает только стандартную библиотеку и код сервиса',
-    'bad/modules/chat/domain/models.py:3:1: sealed-imports: structlog в modules/chat/domain/models: запечатанная зона знает только стандартную библиотеку и код сервиса',
-    'bad/modules/chat/domain/models.py:4:1: sealed-imports: sqlalchemy в modules/chat/domain/models: запечатанная зона знает только стандартную библиотеку и код сервиса',
-    'bad/shared/validation.py:3:1: sealed-imports: email_validator в shared/validation: запечатанная зона знает только стандартную библиотеку и код сервиса',
+    "bad/modules/chat/application/service.py:4:1: sealed-imports: fastapi in modules/chat/application/service: a sealed zone knows only the standard library and the service's own code",
+    "bad/modules/chat/domain/models.py:3:1: sealed-imports: structlog in modules/chat/domain/models: a sealed zone knows only the standard library and the service's own code",
+    "bad/modules/chat/domain/models.py:4:1: sealed-imports: sqlalchemy in modules/chat/domain/models: a sealed zone knows only the standard library and the service's own code",
+    "bad/shared/validation.py:3:1: sealed-imports: email_validator in shared/validation: a sealed zone knows only the standard library and the service's own code",
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[signature_layout]
   list([
-    'bad/line.py:6:1: signature-layout: price: параметров 2 в одну строку; по одному на строку',
-    'bad/line.py:12:12: signature-layout: price: аргументов 2 в одну строку; по одному на строку',
+    'bad/line.py:6:1: signature-layout: price: 2 parameters on one line; put one per line',
+    'bad/line.py:12:12: signature-layout: price: 2 arguments on one line; put one per line',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[statement_keys]
   list([
-    'bad/infra/database/repositories/inbox.py:36:9: statement-keys: execute() внутри цикла — поход в базу на итерацию; один запрос по всему множеству говорит то же самое',
-    'bad/infra/database/repositories/inbox.py:27:33: statement-keys: index_elements: называет колонку строкой; маппед-атрибут переезжает вместе с ней',
-    'bad/infra/database/repositories/inbox.py:28:23: statement-keys: set_: называет колонку строкой; маппед-атрибут переезжает вместе с ней',
-    'bad/infra/database/repositories/inbox.py:33:60: statement-keys: from_select: называет колонку строкой; маппед-атрибут переезжает вместе с ней',
-    'bad/infra/database/repositories/inbox.py:33:72: statement-keys: from_select: называет колонку строкой; маппед-атрибут переезжает вместе с ней',
+    'bad/infra/database/repositories/inbox.py:36:9: statement-keys: execute() inside a loop is a trip to the database per iteration; one statement over the whole set says the same thing',
+    'bad/infra/database/repositories/inbox.py:27:33: statement-keys: index_elements: names a column by string; a mapped attribute moves with the column',
+    'bad/infra/database/repositories/inbox.py:28:23: statement-keys: set_: names a column by string; a mapped attribute moves with the column',
+    'bad/infra/database/repositories/inbox.py:33:60: statement-keys: from_select: names a column by string; a mapped attribute moves with the column',
+    'bad/infra/database/repositories/inbox.py:33:72: statement-keys: from_select: names a column by string; a mapped attribute moves with the column',
   ])
 # ---
 # name: test_project_check_output_matches_the_snapshot[dependency_bounds__floating]
   list([
-    "pyproject.toml:5:1: dependency-bounds: project.dependencies: у 'pydantic>=2.13.5' нет потолка; закрепи (==) или ограничь (>=x,<y), иначе версию выберет решатель",
-    "pyproject.toml:6:1: dependency-bounds: project.dependencies: у 'httpx' нет потолка; закрепи (==) или ограничь (>=x,<y), иначе версию выберет решатель",
-    "pyproject.toml:10:1: dependency-bounds: dependency-groups.dev: у 'pytest>=9.1' нет потолка; закрепи (==) или ограничь (>=x,<y), иначе версию выберет решатель",
-    "pyproject.toml:13:1: dependency-bounds: build-system.requires: у 'hatchling' нет потолка; закрепи (==) или ограничь (>=x,<y), иначе версию выберет решатель",
+    "pyproject.toml:5:1: dependency-bounds: project.dependencies: 'pydantic>=2.13.5' has no ceiling; pin it (==) or bound it (>=x,<y), otherwise the resolver chooses the version",
+    "pyproject.toml:6:1: dependency-bounds: project.dependencies: 'httpx' has no ceiling; pin it (==) or bound it (>=x,<y), otherwise the resolver chooses the version",
+    "pyproject.toml:10:1: dependency-bounds: dependency-groups.dev: 'pytest>=9.1' has no ceiling; pin it (==) or bound it (>=x,<y), otherwise the resolver chooses the version",
+    "pyproject.toml:13:1: dependency-bounds: build-system.requires: 'hatchling' has no ceiling; pin it (==) or bound it (>=x,<y), otherwise the resolver chooses the version",
   ])
 # ---
 # name: test_project_check_output_matches_the_snapshot[dependency_bounds__ok]
@@ -229,6 +229,6 @@
 # ---
 # name: test_project_check_output_matches_the_snapshot[schema_drift__broken]
   list([
-    'migrations/versions:1:1: schema-drift: `alembic upgrade head` вышел с 1',
+    'migrations/versions:1:1: schema-drift: `alembic upgrade head` exited with 1',
   ])
 # ---

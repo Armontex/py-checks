@@ -1,4 +1,4 @@
-"""Команда `list`: какие проверки есть."""
+"""The `list` command: which checks exist."""
 
 from __future__ import annotations
 
@@ -20,15 +20,15 @@ if TYPE_CHECKING:
 
 
 def list_checks() -> None:
-    """Показать все проверки: код, состояние и одну строку описания."""
+    """Show every check: its code, its state and one line of description."""
     config = load(root=find_root(start=Path.cwd()))
     table = Table(
         box=None,
         pad_edge=False,
     )
-    table.add_column("код")
-    table.add_column("состояние")
-    table.add_column("что делает")
+    table.add_column("code")
+    table.add_column("state")
+    table.add_column("what it does")
     for code, check in sorted(available().listed.items()):
         table.add_row(
             code,
@@ -46,16 +46,16 @@ def _state(
     check: Check,
     config: Config,
 ) -> str:
-    """Включено, выключено — или включено, но не в обычном прогоне.
+    """On, off — or on, but not in an ordinary run.
 
-    Правилу, которому нужна живая среда, место в CI, поэтому вместо «вкл» в
-    таблице стоит то, чем его зовут.
+    A rule that needs a live environment belongs in CI, so instead of "on" the
+    table shows what calls it.
     """
     if not config.enabled(code=check.code):
-        return "выкл"
+        return "off"
     if check.scope is Scope.ENVIRONMENT:
         return "--all"
-    return "вкл"
+    return "on"
 
 
 def register(*, app: typer.Typer) -> None:

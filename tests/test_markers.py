@@ -80,7 +80,7 @@ def test_marker_without_a_code_is_a_violation() -> None:
     found = list(complaints(file=file, aliases={}, known=["module-length"]))
 
     assert [v.code for v in found] == ["check-ok", "check-ok"]
-    assert "нужен код проверки" in found[0].message
+    assert "needs a check code" in found[0].message
 
 
 def test_marker_with_an_unknown_code_is_a_violation() -> None:
@@ -88,7 +88,7 @@ def test_marker_with_an_unknown_code_is_a_violation() -> None:
 
     found = list(complaints(file=file, aliases={}, known=["module-length"]))
 
-    assert "нет проверки `module-lenght`" in found[0].message
+    assert "there is no check `module-lenght`" in found[0].message
 
 
 def test_marker_without_a_reason_is_a_violation() -> None:
@@ -96,7 +96,7 @@ def test_marker_without_a_reason_is_a_violation() -> None:
 
     found = list(complaints(file=file, aliases={}, known=["module-length"]))
 
-    assert "нужна причина" in found[0].message
+    assert "needs a reason" in found[0].message
 
 
 def test_the_shape_written_in_a_docstring_is_not_a_marker() -> None:

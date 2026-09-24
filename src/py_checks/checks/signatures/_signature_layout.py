@@ -1,4 +1,4 @@
-"""Список из двух и более элементов пишется в столбик."""
+"""A list of two or more entries is written in a column."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 
 CODE: Final = "signature-layout"
 
-# Двух элементов достаточно: один в строке читается как одно слово, а два уже
-# приходится разбирать.
+# Two entries are enough: one on a line reads as a single word, while two
+# already have to be taken apart.
 ENOUGH: Final = 2
 
 
@@ -28,34 +28,36 @@ class SignatureLayoutSettings(CheckSettings):
 
 
 class SignatureLayout:
-    """Падает, если список из двух и более элементов записан в одну строку.
+    """Fails when a list of two or more entries is written on one line.
 
-    Обе половины вызова: подпись, которая объявляет параметры, и место, которое
-    их передаёт. В столбике правка одного аргумента трогает одну строку и
-    говорит ровно это; тот же список в строку сдвигает всё, что стоит после
-    правки, и ревью читает его целиком, чтобы найти изменение. В вызове это
-    важнее, чем в подписи: там стоят выражения, а не имена.
+    Both halves of a call: the signature that declares the parameters, and the
+    site that passes them. In a column, editing one argument touches one line
+    and says exactly that; the same list on one line shifts everything after
+    the edit, and review reads the whole of it to find the change. At a call
+    site this matters more than in a signature: expressions stand there, not
+    names.
 
-    `self` и `cls` не в счёт — их передаёт интерпретатор.
+    `self` and `cls` do not count: the interpreter passes them.
 
-    В вызове правило срабатывает от двух и более ИМЕНОВАННЫХ аргументов, и это
-    вся граница между своим кодом и чужим: у нас каждая функция keyword-only,
-    поэтому вызов нашей функции — сплошь имена и под правило попадает, а
-    `isinstance(node, ast.Call)` и `range(1, 10)` — чужая позиционная подпись, и
-    её не трогают. Как только сработало, в столбик идут все аргументы,
-    позиционные тоже: наполовину развёрнутый вызов правилу ни к чему.
+    At a call site the rule fires on two or more NAMED arguments, and that is
+    the entire border between our code and other people's: every function of
+    ours is keyword-only, so a call of ours is all names and falls under the
+    rule, while `isinstance(node, ast.Call)` and `range(1, 10)` are somebody
+    else's positional signature and are left alone. Once it fires, every
+    argument goes into the column, positional ones included: a call unfolded
+    halfway is of no use to the rule.
 
-    Декоратор — единственное исключение: `@dataclass(frozen=True, slots=True)`
-    это метка, а не список, который читают ради смысла. Те же слова на каждом
-    dataclass сервиса, переставлять там нечего.
+    A decorator is the single exception: `@dataclass(frozen=True, slots=True)`
+    is a label, not a list read for meaning. The same words sit on every
+    dataclass in a service, and there is nothing to rearrange.
 
-    `--fix` дописывает висячую запятую и зовёт `ruff format`: форматтер держит
-    список в столбик, когда запятая стоит, но сам её никогда не ставит.
+    `--fix` writes the trailing comma and calls `ruff format`: the formatter
+    keeps a list in a column when the comma is there, but never writes one.
 
-    Настройка: `calls` — судить ли места вызова. Половина правила про вызовы
-    дороже половины про подписи: в сервисе, который писали без неё, она трогает
-    почти каждый файл, и выключить её на время переезда честнее, чем выключить
-    правило целиком.
+    Settings: `calls`, whether call sites are judged. The half about calls
+    costs more than the half about signatures: in a service written without
+    it, it touches nearly every file, and switching it off for the duration of
+    a move is more honest than switching off the whole rule.
     """
 
     code: ClassVar[str] = CODE
@@ -109,9 +111,7 @@ class SignatureLayout:
             node=node,
             path=file.path,
             code=CODE,
-            message=(
-                f"{definition.name}: параметров {len(listed)} в одну строку; по одному на строку"
-            ),
+            message=(f"{definition.name}: {len(listed)} parameters on one line; put one per line"),
             edit=cls._comma(
                 file=file,
                 ends=[*cls._ends(nodes=listed), *cls._ends(nodes=defaults)],
@@ -139,8 +139,7 @@ class SignatureLayout:
             path=file.path,
             code=CODE,
             message=(
-                f"{cls._called(node=node)}: аргументов {len(listed)} в одну строку; "
-                f"по одному на строку"
+                f"{cls._called(node=node)}: {len(listed)} arguments on one line; put one per line"
             ),
             edit=cls._comma(
                 file=file,
@@ -154,13 +153,13 @@ class SignatureLayout:
         listed: Sequence[ast.expr | ast.keyword | ast.arg],
         after: int,
     ) -> bool:
-        """По одному на строку, и ни одного на той строке, где список открылся."""
+        """One per line, and none on the line where the list opened."""
         lines = {element.lineno for element in listed}
         return len(lines) == len(listed) and min(lines) > after
 
     @staticmethod
     def _parameters(*, definition: Definition) -> list[ast.arg]:
-        """Параметры, которые заполняет вызывающий, в порядке записи."""
+        """The parameters a caller fills, in the order written."""
         arguments = definition.node.args
         listed = [
             *arguments.posonlyargs,
@@ -173,12 +172,12 @@ class SignatureLayout:
 
     @staticmethod
     def _defaults(*, node: Function) -> list[ast.expr]:
-        """Значения по умолчанию: запятая ставится после них, а не после имени."""
+        """Default values: the comma goes after them, not after the name."""
         return [one for one in (*node.args.defaults, *node.args.kw_defaults) if one is not None]
 
     @staticmethod
     def _ends(*, nodes: Sequence[ast.expr | ast.keyword | ast.arg]) -> list[tuple[int, int]]:
-        """Где кончается каждый элемент списка."""
+        """Where each entry of the list ends."""
         return [
             (node.end_lineno, node.end_col_offset)
             for node in nodes
@@ -191,13 +190,13 @@ class SignatureLayout:
         file: ParsedFile,
         ends: list[tuple[int, int]],
     ) -> Edit | None:
-        """Правка: висячая запятая после последнего элемента списка.
+        """The edit: a trailing comma after the last entry of the list.
 
-        Последний — по концу, а не по порядку записи: у параметра со значением
-        по умолчанию запятая ставится после значения, а не после имени.
+        Last by where it ends, not by the order written: for a parameter with a
+        default value the comma goes after the value, not after the name.
 
-        Дальше раскладка — забота форматтера: `ruff format` разворачивает
-        список в столбик, как только запятая стоит.
+        The layout from there on is the formatter's job: `ruff format` unfolds
+        the list into a column as soon as the comma is there.
         """
         if not ends:
             return None
@@ -216,12 +215,12 @@ class SignatureLayout:
 
     @staticmethod
     def _called(*, node: ast.Call) -> str:
-        """Как вызов записан: `self._policy`, `price`, `Model.build`."""
+        """How the call is written: `self._policy`, `price`, `Model.build`."""
         return ast.unparse(node.func)
 
     @staticmethod
     def _decorators(*, tree: ast.Module) -> frozenset[int]:
-        """Вызовы, которые на самом деле декораторы, — по тождеству узла."""
+        """The calls that are in fact decorators, by node identity."""
         return frozenset(
             id(decorator)
             for node in ast.walk(tree)

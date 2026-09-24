@@ -1,9 +1,10 @@
-"""Эффекты: что код берёт у мира и что он о мире говорит.
+"""Effects: what the code takes from the world and what it says about it.
 
-Часы, случайность и новый идентификатор берутся портом, а не глобальной
-функцией: иначе один и тот же вход даёт разный выход, и тест либо замораживает
-мир мокой, либо не утверждает ничего. Строка лога называет событие членом
-перечисления: это имя читает не человек, а счётчик и алерт.
+The clock, the dice and a new identifier come through a port, not a global
+function: otherwise the same input gives a different output, and the test
+either freezes the world with a mock or asserts nothing at all. A log line
+names its event by an enum member: that name is read not by a human but by a
+counter and an alert.
 """
 
 from py_checks.checks.effects._determinism import Determinism, DeterminismSettings

@@ -1,4 +1,4 @@
-"""Команда `mutation`: мутационный гейт — `diff`, `full` и `record`."""
+"""The `mutation` command: the mutation gate — `diff`, `full` and `record`."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ Children = Annotated[
     typer.Option(
         "--children",
         min=1,
-        help="сколько мутантов проверять разом; по умолчанию — из настроек или решает mutmut",
+        help="how many mutants to run at once; by default from the settings, or mutmut decides",
     ),
 ]
 
@@ -30,13 +30,13 @@ Against = Annotated[
     str | None,
     typer.Option(
         "--against",
-        help="с чем сравнивать ветку; по умолчанию — что заменяет пуш, иначе develop",
+        help="what to compare the branch to; by default what the push replaces, otherwise develop",
     ),
 ]
 
 mutation = typer.Typer(
     no_args_is_help=True,
-    help="Мутационный гейт: пуш не оставляет строки, поломку которой не заметит ни один тест.",
+    help="The mutation gate: a push leaves no line whose breakage no test would notice.",
 )
 
 console = Console(soft_wrap=True)
@@ -47,42 +47,42 @@ errors = Console(
 
 
 @mutation.command("diff")
-def diff(  # check-ok: keyword-only-arguments: подпись команды разбирает typer
+def diff(  # check-ok: keyword-only-arguments: typer parses the command's signature
     children: Children = None,
     against: Against = None,
 ) -> None:
-    """Только модули, которые тронула ветка, — то, что гоняет пуш."""
+    """Only the modules the branch touched — what a push runs."""
     project = _project(children=children)
     try:
         diffed = project.diff(against=against)
     except GateError as error:
         _refuse(message=str(error))
     if diffed is None:
-        errors.print("[yellow]сравнить не с чем — ни пуша, ни develop; гоню всё[/yellow]")
+        errors.print("[yellow]nothing to compare to — no push, no develop; running all[/yellow]")
         full(children=children)
         return
     verdict = diffed.verdict
     if not verdict.counted:
-        _say(text=f"ok: против {diffed.against} мутируемое не менялось")
+        _say(text=f"ok: nothing mutable changed against {diffed.against}")
         raise typer.Exit(EXIT_OK)
     _counted(
         tally=verdict.tally,
-        where=" в изменённых модулях",
+        where=" in changed modules",
     )
     _judged(verdict=verdict)
     _say(
         text=(
-            f"ok: {verdict.total} выживш(их) в {len(verdict.counted)} "
-            f"изменённ(ых) модул(ях) против {diffed.against}"
+            f"ok: {verdict.total} survivor(s) in {len(verdict.counted)} "
+            f"changed module(s) against {diffed.against}"
         )
     )
 
 
 @mutation.command("full")
-def full(  # check-ok: keyword-only-arguments: подпись команды разбирает typer
+def full(  # check-ok: keyword-only-arguments: typer parses the command's signature
     children: Children = None,
 ) -> None:
-    """Всё, что мутируется, против записи — модуль за модулем."""
+    """Everything that is mutated, against the record — module by module."""
     project = _project(children=children)
     verdict = _full(project=project)
     _counted(tally=verdict.tally)
@@ -91,19 +91,19 @@ def full(  # check-ok: keyword-only-arguments: подпись команды р�
     if verdict.total < before:
         _say(
             text=(
-                f"ok: {verdict.total} выживш(их), по записи {before}. "
-                f"Запусти `py-checks mutation record`, чтобы запись не носила отвоёванное"
+                f"ok: {verdict.total} survivor(s), {before} on record. "
+                f"Run `py-checks mutation record` so the record stops carrying what was won back"
             )
         )
         return
-    _say(text=f"ok: {verdict.total} выживш(их), как в записи")
+    _say(text=f"ok: {verdict.total} survivor(s), as recorded")
 
 
 @mutation.command("record")
-def record(  # check-ok: keyword-only-arguments: подпись команды разбирает typer
+def record(  # check-ok: keyword-only-arguments: typer parses the command's signature
     children: Children = None,
 ) -> None:
-    """Полный прогон, и его итог по модулям — в файл записи."""
+    """A full pass, with its result per module written to the record file."""
     project = _project(children=children)
     try:
         counted = project.record()
@@ -111,8 +111,8 @@ def record(  # check-ok: keyword-only-arguments: подпись команды �
         _refuse(message=str(error))
     _say(
         text=(
-            f"записан {project.baseline.relative_to(project.root)}: "
-            f"{sum(counted.values())} выживш(их) в {len(counted)} модул(ях)"
+            f"recorded {project.baseline.relative_to(project.root)}: "
+            f"{sum(counted.values())} survivor(s) in {len(counted)} module(s)"
         )
     )
 
@@ -138,18 +138,17 @@ def _counted(
     tally: Tally,
     where: str = "",
 ) -> None:
-    """Сколько мутантов прогон попробовал и чем кончилось, — справка, не суд."""
-    other = f", прочее {tally.other}" if tally.other else ""
+    """How many mutants the pass tried and how it ended — information, not a verdict."""
+    other = f", other {tally.other}" if tally.other else ""
     _say(
         text=(
-            f"мутантов{where}: запущено {tally.tried}, убито {tally.killed}, "
-            f"осталось {tally.alive}{other}"
+            f"mutants{where}: run {tally.tried}, killed {tally.killed}, left {tally.alive}{other}"
         )
     )
 
 
 def _judged(*, verdict: Verdict) -> None:
-    """Отказ, если где-то выживших больше записанного; иначе — ничего."""
+    """A refusal if some module has more survivors than recorded; otherwise nothing."""
     grown = verdict.grown
     if not grown:
         return
@@ -161,27 +160,27 @@ def _judged(*, verdict: Verdict) -> None:
     errors.print(_growth(grown=grown))
     _refuse(
         message=(
-            "Строку, которую ты тронул, можно сломать, и ни один тест этого не заметит.\n"
-            "Убей мутанта тестом — или запусти `py-checks mutation record`, если выживший "
-            "не стоит теста, и скажи в коммите почему."
+            "A line you touched can be broken and no test will notice.\n"
+            "Kill the mutant with a test — or run `py-checks mutation record` if the survivor "
+            "is not worth a test, and say why in the commit."
         )
     )
 
 
 def _survivors(*, alive: list[str]) -> Table:
-    """Кто выжил, модуль за модулем: читателю нужно, где дыра, а номер мутанта —
-    когда он пойдёт её закрывать."""
+    """Who survived, module by module: the reader needs where the hole is, and the
+    mutant's number once they go to close it."""
     table = Table(
-        title="выжившие мутанты",
+        title="surviving mutants",
         title_style="bold",
         header_style="bold",
     )
     table.add_column(
-        "модуль",
+        "module",
         overflow="fold",
     )
     table.add_column(
-        "мутант",
+        "mutant",
         overflow="fold",
     )
     for mutant in sorted(alive):
@@ -195,20 +194,20 @@ def _survivors(*, alive: list[str]) -> Table:
 
 def _growth(*, grown: dict[str, tuple[int, int]]) -> Table:
     table = Table(
-        title="больше, чем записано",
+        title="more than recorded",
         title_style="bold",
         header_style="bold",
     )
     table.add_column(
-        "модуль",
+        "module",
         overflow="fold",
     )
     table.add_column(
-        "выжило",
+        "survived",
         justify="right",
     )
     table.add_column(
-        "по записи",
+        "on record",
         justify="right",
     )
     for module, (now, before) in grown.items():
@@ -221,19 +220,19 @@ def _growth(*, grown: dict[str, tuple[int, int]]) -> Table:
 
 
 def _refuse(*, message: str) -> NoReturn:
-    """Сказать, что делать, и выйти с кодом, который читает оболочка."""
+    """Say what to do and exit with a code the shell reads."""
     errors.print(
         Panel(
             message,
             border_style="red",
-            title="мутационный гейт",
+            title="mutation gate",
         )
     )
     raise typer.Exit(EXIT_VIOLATION)
 
 
 def _say(*, text: str) -> None:
-    """Печатать как есть: в строке бывают пути и имена модулей."""
+    """Print as is: a line may hold paths and module names."""
     console.print(
         text,
         markup=False,

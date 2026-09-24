@@ -1,4 +1,4 @@
-"""Правка исходника и то, как она накладывается."""
+"""An edit to the source and how it is applied."""
 
 from __future__ import annotations
 
@@ -12,11 +12,12 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class Edit:
-    """Замена куска исходника, строки и колонки — как у нарушения, с единицы.
+    """A replacement of a piece of source; lines and columns as in a violation, from 1.
 
-    Вставка — это замена пустого места: начало и конец совпадают. Правка
-    описывает только тот кусок, который меняет, поэтому всё остальное в файле —
-    комментарии, переносы, чужое форматирование — остаётся нетронутым.
+    An insertion is a replacement of empty space: the start and the end are
+    the same. An edit describes only the piece it changes, so everything else
+    in the file — comments, line breaks, someone else's formatting — stays
+    untouched.
     """
 
     line: int
@@ -31,11 +32,12 @@ def column(
     line: str,
     offset: int,
 ) -> int:
-    """Колонка правки по смещению из дерева, с единицы.
+    """The edit's column from the tree's offset, from 1.
 
-    `ast` считает `col_offset` в БАЙТАХ utf-8, а правка индексирует строку
-    символами. Совпадает это ровно до первого не-ascii символа в строке: одно
-    русское слово в литерале раньше по строке — и запятая встаёт не туда.
+    `ast` counts `col_offset` in utf-8 BYTES, while an edit indexes the line
+    by characters. The two agree only up to the first non-ascii character on
+    the line: one Russian word in a literal earlier on the line, and the comma
+    lands in the wrong place.
     """
     return len(line.encode("utf-8")[:offset].decode("utf-8", errors="ignore")) + 1
 
@@ -45,12 +47,13 @@ def apply(
     text: str,
     edits: Sequence[Edit],
 ) -> str:
-    """Исходник со всеми правками.
+    """The source with every edit applied.
 
-    Накладываются с конца файла к началу: тогда позиции ещё не наложенных
-    правок остаются верными и пересчитывать их не нужно. Правки, залезающие на
-    уже наложенную, пропускаются — две проверки, спорящие за один кусок текста,
-    должны разойтись в разных прогонах, а не перезаписывать друг друга.
+    Edits are applied from the end of the file to the start: that way the
+    positions of the edits not yet applied stay correct and need no
+    recalculation. An edit that overlaps one already applied is skipped — two
+    checks arguing over one piece of text must settle it in separate runs, not
+    overwrite each other.
     """
     starts = _starts(text=text)
     applied = len(text)
@@ -78,7 +81,7 @@ def apply(
 
 
 def _starts(*, text: str) -> tuple[int, ...]:
-    """Смещение начала каждой строки от начала файла."""
+    """The offset of each line's start from the start of the file."""
     lengths = (len(line) for line in text.splitlines(keepends=True))
     return (0, *accumulate(lengths))
 

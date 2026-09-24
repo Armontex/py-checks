@@ -1,4 +1,4 @@
-"""Форматирование файлов, которые правил автофикс."""
+"""Formatting the files the autofix has edited."""
 
 from __future__ import annotations
 
@@ -14,17 +14,17 @@ FORMATTER: Final = "ruff"
 
 
 def reformat(*, paths: Sequence[Path]) -> None:
-    """Пройтись форматтером по изменённым файлам.
+    """Run the formatter over the changed files.
 
-    Правка ставит символы, а не колонки: после вставки `*` подпись может стать
-    длиннее лимита строки. Раскладывать её руками — работа форматтера, он в
-    проекте всё равно есть. Если его нет, файл остаётся исправленным, просто
-    неотформатированным.
+    An edit places characters, not columns: after `*` is inserted a signature
+    may grow past the line limit. Laying it out is the formatter's job, and
+    the project has one anyway. If it does not, the file stays fixed, just
+    not formatted.
     """
     formatter = shutil.which(FORMATTER)
     if formatter is None or not paths:
         return
-    subprocess.run(  # noqa: S603 - команда своя, пути берутся из найденных файлов
+    subprocess.run(  # noqa: S603 - our own command, the paths come from the files found
         [formatter, "format", "--quiet", *(str(path) for path in paths)],
         check=False,
     )

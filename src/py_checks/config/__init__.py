@@ -1,11 +1,11 @@
-"""Настройки из `pyproject.toml` проекта.
+"""The settings from the project's `pyproject.toml`.
 
-Настройки живут либо в своём файле — `py-checks.toml` или `pychecks.toml`,
-с точкой в начале или без, — либо секцией `[tool.py-checks]` в
-`pyproject.toml`. В своём
-файле приставки нет: весь файл и есть эта секция. Внутри — по секции на
-проверку, и каждая описана моделью pydantic, поэтому опечатка в названии
-настройки падает сразу и с понятным текстом.
+The settings live either in the tool's own file — `py-checks.toml` or
+`pychecks.toml`, with or without a leading dot — or as the `[tool.py-checks]`
+section in `pyproject.toml`. The tool's own file has no prefix: the whole
+file is that section. Inside there is one section per check, each described
+by a pydantic model, so a typo in a setting's name fails at once and with a
+clear message.
 """
 
 from py_checks.config._base import OPEN, CheckSettings

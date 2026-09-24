@@ -1,4 +1,4 @@
-"""Приложение командной строки."""
+"""The command-line application."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from py_checks.cli.commands import REGISTRARS
 app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
-    help="Проверки архитектурных соглашений проекта.",
+    help="Checks of a project's architectural conventions.",
 )
 
 for register in REGISTRARS:
@@ -17,5 +17,5 @@ for register in REGISTRARS:
 
 
 def main() -> None:
-    """Точка входа консольной команды `py-checks`."""
+    """The entry point of the `py-checks` console command."""
     app()

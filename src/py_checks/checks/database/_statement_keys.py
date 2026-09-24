@@ -1,4 +1,4 @@
-"""Запрос называет колонку атрибутом, а не строкой, и ходит в базу один раз."""
+"""A statement names a column by attribute, not by string, and goes to the database once."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 CODE: Final = "statement-keys"
 
-SAID: Final = "называет колонку строкой; маппед-атрибут переезжает вместе с ней"
+SAID: Final = "names a column by string; a mapped attribute moves with the column"
 
 
 class StatementKeysSettings(ZonedSettings):
@@ -29,27 +29,28 @@ class StatementKeysSettings(ZonedSettings):
 
 
 class StatementKeys:
-    """Падает, если запрос называет колонку строкой или ходит в базу в цикле.
+    """Fails if a statement names a column by string, or goes to the database in a loop.
 
-    Строки собираются через модели, поэтому список колонок держит pyright:
-    пропущенная колонка — пропущенный аргумент, переименованная — неожиданное
-    ключевое слово. Строковый ключ в `index_elements=[...]`, `set_={...}` или
-    `from_select` открывает дыру заново: он ничего не совпадает во время
-    проверки и либо падает, либо молча перестаёт совпадать на той строке, что
-    выполняется.
+    Rows are assembled through models, so pyright holds the column list: a
+    missing column is a missing argument, a renamed one an unexpected keyword.
+    A string key in `index_elements=[...]`, `set_={...}` or `from_select`
+    opens the hole again: it matches nothing at check time, and either fails
+    or quietly stops matching on the row that runs.
 
-    `index_elements` и `set_` вместе — это `ON CONFLICT DO UPDATE`, то есть
-    inbox и каждый upsert. Строка, переставшая там совпадать, не поднимает
-    исключения: конфликт просто не находится, дубль вставляется второй раз, и
-    идемпотентность — то, ради чего inbox и существует, — тихо кончается.
+    `index_elements` and `set_` together are `ON CONFLICT DO UPDATE` — that
+    is the inbox and every upsert. A string that has stopped matching there
+    raises nothing: the conflict is simply not found, the duplicate is
+    inserted a second time, and idempotency — the whole reason the inbox
+    exists — quietly ends.
 
-    Второе правило: `execute(...)` внутри цикла — это поход в базу на итерацию,
-    форма N+1. Сто ставок — сто поездок туда и обратно там, где хватило бы
-    одного запроса по всему множеству. Иногда цикл честен — три константы, и
-    одного запроса, говорящего то же самое, не существует, — поэтому правило
-    снимается пометкой на строке цикла или самого вызова, а не отсутствует.
+    The second rule: an `execute(...)` inside a loop is a trip to the database
+    per iteration, the N+1 shape. A hundred bets is a hundred round trips where
+    one statement over the whole set would have done. Sometimes the loop is
+    honest — three constants, and no single statement says the same thing —
+    so the rule is lifted by a mark on the line of the loop or of the call,
+    rather than left out.
 
-    Настройки: `zones`, `lists`, `mappings`, `sub-queries`, `loops`.
+    Settings: `zones`, `lists`, `mappings`, `sub-queries`, `loops`.
     """
 
     code: ClassVar[str] = CODE
@@ -124,7 +125,7 @@ class StatementKeys:
         node: ast.For | ast.AsyncFor | ast.While,
         limits: StatementKeysSettings,
     ) -> Iterator[Violation]:
-        """Поход в базу на каждой итерации."""
+        """A trip to the database on every iteration."""
         for child in ast.walk(node):
             if not isinstance(child, ast.Call) or name(node=child.func) not in limits.loops:
                 continue
@@ -132,12 +133,12 @@ class StatementKeys:
                 node=node,
                 path=file.path,
                 code=CODE,
-                # Пометка снимается со строки цикла или с любой строки вызова:
-                # причина принадлежит тому месту, где автор её и пишет.
+                # The mark is lifted from the line of the loop or from any line of
+                # the call: the reason belongs wherever its author writes it.
                 end_line=child.end_lineno or child.lineno,
                 message=(
-                    f"{name(node=child.func)}() внутри цикла — поход в базу на итерацию; "
-                    f"один запрос по всему множеству говорит то же самое"
+                    f"{name(node=child.func)}() inside a loop is a trip to the database per "
+                    f"iteration; one statement over the whole set says the same thing"
                 ),
             )
 

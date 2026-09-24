@@ -1,4 +1,4 @@
-"""Из чего собрана колонка модели."""
+"""What a model's column is built out of."""
 
 from __future__ import annotations
 
@@ -34,39 +34,39 @@ class ModelColumnsSettings(ZonedSettings):
 
 
 class ModelColumns:
-    """Падает, если колонка собрана не из того материала.
+    """Fails if a column is built out of the wrong material.
 
-    Пять правил на одну таблицу настроек.
+    Five rules on one table of settings.
 
-    `instead` — материал, которому в колонке не место, и что писать вместо.
-    Голый `Enum` — нативный тип Postgres: каждый новый член требует `ALTER
-    TYPE`, а словари здесь чужие и расти будут. `Float` не держит цену точно, а
-    колонка — это состояние, и ошибка округления копится с каждой записью.
-    Голый `JSONB` — форма, которую никто не объявил: что положил писатель, то и
-    получит каждый читатель, а разбор, поймавший бы пропущенный ключ, случается
-    в каждом отдельно или нигде.
+    `instead` is the material that has no place in a column, and what to write
+    instead. A bare `Enum` is a native Postgres type: every new member needs an
+    `ALTER TYPE`, and these vocabularies belong to somebody else and will grow.
+    `Float` does not hold a price exactly, and a column is state: the rounding
+    error accumulates with every write. A bare `JSONB` is a shape nobody
+    declared: what the writer put in is what every reader gets, and the
+    parsing that would have caught a missing key happens in each of them
+    separately or nowhere.
 
-    `wrappers` — модуль, которому этот материал называть можно: там живёт обёртка
-    над ним, и правило его не касается.
+    `wrappers` is the module allowed to name that material: the wrapper over it
+    lives there, and the rule leaves it alone.
 
-    `defaults` — все способы, которыми колонка заполняет себя сама. Значение по
-    умолчанию — это значение, которого никто не писал: писатель пропустил
-    колонку, строка всё равно получила число, и пропуск, который на пропущенном
-    аргументе конструктора поймал бы проверяльщик типов, превращается в
-    правдоподобную строку.
+    `defaults` lists every way a column fills itself in. A default is a value
+    nobody wrote: the writer skipped the column, the row got a number anyway,
+    and an omission that a type checker would have caught on a missing
+    constructor argument turns into a plausible row.
 
-    `skip` — встроенные типы в `Mapped[...]`. Такая колонка говорит, какой
-    у значения вид, и ничего — какие значения допустимы, так что правило
-    приходится помнить каждому писателю.
+    `skip` lists the built-in types in `Mapped[...]`. Such a column says what
+    kind of value it holds and nothing about which values are allowed, so every
+    writer has to remember the rule.
 
-    `aware` — типы времени, которым нужен `timezone=True`: без него колонка
-    хранит наивную метку, те самые настенные часы писателя, без подписи.
+    `aware` lists the time types that need `timezone=True`: without it the
+    column stores a naive stamp — the writer's own wall clock, unsigned.
 
-    `nullable` — аннотация и ключевое слово обязаны совпадать. SQLAlchemy
-    разрешает им разойтись, и тогда аннотация лжёт: pyright рассуждает по ней,
-    база держит ключевое слово, и одно из двух неверно на каждой строке.
+    `nullable`: the annotation and the keyword must agree. SQLAlchemy lets them
+    diverge, and then the annotation lies: pyright reasons by it, the database
+    holds the keyword, and one of the two is wrong on every row.
 
-    Настройки: `zones`, `factories`, `instead`, `wrappers`, `defaults`, `skip`,
+    Settings: `zones`, `factories`, `instead`, `wrappers`, `defaults`, `skip`,
     `aware`, `nullable`.
     """
 
@@ -115,7 +115,7 @@ class ModelColumns:
         node: ast.Call,
         limits: ModelColumnsSettings,
     ) -> Iterator[Violation]:
-        """Материал и то, чем колонка заполняет себя сама."""
+        """The material, and whatever the column fills itself in with."""
         written = name(node=node.func)
         if written in limits.instead and limits.wrappers.get(written) != file.path.stem:
             yield cls._says(
@@ -131,7 +131,7 @@ class ModelColumns:
                 file=file,
                 node=node,
                 message=(
-                    f"{written} без timezone=True хранит наивную метку времени; скажи timezone=True"
+                    f"{written} without timezone=True stores a naive timestamp; say timezone=True"
                 ),
             )
         if written not in limits.factories:
@@ -142,8 +142,8 @@ class ModelColumns:
                     file=file,
                     node=node,
                     message=(
-                        f"{keyword.arg}= заполняет колонку за писателя, который её не написал; "
-                        f"передай значение в запросе"
+                        f"{keyword.arg}= fills the column in for a writer who did not write it; "
+                        f"pass the value in the statement"
                     ),
                 )
 
@@ -155,7 +155,7 @@ class ModelColumns:
         node: ast.AnnAssign,
         limits: ModelColumnsSettings,
     ) -> Iterator[Violation]:
-        """Аннотация колонки: встроенный тип и согласие с `nullable=`."""
+        """The column's annotation: a built-in type, and agreement with `nullable=`."""
         inner = cls._mapped(node=node.annotation)
         if inner is None:
             return
@@ -165,7 +165,7 @@ class ModelColumns:
                 node=node,
                 path=file.path,
                 code=CODE,
-                message=(f"{written} говорит вид, а не правило; возьми примитив с его границей"),
+                message=(f"{written} says a kind, not a rule; take a primitive with its bound"),
             )
         if not limits.nullable:
             return
@@ -179,8 +179,8 @@ class ModelColumns:
                 path=file.path,
                 code=CODE,
                 message=(
-                    "аннотация и nullable= расходятся; во время работы побеждает то, "
-                    "чего проверяльщик типов не видит"
+                    "the annotation and nullable= disagree; at run time the one the type "
+                    "checker cannot see wins"
                 ),
             )
 
@@ -190,7 +190,7 @@ class ModelColumns:
         node: ast.expr | None,
         limits: ModelColumnsSettings,
     ) -> bool | None:
-        """Что сказано в `nullable=`, если вообще сказано."""
+        """What `nullable=` says, if it says anything."""
         if not isinstance(node, ast.Call) or name(node=node.func) not in limits.factories:
             return None
         for keyword in node.keywords:
@@ -200,7 +200,7 @@ class ModelColumns:
 
     @classmethod
     def _mapped(cls, *, node: ast.expr) -> tuple[str, bool] | None:
-        """Имя внутри `Mapped[...]` и то, допускает ли оно `None`."""
+        """The name inside `Mapped[...]`, and whether it allows `None`."""
         if not isinstance(node, ast.Subscript) or name(node=node.value) != MAPPED:
             return None
         match node.slice:

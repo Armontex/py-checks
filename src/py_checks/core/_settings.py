@@ -1,4 +1,4 @@
-"""Сужение настроек до модели конкретной проверки."""
+"""Narrowing the settings to a particular check's model."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class SettingsMismatchError(Exception):
-    """Проверке отдали не её настройки."""
+    """A check was given settings that are not its own."""
 
     def __init__(
         self,
@@ -18,7 +18,7 @@ class SettingsMismatchError(Exception):
         expected: type[object],
         got: type[object],
     ) -> None:
-        super().__init__(f"{code}: ожидались {expected.__name__}, пришли {got.__name__}")
+        super().__init__(f"{code}: expected {expected.__name__}, got {got.__name__}")
         self.code = code
 
 
@@ -28,12 +28,12 @@ def settings_as[S: CheckSettings](
     model: type[S],
     code: str,
 ) -> S:
-    """Те же настройки, но уже своего типа.
+    """The same settings, but now of the check's own type.
 
-    Ядро отдаёт проверке общий `CheckSettings`: иначе протокол пришлось бы
-    параметризовать типом настроек, и реестр перестал бы складываться в один
-    словарь. Сужение здесь — одна строка в начале правила, зато дальше поля
-    видит и редактор, и pyright.
+    The core hands a check the general `CheckSettings`: otherwise the protocol
+    would have to be parametrised by the settings type, and the registry would
+    no longer fit into one dict. Narrowing here costs one line at the start of
+    a rule, and from then on both the editor and pyright see the fields.
     """
     if not isinstance(settings, model):
         raise SettingsMismatchError(

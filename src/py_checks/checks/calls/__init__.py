@@ -1,7 +1,7 @@
-"""Места вызова.
+"""Call sites.
 
-Есть функции, у которых законных мест вызова ровно столько, сколько их
-перечислено: конверсия денег, например. Правило держит этот список.
+Some functions have exactly as many lawful call sites as are listed: money
+conversion, for one. The rule holds that list.
 """
 
 from py_checks.checks.calls._confined_functions import (

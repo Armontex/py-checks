@@ -1,4 +1,4 @@
-"""Слои проекта: что он объявил о себе сам."""
+"""The project's layers: what it has declared about itself."""
 
 from __future__ import annotations
 
@@ -14,19 +14,19 @@ if TYPE_CHECKING:
 
 
 class Contracts(CheckSettings):
-    """Секция `[tool.py-checks.contracts]`.
+    """The `[tool.py-checks.contracts]` section.
 
-    `layers` — слой и то, что ему разрешено импортировать. Всё, чего в таблице
-    нет, ограничений не имеет: библиотека не знает, как называются слои в этом
-    проекте, и не догадывается за него.
+    `layers` — a layer and what it may import. Anything missing from the table
+    has no restrictions: the library does not know what the layers are called
+    in this project and does not guess on its behalf.
 
-    `composition-root` — слои, которым можно всё: они связывают остальные между
-    собой, и это вся их работа. Перечислять их отдельно нужно затем, чтобы они
-    попали в запреты остальных: слой, о котором таблица не знает, ничьим
-    запретом не становится.
+    `composition-root` — layers that may import anything: they tie the rest
+    together, and that is the whole of their work. They are listed separately
+    so that they end up in the others' forbidden lists: a layer the table does
+    not know about is forbidden to nobody.
 
-    `header` — шапка собранного файла со своим текстом, вместе с `#`. Пустая
-    строка оставляет шапку библиотеки.
+    `header` — the built file's own header text, `#` included. An empty
+    string keeps the library's header.
     """
 
     composition_root: tuple[str, ...] = ()

@@ -32,12 +32,12 @@
 догадывается за вас, как называется ваш домен.
 
 ```
-src/app/modules/cashout/application/offer.py:34:9: determinism: uuid4() не детерминирован;
-    идентификатор выдают на краю и передают внутрь
-src/app/infra/database/models/bet.py:51:5: model-columns: stake — Numeric без ограничений;
-    деньги описывают Numeric(18, 4)
+src/app/modules/cashout/application/offer.py:34:9: determinism: uuid4() is not deterministic;
+    the identifier is handed out at the edge and passed inwards
+src/app/infra/database/models/bet.py:51:5: model-columns: stake is a Numeric with no bound;
+    money is described by Numeric(18, 4)
 src/app/presentation/api/v1/routers/bets.py:22:1: edge-declarations: POST /bets
-    не назвал response_model
+    did not name a response_model
 ```
 
 ## Зачем

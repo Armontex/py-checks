@@ -1,4 +1,4 @@
-"""Что mutmut мутирует и как он называет мутантов."""
+"""What mutmut mutates and how it names mutants."""
 
 from __future__ import annotations
 
@@ -26,26 +26,26 @@ TOOL: Final = "mutmut"
 SUFFIX: Final = ".py"
 PACKAGE: Final = "__init__"
 
-# `pushed` pre-commit отдаёт хуку на пуш как то, что пуш заменяет; у новой
-# ветки это строка из нулей.
+# pre-commit hands the push hook `pushed` as what the push replaces; for a new
+# branch it is a string of zeros.
 PUSHED: Final = "PRE_COMMIT_FROM_REF"
 NO_SUCH_REF: Final = "0" * 40
 
 
 @dataclass(frozen=True, slots=True)
 class Scope:
-    """Где mutmut ищет код и как из пути выходит имя его мутанта."""
+    """Where mutmut looks for code and how a path becomes its mutant's name."""
 
     sources: tuple[PurePosixPath, ...]
     spared: tuple[str, ...]
     src: PurePosixPath
 
     def module_of(self, *, path: PurePosixPath) -> str | None:
-        """Модуль, под которым файл мутируется, или ничего, если не мутируется.
+        """The module the file is mutated under, or nothing if it is not mutated.
 
-        mutmut называет мутанта путём импорта: от корня, откуда импортируют, —
-        `src` у раскладки с ним и корень проекта у плоской. У пакета `__init__`
-        он отбрасывает, прежде чем записать имя.
+        mutmut names a mutant by its import path: from the root it is imported
+        from — `src` in a layout that has one, the project root in a flat one.
+        For a package it drops `__init__` before writing the name down.
         """
         inside = any(path.is_relative_to(source) for source in self.sources)
         spared = any(fnmatch(path.as_posix(), pattern) for pattern in self.spared)
@@ -61,18 +61,18 @@ def scope(
     root: Path,
     src: Path,
 ) -> Scope:
-    """Область мутаций, прочитанная так же, как её читает mutmut.
+    """The mutation scope, read the same way mutmut reads it.
 
-    `[tool.mutmut]` в `pyproject.toml` побеждает, если он есть; иначе
-    `[mutmut]` в `setup.cfg`. Ни там ни там — отказ: гейт, не знающий, что
-    мутируется, судил бы пустоту и молча пропускал бы всё.
+    `[tool.mutmut]` in `pyproject.toml` wins if there is one; otherwise
+    `[mutmut]` in `setup.cfg`. Neither — a refusal: a gate that does not know
+    what is mutated would judge nothing and silently pass everything.
     """
     declared = _pyproject(root=root) or _setup(root=root)
     sources = declared.get(SOURCES, ())
     if not sources:
         raise GateError(
-            f"mutmut не знает, что мутировать: нет `{SOURCES}` "
-            f"ни в [tool.{TOOL}] {PYPROJECT}, ни в [{TOOL}] {SETUP}"
+            f"mutmut does not know what to mutate: set `{SOURCES}` "
+            f"in [tool.{TOOL}] of {PYPROJECT} or in [{TOOL}] of {SETUP}"
         )
     return Scope(
         sources=tuple(PurePosixPath(one) for one in sources),
@@ -118,10 +118,10 @@ def changed(
     against: str,
     area: Scope,
 ) -> tuple[str, ...]:
-    """Мутируемые модули, которые тронула ветка, — одним вызовом git.
+    """The mutated modules the branch touched — in a single git call.
 
-    `A...B` — это общий предок: ветку судят по её собственным правкам, а не
-    по всему, что develop принял с тех пор, как она от него ушла.
+    `A...B` is the common ancestor: a branch is judged by its own changes, not
+    by everything develop has taken in since the branch left it.
     """
     listed = shell.answered(
         command=("git", "diff", "--name-only", "--diff-filter=d", f"{against}...HEAD"),
@@ -139,11 +139,11 @@ def against_ref(
     shell: Shell,
     candidates: tuple[str, ...],
 ) -> str | None:
-    """С чем сравнивать: с тем, что пуш заменяет, иначе с первым известным.
+    """What to compare against: what the push replaces, otherwise the first known.
 
-    pre-commit отдаёт хуку на пуш текущий sha удалённой ветки — ровно то,
-    что нужно, — а у новой ветки это нули. Тогда develop, под тем именем,
-    которое знает этот клон.
+    pre-commit hands the push hook the remote branch's current sha — exactly
+    what is needed — and for a new branch it is zeros. Then develop, under
+    whichever name this clone knows it by.
     """
     pushed = os.environ.get(PUSHED, "")
     if pushed and pushed != NO_SUCH_REF:

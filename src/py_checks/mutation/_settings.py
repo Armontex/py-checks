@@ -1,4 +1,4 @@
-"""Секция `[mutation]`: как звать mutmut и с чем сравнивать."""
+"""The `[mutation]` section: how to call mutmut and what to compare against."""
 
 from __future__ import annotations
 
@@ -14,25 +14,27 @@ if TYPE_CHECKING:
 
 
 class Mutation(CheckSettings):
-    """Секция `[tool.py-checks.mutation]`.
+    """The `[tool.py-checks.mutation]` section.
 
-    `command` — как позвать mutmut. По умолчанию из того же окружения, что и
-    сама библиотека; список, а не строка, чтобы аргументы не разбирал шелл.
+    `command` — how to call mutmut. By default from the same environment as
+    the library itself; a list, not a string, so that no shell splits the
+    arguments.
 
-    `baseline` — файл, в котором `record` записывает выживших по модулям. С
-    ним сравнивают и `diff`, и `full`.
+    `baseline` — the file `record` writes the survivors per module to. Both
+    `diff` and `full` compare against it.
 
-    `against` — с чем сравнивать ветку, когда пуш сам этого не сказал:
-    первое имя, которое знает этот клон.
+    `against` — what to compare the branch with when the push has not said:
+    the first name this clone knows.
 
-    `children` — сколько мутантов проверять разом. Пусто — решает mutmut.
+    `children` — how many mutants to check at once. Empty — mutmut decides.
 
-    `env` — переменные для прогона. Типичная — профиль hypothesis: свойство,
-    которое каждый раз тянет новые примеры, убивает мутанта в одном прогоне
-    и упускает в следующем, и запись начинает двигаться сама.
+    `env` — variables for the run. The typical one is a hypothesis profile: a
+    property that draws new examples every time kills a mutant in one run and
+    misses it in the next, and the record starts moving on its own.
 
-    Что мутировать, здесь не сказано: это `source_paths` и `do_not_mutate`
-    самого mutmut, и гейт читает их оттуда же, откуда mutmut.
+    What to mutate is not said here: that is `source_paths` and
+    `do_not_mutate` of mutmut itself, and the gate reads them from wherever
+    mutmut does.
     """
 
     command: tuple[str, ...] = ("mutmut",)

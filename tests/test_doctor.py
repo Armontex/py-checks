@@ -102,7 +102,7 @@ def test_a_config_that_holds_together_says_so(project: Path) -> None:
     result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code == 0
-    assert "ok: настройки согласованы" in result.output
+    assert "ok: the settings hold together" in result.output
 
 
 def test_a_section_nobody_reads_is_named_with_its_neighbours(project: Path) -> None:
@@ -114,7 +114,7 @@ def test_a_section_nobody_reads_is_named_with_its_neighbours(project: Path) -> N
     result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code == 1
-    assert "[statement-key] — такой секции нет" in result.output
+    assert "[statement-key] — no such section" in result.output
     assert "statement-keys" in result.output
 
 
@@ -127,7 +127,7 @@ def test_an_empty_section_without_defaults_is_a_rule_that_says_nothing(project: 
     result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code == 1
-    assert "[layout] — секция пуста, а умолчаний у правила нет" in result.output
+    assert "[layout] — the section is empty and the rule has no defaults" in result.output
 
 
 def test_an_empty_section_with_working_defaults_is_left_alone(project: Path) -> None:
@@ -151,7 +151,7 @@ def test_a_rule_that_works_nowhere_is_a_rule_that_judges_nowhere(project: Path) 
     result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code == 1
-    assert "[statement-keys] — зон не названо" in result.output
+    assert "[statement-keys] — no zones named" in result.output
 
 
 def test_an_address_without_a_directory_is_reported(project: Path) -> None:
@@ -163,7 +163,7 @@ def test_an_address_without_a_directory_is_reported(project: Path) -> None:
     result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code == 1
-    assert "'application/handlers' не нашлось" in result.output
+    assert "'application/handlers' not found" in result.output
 
 
 def test_a_key_that_is_not_an_address_is_left_alone(project: Path) -> None:
@@ -178,7 +178,7 @@ def test_a_key_that_is_not_an_address_is_left_alone(project: Path) -> None:
 
     result = runner.invoke(app, ["doctor"])
 
-    assert "не нашлось" not in result.output
+    assert "not found" not in result.output
 
 
 def test_ignore_that_names_nothing_is_reported(project: Path) -> None:
@@ -190,4 +190,4 @@ def test_ignore_that_names_nothing_is_reported(project: Path) -> None:
     result = runner.invoke(app, ["doctor"])
 
     assert result.exit_code == 1
-    assert "такого правила нет" in result.output
+    assert "no such rule" in result.output

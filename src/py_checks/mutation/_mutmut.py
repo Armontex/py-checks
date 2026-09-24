@@ -1,4 +1,4 @@
-"""Прогон mutmut и разбор того, что он напечатал."""
+"""Running mutmut and parsing what it printed."""
 
 from __future__ import annotations
 
@@ -12,27 +12,27 @@ from py_checks.mutation._process import said
 if TYPE_CHECKING:
     from py_checks.mutation._process import Shell
 
-# `mutmut run` выходит с единицей ровно тогда, когда кто-то выжил: здесь это
-# обычный исход, а не сбой инструмента. Всё, что выше, — сбой, и читаться как
-# чистый прогон он не должен.
+# `mutmut run` exits with one exactly when something survived: here that is an
+# ordinary outcome, not a tool failure. Anything above it is a failure, and it
+# must not read as a clean run.
 ALIVE_EXIT: Final = 1
 
-# Два вердикта, а не один: `survived` — мутант, мимо которого прошли все тесты,
-# `no tests` — мутант, до которого не дошёл ни один. Второе сильнее: модуль без
-# единого теста иначе давал бы ноль выживших.
+# Two verdicts, not one: `survived` is a mutant every test walked past,
+# `no tests` is a mutant no test reached. The second is the stronger: a module
+# without a single test would otherwise score zero survivors.
 ALIVE: Final = re.compile(r"^\s*(?P<mutant>\S+): (?:survived|no tests)$", re.MULTILINE)
 
-# Мутант, которого прогон так и не попробовал. Когда падает сбор тестов, mutmut
-# всё равно выходит с единицей, и по коду выхода такой прогон не отличить от
-# прогона с выжившими; по этой строке — отличить.
+# A mutant the run never tried. When test collection fails, mutmut still exits
+# with one, and by the exit code such a run cannot be told from a run with
+# survivors; by this line it can.
 UNCHECKED: Final = re.compile(r"^\s*(?P<mutant>\S+): not checked$", re.MULTILINE)
 
-# Каждая строка отчёта: мутант и вердикт.
+# Every line of the report: a mutant and its verdict.
 VERDICT: Final = re.compile(r"^\s*(?P<mutant>\S+): (?P<verdict>.+?)\s*$", re.MULTILINE)
 
-# Убит — так же, как считает сам mutmut: тест упал, тест завис, или мутант не
-# прошёл проверку типов. Жив — то же, по чему гейт отказывает. Не пробовали —
-# в счёт запущенных не идёт.
+# Killed — the way mutmut itself counts it: a test failed, a test hung, or the
+# mutant failed the type check. Alive — the same thing the gate refuses on.
+# Not tried — not counted among those run.
 KILLED: Final[frozenset[str]] = frozenset({"killed", "timeout", "caught by type check"})
 SURVIVED: Final[frozenset[str]] = frozenset({"survived", "no tests"})
 UNTRIED: Final[frozenset[str]] = frozenset({"not checked", "skipped"})
@@ -42,11 +42,11 @@ MUTANT_OF_MODULE: Final = "{module}.*"
 
 @dataclass(frozen=True, slots=True)
 class Tally:
-    """Сколько мутантов прогон попробовал и чем это кончилось.
+    """How many mutants the run tried and how that ended.
 
-    `other` — вердикты, которые не убийство и не выживание: `suspicious`,
-    `segfault`, прерванный прогон. Их мало и они редки, но молча растворить их
-    в одной из двух кучек значило бы соврать о ней.
+    `other` — verdicts that are neither a kill nor a survival: `suspicious`,
+    `segfault`, an interrupted run. They are few and rare, but quietly folding
+    them into one of the two piles would be lying about that pile.
     """
 
     killed: int
@@ -60,23 +60,23 @@ class Tally:
 
 @dataclass(frozen=True, slots=True)
 class Mutmut:
-    """Как звать mutmut в этом проекте."""
+    """How mutmut is called in this project."""
 
     shell: Shell
     command: tuple[str, ...]
     children: int | None
 
     def report(self, *, modules: tuple[str, ...] = ()) -> str:
-        """Отчёт после прогона: названных модулей или всего, что мутируется.
+        """The report after a run: of the named modules or of everything mutated.
 
-        Названные модули прогоняются заново, даже когда в кэше есть их
-        вердикт, — ради этого их и называют: кэш привязан к исходнику, и тест,
-        который ослабили, оставляет стоять все вердикты, что он раньше
-        заработал.
+        The named modules are run again even when the cache holds their
+        verdict — that is what naming them is for: the cache is keyed on the
+        source, and a test that was weakened leaves standing every verdict it
+        earned before.
 
-        Прогон всего перезапускает выживших по той же причине, прочитанной
-        наоборот: тест, написанный сегодня, убивает мутанта в файле, которого
-        никто не трогал, а кэш продолжал бы считать его живым.
+        A run of everything reruns the survivors for the same reason read the
+        other way round: a test written today kills a mutant in a file nobody
+        touched, and the cache would go on counting it alive.
         """
         named = tuple(MUTANT_OF_MODULE.format(module=module) for module in modules)
         self._run(named=named)
@@ -89,8 +89,8 @@ class Mutmut:
         )
         if untried:
             raise GateError(
-                f"mutmut не попробовал {len(untried)} мутант(ов), первый — {untried[0]}; "
-                f"скорее всего, не собрались тесты в его копии проекта"
+                f"mutmut did not try {len(untried)} mutant(s), the first is {untried[0]}; "
+                f"most likely the tests failed to collect in its copy of the project"
             )
         return report
 
@@ -104,7 +104,7 @@ class Mutmut:
         return self.shell.answered(command=(*self.command, "results", "--all", "true"))
 
     def _again(self, *, alive: list[str]) -> str:
-        """Выжившие, прогнанные по имени, и отчёт после этого."""
+        """The survivors, run by name, and the report after that."""
         if alive:
             self._run(named=tuple(alive))
         return self._results()
@@ -119,7 +119,7 @@ def tallied(
     report: str,
     modules: tuple[str, ...] = (),
 ) -> Tally:
-    """Счёт по вердиктам: всего отчёта или только названных модулей."""
+    """The count by verdict: of the whole report or of the named modules only."""
     verdicts = [
         found["verdict"]
         for found in VERDICT.finditer(report)
@@ -140,8 +140,8 @@ def unchecked(
     report: str,
     modules: tuple[str, ...] = (),
 ) -> list[str]:
-    """Мутанты из области прогона, которых он не достиг: все, если модули не
-    названы, иначе только мутанты названных."""
+    """Mutants in the run's scope that it did not reach: all of them if no
+    modules are named, otherwise only those of the named modules."""
     return [
         mutant
         for mutant in UNCHECKED.findall(report)
@@ -150,7 +150,7 @@ def unchecked(
 
 
 def module_of(*, mutant: str) -> str:
-    """Модуль мутанта: его имя без последнего куска, имени самого мутанта."""
+    """A mutant's module: its name without the last part, the mutant's own name."""
     return mutant.rsplit(".", 1)[0]
 
 

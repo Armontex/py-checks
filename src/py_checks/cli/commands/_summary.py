@@ -1,4 +1,4 @@
-"""Описание проверки, взятое из её докстринга."""
+"""A check's description, taken from its docstring."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Final
 if TYPE_CHECKING:
     from py_checks.core import Check
 
-NO_DOC: Final = "нет описания"
+NO_DOC: Final = "no description"
 
 
 def docstring(*, check: Check) -> str:
@@ -16,5 +16,5 @@ def docstring(*, check: Check) -> str:
 
 
 def summary(*, check: Check) -> str:
-    """Первая строка докстринга: правило одной фразой."""
+    """The first line of the docstring: the rule in one sentence."""
     return docstring(check=check).splitlines()[0]

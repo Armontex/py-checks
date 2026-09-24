@@ -1,12 +1,12 @@
-"""Ошибки пакета."""
+"""The package's errors."""
 
 from __future__ import annotations
 
 
 class GateError(RuntimeError):
-    """Гейт не смог ответить: mutmut или git не дошли до вердикта.
+    """The gate could not answer: mutmut or git did not reach a verdict.
 
-    Своя ошибка, потому что иначе случится ровно то, от чего гейт существует:
-    прогон, умерший на импорте, не печатает ни одного вердикта, а отчёт без
-    вердиктов разбирается как ноль выживших — то есть как отвоёванная земля.
+    An error of its own, because otherwise exactly what the gate exists to
+    prevent would happen: a run that died on import prints no verdict, and a
+    report with no verdicts reads as zero survivors — that is, as ground won.
     """

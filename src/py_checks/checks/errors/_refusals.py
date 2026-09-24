@@ -1,4 +1,4 @@
-"""Отказ, на который вызывающему нечем ответить, — это не отказ, а падение."""
+"""A refusal the caller has no way to answer is not a refusal but a crash."""
 
 from __future__ import annotations
 
@@ -19,9 +19,9 @@ if TYPE_CHECKING:
 
 CODE: Final = "refusals"
 
-# Исключения, которые везёт сам интерпретатор, — по именам. Читаются из
-# `builtins`, а не перечисляются: список пришлось бы кому-то поддерживать, а
-# он меняется от версии к версии языка.
+# The exceptions the interpreter itself ships, by name. Read from `builtins`
+# rather than listed: somebody would have to maintain the list, and it changes
+# from one version of the language to the next.
 BUILTINS: Final[frozenset[str]] = frozenset(
     found
     for found, value in vars(builtins).items()
@@ -30,11 +30,11 @@ BUILTINS: Final[frozenset[str]] = frozenset(
 
 
 class RefusalsSettings(ZonedSettings):
-    """Где судим, чем несут код и что отказом не считается.
+    """Where to judge, what carries the code, and what is not a refusal.
 
-    `carries` не назван — у проекта нет своего кода отказа, и правило судит
-    только встроенные исключения: у них кода нет ни в каком виде. Назван —
-    своя ошибка обязана нести его с собой, кроме перечисленных в `internal`.
+    With `carries` unset the project has no refusal code of its own, and the
+    rule judges only builtin exceptions: they carry no code in any form. With
+    it set, an error of your own must carry it, except those in `internal`.
     """
 
     carries: str | None = None
@@ -43,26 +43,26 @@ class RefusalsSettings(ZonedSettings):
 
 
 class Refusals:
-    """Падает, если отказ выходит наружу без кода, на который можно ветвиться.
+    """Fails when a refusal leaves without a code anyone can branch on.
 
-    У отказа две половины. Фраза — человеку: её читают в логе, её переписывают,
-    и зависеть от её слов нельзя ничему. Код — то, на что ветвится вызывающий:
-    «денег не хватило» — это экран, «купон изменился» — это пересчёт. Поэтому
-    фраза вольна меняться, а код нет, и держится это ровно до тех пор, пока
-    каждое «нет», которое говорит модуль, несёт его с собой.
+    A refusal has two halves. The sentence is for a person: it is read in a
+    log, it gets rewritten, and nothing may depend on its wording. The code is
+    what a caller branches on: "not enough funds" is a screen, "the basket
+    changed" is a re-price. So the sentence is free to change and the code is
+    not, and that holds only while every no a module says carries one.
 
-    Встроенное исключение кода не несёт вовсе. `ValueError`, пересёкший
-    сценарий, — это отказ, о котором снаружи известно только то, что он
-    случился, и периметр честно превращает его в 500: больше ему сделать не из
-    чего. Что из встроенных отказом не считается, говорит `allow`:
-    `NotImplementedError` — это не «нет», а метод, которого ещё нет, и
-    единственное исключение, которое читатель не спутает с ответом.
+    A builtin exception carries no code at all. A `ValueError` crossing a use
+    case is a refusal about which the outside knows only that it happened, and
+    the perimeter honestly turns it into a 500: it has nothing else to work
+    with. `allow` names the builtins that are not refusals:
+    `NotImplementedError` is not a no but a method that does not exist yet,
+    and the one exception a reader never mistakes for an answer.
 
-    Своя ошибка кодом обязана, если она про игрока. Та, что говорит «код
-    написан неверно» или «порт нарушил обещание», — внутренняя, ветвиться на
-    неё некому, и её имена перечисляет `internal`.
+    An error of your own owes a code when it is about the player. One that
+    says "the code is written wrong" or "a port broke its promise" is
+    internal: nobody branches on it, and `internal` lists its name.
 
-    Настройки: `zones`, `carries`, `allow`, `internal`.
+    Settings: `zones`, `carries`, `allow`, `internal`.
     """
 
     code: ClassVar[str] = CODE
@@ -88,8 +88,9 @@ class Refusals:
         )
         if where is None:
             return
-        # По строкам, а не по обходу: `ast.walk` идёт в ширину, и отказ из
-        # глубины `if` оказывается в выводе позже соседа, написанного ниже.
+        # By line, not by traversal: `ast.walk` goes breadth-first, and a
+        # refusal deep inside an `if` would come out after a neighbour written
+        # below it.
         yield from sorted(
             cls._found(
                 file=file,
@@ -127,7 +128,7 @@ class Refusals:
 
     @staticmethod
     def _raised(*, thrown: ast.expr) -> str:
-        """Что брошено: `raise Denied(...)` и `raise Denied` — одно и то же имя."""
+        """What is raised: `raise Denied(...)` and `raise Denied` are the same name."""
         return name(node=thrown.func) if isinstance(thrown, ast.Call) else name(node=thrown)
 
     @classmethod
@@ -138,22 +139,22 @@ class Refusals:
         thrown: ast.expr,
         limits: RefusalsSettings,
     ) -> str | None:
-        """Чем плох этот `raise`; `None` — ничем."""
+        """What is wrong with this `raise`; `None` means nothing."""
         if raised in BUILTINS:
             if raised in limits.allow:
                 return None
-            said = f" с {limits.carries}=" if limits.carries else ""
+            said = f" with {limits.carries}=" if limits.carries else ""
             return (
-                f"бросает {raised}, а кода на нём нет: снаружи об этом отказе известно "
-                f"только то, что он случился. Ответь своей ошибкой{said}"
+                f"raises {raised}, which carries no code: all the outside knows about "
+                f"this refusal is that it happened. Answer with an error of your own{said}"
             )
         if limits.carries is None or raised in limits.internal:
             return None
         if not isinstance(thrown, ast.Call):
-            return f"бросает {raised} классом, без {limits.carries}="
+            return f"raises {raised} as a bare class, without {limits.carries}="
         if any(keyword.arg == limits.carries for keyword in thrown.keywords):
             return None
         return (
-            f"бросает {raised} без {limits.carries}=; код — то, на что ветвится "
-            f"вызывающий, а фраза — человеку"
+            f"raises {raised} without {limits.carries}=; the code is what the caller "
+            f"branches on, the sentence is for a person"
         )

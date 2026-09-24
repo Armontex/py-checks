@@ -1,4 +1,4 @@
-"""Команда `doctor`: что не так с самими настройками."""
+"""The `doctor` command: what is wrong with the settings themselves."""
 
 from __future__ import annotations
 
@@ -23,34 +23,34 @@ if TYPE_CHECKING:
     from py_checks.config import CheckSettings, Config, TomlValue
     from py_checks.core import Check
 
-# Секции, которые читает не правило: сборщики файлов и мутационный гейт.
+# Sections read by something other than a rule: the file builders and the mutation gate.
 OWNED: Final[frozenset[str]] = frozenset({CONTRACTS, ENV_EXAMPLE, MUTATION})
 
-# Ключ, называющий места: он есть у всех правил, которые работают не везде, и
-# пустой список в нём означает, что правило молчит по всему дереву.
+# The key that names places: every rule that does not work everywhere has it,
+# and an empty list in it means the rule is silent across the whole tree.
 ZONES: Final = "zones"
 
-# Сколько похожих имён предлагать в ответ на опечатку и насколько похожих:
-# умолчание difflib (0.6) молчит там, где человек видит опечатку глазами.
+# How many similar names to offer in answer to a typo, and how similar: the
+# difflib default (0.6) stays silent where a person sees the typo by eye.
 CLOSE: Final = 2
 ALIKE: Final = 0.5
 
 SUFFIX: Final = ".py"
 
-# Поле и причина: остальное в жалобе pydantic — служебное.
+# The field and the reason: the rest of pydantic's complaint is bookkeeping.
 REASON: Final = 2
 
 
 @dataclass(frozen=True, slots=True)
 class Complaint:
-    """Что не так и с чем именно."""
+    """What is wrong, and with what exactly."""
 
     said: str
     about: str
 
 
 def doctor() -> None:
-    """Проверить сами настройки: опечатки, мёртвые адреса, молчащие правила."""
+    """Check the settings themselves: typos, dead addresses, silent rules."""
     config = load(root=find_root(start=Path.cwd()))
     found = [
         *_unknown(config=config),
@@ -58,9 +58,9 @@ def doctor() -> None:
         *_silent(config=config),
         *_nowhere(config=config),
     ]
-    # Длинное имя не переносится посреди слова: читателю его копировать.
+    # A long name is not broken mid-word: the reader will copy it.
     console = Console(soft_wrap=True)
-    console.print(f"{config.origin or 'настройки по умолчанию'}\n", markup=False)
+    console.print(f"{config.origin or 'default settings'}\n", markup=False)
     for said, group in _grouped(found=found).items():
         console.print(f"  {said}", markup=False)
         for complaint in group:
@@ -71,7 +71,7 @@ def doctor() -> None:
 
 
 def _grouped(*, found: list[Complaint]) -> dict[str, list[Complaint]]:
-    """Замечания по заголовкам, в порядке первого появления."""
+    """The complaints by heading, in order of first appearance."""
     groups: dict[str, list[Complaint]] = {}
     for complaint in found:
         groups.setdefault(complaint.said, []).append(complaint)
@@ -79,16 +79,16 @@ def _grouped(*, found: list[Complaint]) -> dict[str, list[Complaint]]:
 
 
 def _count(*, found: list[Complaint]) -> str:
-    return f"замечаний — {len(found)}" if found else "ok: настройки согласованы"
+    return f"complaint(s): {len(found)}" if found else "ok: the settings hold together"
 
 
 def _sections() -> set[str]:
-    """Имена секций, которые кто-нибудь читает: у пяти правил оно общее."""
+    """The names of the sections somebody reads: five rules share one."""
     return {section_of(check=check) for check in available().listed.values()}
 
 
 def _unknown(*, config: Config) -> Iterator[Complaint]:
-    """Секция, которой не соответствует ни правило, ни сборщик."""
+    """A section that matches neither a rule nor a builder."""
     known = _sections()
     named = prefix(source=config.origin)
     for section in sorted(config.checks):
@@ -100,15 +100,15 @@ def _unknown(*, config: Config) -> Iterator[Complaint]:
             n=CLOSE,
             cutoff=ALIKE,
         )
-        said = f"; ближайшие: {', '.join(close)}" if close else ""
+        said = f"; closest: {', '.join(close)}" if close else ""
         yield Complaint(
-            said="опечатка в имени секции",
-            about=f"[{named}{section}] — такой секции нет{said}",
+            said="typo in a section name",
+            about=f"[{named}{section}] — no such section{said}",
         )
 
 
 def _ignored(*, config: Config) -> Iterator[Complaint]:
-    """`ignore`, называющий правило, которого нет."""
+    """An `ignore` that names a rule that does not exist."""
     codes = set(available().listed)
     for code in config.ignore:
         if code in codes:
@@ -119,20 +119,20 @@ def _ignored(*, config: Config) -> Iterator[Complaint]:
             n=CLOSE,
             cutoff=ALIKE,
         )
-        said = f"; ближайшие: {', '.join(close)}" if close else ""
+        said = f"; closest: {', '.join(close)}" if close else ""
         yield Complaint(
-            said="ignore называет несуществующее",
-            about=f"{code!r} — такого правила нет{said}",
+            said="ignore names what does not exist",
+            about=f"{code!r} — no such rule{said}",
         )
 
 
 def _silent(*, config: Config) -> Iterator[Complaint]:
-    """Правило, у которого секция есть, а сказать ей нечего.
+    """A rule that has a section with nothing to say.
 
-    Ноль нарушений в таком случае выглядит как соблюдённое соглашение, а
-    означает правило, которое ничего не проверяло. Пустая секция сама по себе
-    не беда: у половины правил умолчания рабочие, и `[raw-sql]` без единой
-    строки запрещает ровно то, ради чего написано.
+    Zero violations in that case look like a convention kept, and mean a rule
+    that checked nothing. An empty section is no trouble on its own: half the
+    rules have working defaults, and `[raw-sql]` without a single line forbids
+    exactly what it was written for.
     """
     named = prefix(source=config.origin)
     for code, check in sorted(available().listed.items()):
@@ -156,9 +156,9 @@ def _mute(
     check: Check,
     named: str,
 ) -> Complaint | None:
-    """Чем именно эта секция ничего не говорит; `None` — говорит."""
+    """How exactly this section says nothing; `None` — it does say something."""
     section = section_of(check=check)
-    said = "правило включено, но молчит"
+    said = "rule is on but silent"
     try:
         settings = config.settings_for(
             code=section,
@@ -166,39 +166,40 @@ def _mute(
         )
     except ConfigError as error:
         return Complaint(
-            said="секция не читается",
+            said="section cannot be read",
             about=f"[{named}{section}] — {_first(said=str(error))}",
         )
     zones = getattr(settings, ZONES, None)
     if zones is not None and not zones:
         return Complaint(
             said=said,
-            about=f"[{named}{code}] — зон не названо: судить негде",
+            about=f"[{named}{code}] — no zones named: nowhere to judge",
         )
     if config.checks[section] or not _bare(model=check.Settings):
         return None
     return Complaint(
         said=said,
-        about=f"[{named}{section}] — секция пуста, а умолчаний у правила нет",
+        about=f"[{named}{section}] — the section is empty and the rule has no defaults",
     )
 
 
 def _first(*, said: str) -> str:
-    """Суть чужой жалобы: поле и причина, без счётчика ошибок и ссылки.
+    """The gist of pydantic's complaint: the field and the reason, no count or link.
 
-    pydantic пишет заголовок, потом поле, потом причину с типом и входным
-    значением. Читателю нужны второе и третье, и то короткой строкой.
+    pydantic writes a heading, then the field, then the reason with the type
+    and the input value. The reader needs the second and the third, and those
+    as one short line.
     """
     lines = [one.strip() for one in said.splitlines()[1:] if one.strip()]
     return ": ".join(one.split(" [type=")[0] for one in lines[:REASON])
 
 
 def _bare(*, model: type[CheckSettings]) -> bool:
-    """Правда ли, что без таблицы у правила нет ничего.
+    """Whether the rule has nothing at all without its table.
 
-    У `module-length` умолчание — предел в строках, и пустая секция значит
-    «работай как написано в библиотеке». У `model-columns` умолчания пусты:
-    там пустая секция значит «ничего не проверяй».
+    `module-length` defaults to a limit in lines, and an empty section means
+    "work as the library says". `model-columns` has empty defaults: there an
+    empty section means "check nothing".
     """
     return all(
         _nothing(value=field.get_default(call_default_factory=True))
@@ -211,10 +212,10 @@ def _nothing(*, value: object) -> bool:
 
 
 def _nowhere(*, config: Config) -> Iterator[Complaint]:
-    """Адрес, которому на диске ничего не соответствует.
+    """An address that nothing on disk answers to.
 
-    Директорию переименовали, блок раскладки остался — и правило смотрит туда,
-    где давно ничего нет, продолжая молчать по этому поводу.
+    A directory was renamed, the layout block stayed — and the rule looks where
+    nothing has been for a long time, and stays silent about it.
     """
     places = _places(src=config.src)
     if not places:
@@ -231,17 +232,18 @@ def _nowhere(*, config: Config) -> Iterator[Complaint]:
         ):
             continue
         yield Complaint(
-            said="адрес, которого нет на диске",
-            about=f"[{named}{section}] — {address!r} не нашлось в {config.src}",
+            said="address that is not on disk",
+            about=f"[{named}{section}] — {address!r} not found in {config.src}",
         )
 
 
 def _addressed(*, config: Config) -> Iterator[tuple[str, str]]:
-    """Адреса, написанные в настройках: блоки общей таблицы и списки зон.
+    """The addresses written in the settings: shared table blocks and zone lists.
 
-    Только эти два: остальные ключи — имена пакетов, типов, конструкций, и
-    отличить их от пути, не зная правила, нельзя. Зона внутри массива таблиц
-    (`[[confined-calls.rules]]`) — та же зона, поэтому шаг внутрь.
+    Only these two: the other keys are names of packages, types, constructs,
+    and they cannot be told from a path without knowing the rule. A zone inside
+    an array of tables (`[[confined-calls.rules]]`) is the same zone, hence the
+    step inside.
     """
     shared = _shared()
     for section, table in config.checks.items():
@@ -254,7 +256,7 @@ def _addressed(*, config: Config) -> Iterator[tuple[str, str]]:
 
 
 def _zones(*, value: TomlValue) -> Iterator[str]:
-    """Зоны таблицы — или зоны каждой таблицы в массиве."""
+    """The zones of a table — or the zones of each table in an array."""
     tables = value if isinstance(value, list) else [value]
     for table in tables:
         if not isinstance(table, dict):
@@ -265,7 +267,7 @@ def _zones(*, value: TomlValue) -> Iterator[str]:
 
 
 def _shared() -> set[str]:
-    """Секции, которые правило читает не под своим кодом: общая таблица."""
+    """The sections a rule reads under something other than its code: a shared table."""
     return {
         section_of(check=check)
         for check in available().listed.values()
@@ -274,10 +276,10 @@ def _shared() -> set[str]:
 
 
 def _places(*, src: Path) -> list[tuple[str, ...]]:
-    """Куски пути каждой директории и каждого модуля под корнем исходников.
+    """The path parts of every directory and every module under the source root.
 
-    Модули считаются наравне с директориями: `exceptions` — это и папка, и
-    `exceptions.py`, и для словаря отказов это одно и то же место.
+    Modules count the same as directories: `exceptions` is both a directory and
+    `exceptions.py`, and to the refusal vocabulary it is one and the same place.
     """
     if not src.is_dir():
         return []
@@ -286,7 +288,7 @@ def _places(*, src: Path) -> list[tuple[str, ...]]:
         for path in src.rglob("*")
         if path.is_dir() or path.suffix == SUFFIX
     ]
-    # Первый кусок — корневой пакет, адреса же пишутся от него внутрь.
+    # The first part is the root package, and addresses are written inwards from it.
     return [parts[1:] for parts in found if len(parts) > 1]
 
 
