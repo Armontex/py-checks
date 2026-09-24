@@ -58,7 +58,7 @@ class Refusals:
     `NotImplementedError` is not a no but a method that does not exist yet,
     and the one exception a reader never mistakes for an answer.
 
-    An error of your own owes a code when it is about the player. One that
+    An error of your own owes a code when it is about the user. One that
     says "the code is written wrong" or "a port broke its promise" is
     internal: nobody branches on it, and `internal` lists its name.
 

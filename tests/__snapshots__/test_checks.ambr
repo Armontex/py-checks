@@ -24,12 +24,12 @@
 # ---
 # name: test_check_output_matches_the_snapshot[class_placement]
   list([
-    'bad/application/handlers/work.py:7:1: class-placement: BetWriter — port; it belongs in application/ports',
-    'bad/application/handlers/work.py:12:1: class-placement: PlaceOrder — dataclass; it belongs in application/dto',
+    'bad/application/handlers/work.py:7:1: class-placement: BetWriter is a port; it belongs in application/ports',
+    'bad/application/handlers/work.py:12:1: class-placement: PlaceOrder is a dataclass; it belongs in application/dto',
     'bad/application/handlers/work.py:16:1: class-placement: PlaceBetUseCase ends with UseCase; it belongs in application/use_cases',
     'bad/application/handlers/work.py:21:1: class-placement: PricingService ends with Service; it belongs in application/services',
     'bad/application/handlers/work.py:26:1: class-placement: OrderRepository ends with Repository; it belongs in infra/database/repositories',
-    'bad/domain/rules.py:11:1: class-placement: MoneyError — exception; it belongs in errors, exceptions',
+    'bad/domain/rules.py:11:1: class-placement: MoneyError is an exception; it belongs in errors, exceptions',
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[config_fields]

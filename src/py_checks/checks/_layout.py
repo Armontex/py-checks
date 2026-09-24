@@ -240,5 +240,7 @@ def _claim(
     if directory.suffix is not None and declared.name.endswith(directory.suffix):
         return f"ends with {directory.suffix}"
     if declared.kind is not None and declared.kind in directory.home:
-        return f"— {declared.kind.said}"
+        said = declared.kind.said
+        # Every kind's name is a plain English noun, so the first letter decides.
+        return f"is {'an' if said[0] in 'aeiou' else 'a'} {said}"
     return None
