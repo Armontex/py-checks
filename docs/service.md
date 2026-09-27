@@ -1758,6 +1758,19 @@ on the first module that is not there. Modules get an `independence` contract
 and migrations a `forbidden` one against the application package — both come
 out of the layout rather than out of the table.
 
+An entry with a slash names part of another layer. An edge that answers in the
+domain's own vocabulary needs its enums and constants, not its entities:
+
+```toml
+presentation = ["application", "presentation", "shared", "config", "domain/enums", "domain/constraints"]
+```
+
+`domain` stays forbidden to `presentation` — listing the rest of it instead
+would leave `domain/__init__` open — and the named parts are let through by
+`ignore_imports`, the module and everything under it. An exception the layer
+never uses is not an error: whether it imports the enums is its own business.
+A table without such entries builds the same file as before.
+
 `header` writes the built file's own header, `#` included — for a project
 whose comments are in another language.
 
