@@ -817,6 +817,23 @@ operation = { method = "execute", max-arguments = 3, forbids = ["UnitOfWork"] }
 `AuthUnitOfWorkFactory` отвергаются одинаково — запрещено держать транзакцию,
 а не писать её имя одним конкретным образом.
 
+`takes` связывает дверь с тем входом, который положен её директории. Где
+сценарии разнесены по `use_cases/commands` и `use_cases/queries`, правила
+размещения держат `...Command` в `dto/commands`, а `...Query` в `dto/queries` —
+и ничто не мешает сценарию-запросу взять команду или голую `name: str`. С
+`takes` каждый аргумент двери аннотирован классом с этим суффиксом; имя
+читается как написано, ссылка вперёд под `TYPE_CHECKING` тоже:
+
+```toml
+[layout."use_cases/queries"]
+suffix = "UseCase"
+operation = { method = "execute", takes = "Query" }
+
+[layout."use_cases/commands"]
+suffix = "UseCase"
+operation = { method = "execute", takes = "Command" }
+```
+
 **Вместо `PLR0913`.** Он не знает ни классов, ни исключения для конструктора.
 С `max-args = 3` он даёт 29, 142, 96 и 108 срабатываний по сервисам, а внутри
 одних только `use_cases` — 49, и все до единого приходятся на `__init__`.

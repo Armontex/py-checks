@@ -824,6 +824,24 @@ naming something its module does not own.
 and `AuthUnitOfWorkFactory` are refused alike — what is forbidden is holding
 the transaction, not spelling its name one particular way.
 
+`takes` ties the door to its directory's kind of input. Where use cases are
+split into `use_cases/commands` and `use_cases/queries`, the placement rules
+keep a `...Command` in `dto/commands` and a `...Query` in `dto/queries` — and
+nothing stops a query use case from taking a command, or a bare `name: str`.
+With `takes`, every argument of the door is annotated with a class of that
+suffix; the name is read as written, a forward reference under
+`TYPE_CHECKING` included:
+
+```toml
+[layout."use_cases/queries"]
+suffix = "UseCase"
+operation = { method = "execute", takes = "Query" }
+
+[layout."use_cases/commands"]
+suffix = "UseCase"
+operation = { method = "execute", takes = "Command" }
+```
+
 **Instead of `PLR0913`.** It knows neither classes nor the exception for a
 constructor. At `max-args = 3` it gives 29, 142, 96 and 108 hits across the
 services, and inside `use_cases` alone 49 — every one of them on `__init__`.
