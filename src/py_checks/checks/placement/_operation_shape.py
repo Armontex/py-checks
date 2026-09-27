@@ -37,6 +37,7 @@ class Shape:
     method: str | None
     forbids: tuple[str, ...]
     max_arguments: int | None
+    takes: str | None
 
 
 class OperationShape:
@@ -51,6 +52,11 @@ class OperationShape:
     skims; a helper after it is the same helper, shared with nobody: if the
     operation needs it, it becomes a private method; if two need it, it moves
     to where the shared code lives.
+
+    With `takes`, every argument of the door is a class of that suffix: a
+    query use case handed a `...Command`, or a bare `name: str`, is a split
+    into commands and queries that holds only on the reviewer's eye. The
+    annotation is read by name, a forward reference included.
 
     Constants and aliases may stand there: a name is read where it is used.
     An enum may not, unlike in other directories: a vocabulary is a class, and
@@ -105,27 +111,50 @@ class OperationShape:
             )
         )
         if subject is not None and isinstance(subject.node, ast.ClassDef):
-            found += [
-                *cls._door(
-                    file=file,
-                    subject=subject,
-                    node=subject.node,
-                    rule=rule,
-                ),
-                *cls._input(
-                    file=file,
-                    subject=subject,
-                    node=subject.node,
-                    rule=rule,
-                ),
-                *cls._held(
-                    file=file,
-                    subject=subject,
-                    node=subject.node,
-                    rule=rule,
-                ),
-            ]
+            found += cls._shaped(
+                file=file,
+                subject=subject,
+                node=subject.node,
+                rule=rule,
+            )
         yield from sorted(found, key=lambda violation: (violation.line, violation.column))
+
+    @classmethod
+    def _shaped(
+        cls,
+        *,
+        file: ParsedFile,
+        subject: Declaration,
+        node: ast.ClassDef,
+        rule: Shape,
+    ) -> list[Violation]:
+        """What is wrong with the operation class itself: its door, input and holdings."""
+        return [
+            *cls._door(
+                file=file,
+                subject=subject,
+                node=node,
+                rule=rule,
+            ),
+            *cls._input(
+                file=file,
+                subject=subject,
+                node=node,
+                rule=rule,
+            ),
+            *cls._held(
+                file=file,
+                subject=subject,
+                node=node,
+                rule=rule,
+            ),
+            *cls._taken(
+                file=file,
+                subject=subject,
+                node=node,
+                rule=rule,
+            ),
+        ]
 
     @staticmethod
     def _rule(
@@ -160,6 +189,7 @@ class OperationShape:
             method=operation.method,
             forbids=operation.forbids,
             max_arguments=operation.max_arguments,
+            takes=operation.takes,
         )
 
     @staticmethod
@@ -261,7 +291,7 @@ class OperationShape:
         if rule.max_arguments is None:
             return
         for method in cls._public(node=node):
-            count = cls._arguments(node=method)
+            count = len(cls._filled(node=method))
             if count <= rule.max_arguments:
                 continue
             yield Violation.from_node(
@@ -277,7 +307,38 @@ class OperationShape:
             )
 
     @classmethod
-    def _arguments(cls, *, node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
+    def _taken(
+        cls,
+        *,
+        file: ParsedFile,
+        subject: Declaration,
+        node: ast.ClassDef,
+        rule: Shape,
+    ) -> Iterator[Violation]:
+        """An argument of the door that is not the directory's kind of input."""
+        if rule.takes is None:
+            return
+        takes = rule.takes
+        for method in cls._public(node=node):
+            for argument in cls._filled(node=method):
+                annotation = argument.annotation
+                if annotation is not None and any(
+                    name.endswith(takes) for name in cls._typed(node=annotation)
+                ):
+                    continue
+                said = "nothing" if annotation is None else ast.unparse(annotation)
+                yield Violation.from_node(
+                    node=argument,
+                    path=file.path,
+                    code=CODE,
+                    message=(
+                        f"{subject.name}.{method.name} takes {argument.arg}: {said}; "
+                        f"in {rule.address} an operation takes a ...{takes}"
+                    ),
+                )
+
+    @classmethod
+    def _filled(cls, *, node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.arg]:
         """Everything the caller fills; the first argument of a method does not count.
 
         By position, not by name: `self` in a `@staticmethod` is an ordinary argument.
@@ -285,7 +346,7 @@ class OperationShape:
         receiver = 0 if cls._static(node=node) else 1
         named = [*node.args.posonlyargs, *node.args.args][receiver:]
         collectors = [one for one in (node.args.vararg, node.args.kwarg) if one is not None]
-        return len(named) + len(node.args.kwonlyargs) + len(collectors)
+        return [*named, *node.args.kwonlyargs, *collectors]
 
     @staticmethod
     def _static(*, node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:

@@ -76,6 +76,11 @@ class Operation(CheckSettings):
     `max_arguments` is how many arguments the entrance takes. A door carries
     what came from outside, and an entrance longer than a few fields is a thing
     with a name: a command, a query, a DTO.
+
+    `takes` is the suffix of what the entrance takes: `Query` in
+    `use_cases/queries` means every argument of the door is a `...Query`. The
+    split into commands and queries holds only while each side is handed its
+    own kind of input.
     """
 
     method: str | None = None
@@ -84,6 +89,7 @@ class Operation(CheckSettings):
         default=None,
         gt=0,
     )
+    takes: str | None = None
 
 
 class Directory(CheckSettings):
