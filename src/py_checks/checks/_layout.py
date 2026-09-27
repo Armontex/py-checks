@@ -99,6 +99,10 @@ class Directory(CheckSettings):
     `suffix` — what the class this directory exists for is called; it too
     lives only here.
     `required` — a module must declare such a class, first and alone.
+    `named` — every class of the `only` kinds here ends with `suffix`, as many
+    per module as the idea needs: `domain/value_objects` keeps `PriceValue`
+    and `CurrencyValue` side by side, and a bare `Price` beside them is the
+    one the reader will not recognise.
     `operation` — the shape of an operation, if operations are kept here.
     `orm` — what the directory is to an ORM model: its home or where it is built.
     `base` — the base class by which a model is recognised in the models' home.
@@ -109,6 +113,7 @@ class Directory(CheckSettings):
     area: str | None = None
     suffix: str | None = None
     required: bool = False
+    named: bool = False
     operation: Operation | None = None
     orm: Orm | None = None
     base: str | None = None
@@ -120,6 +125,9 @@ class Directory(CheckSettings):
             return self
         if self.required:
             message = "`required` without `suffix`: it is unclear which class must be there"
+            raise ValueError(message)
+        if self.named:
+            message = "`named` without `suffix`: it is unclear what the classes are called"
             raise ValueError(message)
         if self.operation is not None:
             message = (
