@@ -224,15 +224,18 @@ def _nowhere(*, config: Config) -> Iterator[Complaint]:
         return
     named = prefix(source=config.origin)
     for section, address, zone in sorted(_addressed(config=config)):
-        modules = not zone or address.split(SEPARATOR)[-1] == ANY
         if any(
             depth(
                 parts=parts,
-                path=address,
+                path=address.removesuffix(SUFFIX),
             )
             is not None
             for parts, directory in places
-            if directory or modules
+            if _answers(
+                address=address,
+                zone=zone,
+                directory=directory,
+            )
         ):
             continue
         yield Complaint(
@@ -242,6 +245,25 @@ def _nowhere(*, config: Config) -> Iterator[Complaint]:
                 f"{'is not a directory' if zone else 'not found'} in {config.src}"
             ),
         )
+
+
+def _answers(
+    *,
+    address: str,
+    zone: bool,
+    directory: bool,
+) -> bool:
+    """Whether a place of this sort can answer the address.
+
+    An address ending in `.py` names a module and only a module answers it. A
+    zone is answered by a directory, and by a module only through a trailing
+    `*`. Any other address — a layout block — by either.
+    """
+    if address.endswith(SUFFIX):
+        return not directory
+    if zone:
+        return directory or address.split(SEPARATOR)[-1] == ANY
+    return True
 
 
 def _addressed(*, config: Config) -> Iterator[tuple[str, str, bool]]:

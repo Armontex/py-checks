@@ -18,6 +18,9 @@
     'bad/dto/orders.py:7:1: class-modules: Status: enum; dto holds only alias, dataclass',
     'bad/dto/orders.py:16:1: class-modules: OrderMissing: exception; dto holds only alias, dataclass',
     'bad/errors/orders.py:8:1: class-modules: refused: function; errors holds only exception',
+    'bad/modules/orders/domain/constraints.py:7:1: class-modules: Row: alias; domain/constraints.py holds only constants',
+    'bad/modules/orders/domain/constraints.py:10:1: class-modules: clamp: function; domain/constraints.py holds only constants',
+    'bad/modules/orders/domain/constraints.py:14:1: class-modules: Limits: class; domain/constraints.py holds only constants',
     'bad/ports/bets.py:14:1: class-modules: SecondWriter: class; ports holds only alias, port',
     'bad/use_cases/resolve.py:4:1: class-modules: rounded: function; use_cases holds only class',
   ])
@@ -166,6 +169,9 @@
     'bad/application/services/limits.py:5:14: operation-shape: LimitsService holds UnitOfWorkFactory; an operation is handed what it writes through, and the transaction stays with the caller',
     'bad/application/use_cases/cancel_bet.py:5:5: operation-shape: CancelBetUseCase offers execute(), retry(); an operation has one public method, and it is execute(); make the rest private or move them to another class',
     'bad/application/use_cases/cancel_bet.py:12:1: operation-shape: _rounded() stands beside the operation; a helper it needs is a private method, one that two need is shared code',
+    'bad/application/use_cases/queries/find_bet.py:7:32: operation-shape: FindBetUseCase.execute takes command: CreateBetCommand; in use_cases/queries an operation takes a ...Query',
+    'bad/application/use_cases/queries/find_bet.py:7:59: operation-shape: FindBetUseCase.execute takes name: str; in use_cases/queries an operation takes a ...Query',
+    'bad/application/use_cases/queries/find_bet.py:7:70: operation-shape: FindBetUseCase.execute takes raw: nothing; in use_cases/queries an operation takes a ...Query',
     'bad/application/use_cases/reconcile.py:5:5: operation-shape: ReconcileUseCase.execute takes 4 arguments, the limit is 3; pass a command, a query or a DTO',
     'bad/application/use_cases/settle_bet.py:6:1: operation-shape: Outcome stands beside the operation; in use_cases a module declares one class and nothing else',
     'bad/application/use_cases/settle_bet.py:11:32: operation-shape: SettleBetUseCase holds PlacementUnitOfWork; an operation is handed what it writes through, and the transaction stays with the caller',
@@ -187,6 +193,7 @@
 # name: test_check_output_matches_the_snapshot[required_class]
   list([
     'bad/config/kafka.py:4:1: required-class: Topics is declared above the ...Settings the module exists for; helpers belong below it',
+    'bad/domain/value_objects/money.py:12:1: required-class: Price does not end with Value; in domain/value_objects every class does',
     'bad/repositories/order.py:4:1: required-class: _rows is declared above the ...Repository the module exists for; helpers belong below it',
     'bad/use_cases/bets.py:8:1: required-class: the module holds PlaceBetUseCase, CancelBetUseCase; one ...UseCase per module, and the module is named after it',
     'bad/use_cases/pricing.py:4:1: required-class: the module declares PricingHelper, but a module in this directory declares a ...UseCase class',

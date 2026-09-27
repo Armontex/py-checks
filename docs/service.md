@@ -693,11 +693,12 @@ operation = { method = "execute", max-arguments = 3 }
 
 | Key | Read by | Says |
 |---|---|---|
-| `only` | `class-modules` | the kinds allowed in this directory, and nothing else sits beside them |
+| `only` | `class-modules` | the kinds allowed in this directory, and nothing else sits beside them; `only = []` written out — constants only |
 | `home` | `class-placement` | the kinds whose only home this is |
 | `area` | `class-placement` | the part of the tree where the claim applies at all |
 | `suffix` | `class-placement`, `required-class`, `operation-shape` | the name of the class this directory exists for |
 | `required` | `required-class` | a module here must declare such a class, first and alone |
+| `named` | `required-class` | every class of the `only` kinds here carries the suffix, as many per module as needed |
 | `operation` | `operation-shape` | the shape of the operation kept here |
 | `orm` | `model-boundary` | which end of the model's boundary this is: `"declared"` or `"built"` |
 | `base` | `model-boundary` | the base class the models here are known by |
@@ -707,6 +708,17 @@ consecutive pieces of a path: `application/use_cases` is found inside
 `modules/<name>/` as well, and a `*` matches any one piece
 (`modules/*/domain`). A directory the layout says nothing about is nobody's
 business.
+
+A heading ending in `.py` addresses one module rather than a directory:
+`[layout."domain/constraints.py"]` is that file in every module's `domain`,
+and `doctor` looks for it as a file. With `only = []` written out, such a
+module holds constants and nothing else — a function, a class or an alias in
+it is reported. Left unset, `only` restricts nothing, as before.
+
+```toml
+[layout."domain/constraints.py"]
+only = []
+```
 
 **A home claimed is a home enumerated.** The moment a kind gets a `home`, it
 lives *only* in the blocks that claim it — so every legitimate home is on the
@@ -766,7 +778,7 @@ in `errors/` or in `exceptions.py`.
 
 #### `required-class` — a module did not declare the class its directory exists for
 
-Reads `required` beside `suffix`.
+Reads `required` and `named` beside `suffix`.
 
 **Why.** A file in `use_cases` exists for a use case; a file in `repositories`
 exists for a repository. The class comes first and comes alone: the file name
@@ -787,6 +799,22 @@ only form of that relief; there is no list of bare names.
 When several blocks match, the innermost wins, and at equal depth the longer
 address: `application/services` requires a class while `domain/services`
 requires nothing.
+
+`named` is for a directory that keeps many classes of one kind rather than one
+per module. `domain/value_objects` holds the values of one idea together, so
+`required` does not fit — and without it the suffix works one way only:
+`class-placement` finds a `PriceValue` outside the directory, but nothing
+finds a bare `Price` inside it. With `named`, every class of the `only` kinds
+ends with the suffix; a class with a leading underscore is the module's
+machinery and is left alone. `named` does not follow from `required`: that
+one lets helpers stand below the class the module exists for.
+
+```toml
+[layout."domain/value_objects"]
+only = ["dataclass"]
+suffix = "Value"
+named = true
+```
 
 **The mark.** `# placement-ok: required-class: <reason>`.
 
@@ -823,6 +851,24 @@ naming something its module does not own.
 `forbids` matches a type name by substring, so `UnitOfWork`, `IAuthUnitOfWork`
 and `AuthUnitOfWorkFactory` are refused alike — what is forbidden is holding
 the transaction, not spelling its name one particular way.
+
+`takes` ties the door to its directory's kind of input. Where use cases are
+split into `use_cases/commands` and `use_cases/queries`, the placement rules
+keep a `...Command` in `dto/commands` and a `...Query` in `dto/queries` — and
+nothing stops a query use case from taking a command, or a bare `name: str`.
+With `takes`, every argument of the door is annotated with a class of that
+suffix; the name is read as written, a forward reference under
+`TYPE_CHECKING` included:
+
+```toml
+[layout."use_cases/queries"]
+suffix = "UseCase"
+operation = { method = "execute", takes = "Query" }
+
+[layout."use_cases/commands"]
+suffix = "UseCase"
+operation = { method = "execute", takes = "Command" }
+```
 
 **Instead of `PLR0913`.** It knows neither classes nor the exception for a
 constructor. At `max-args = 3` it gives 29, 142, 96 and 108 hits across the
@@ -1711,6 +1757,19 @@ does not exist is left out of the contract, otherwise import-linter would fail
 on the first module that is not there. Modules get an `independence` contract
 and migrations a `forbidden` one against the application package — both come
 out of the layout rather than out of the table.
+
+An entry with a slash names part of another layer. An edge that answers in the
+domain's own vocabulary needs its enums and constants, not its entities:
+
+```toml
+presentation = ["application", "presentation", "shared", "config", "domain/enums", "domain/constraints"]
+```
+
+`domain` stays forbidden to `presentation` — listing the rest of it instead
+would leave `domain/__init__` open — and the named parts are let through by
+`ignore_imports`, the module and everything under it. An exception the layer
+never uses is not an error: whether it imports the enums is its own business.
+A table without such entries builds the same file as before.
 
 `header` writes the built file's own header, `#` included — for a project
 whose comments are in another language.

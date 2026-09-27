@@ -76,6 +76,11 @@ class Operation(CheckSettings):
     `max_arguments` is how many arguments the entrance takes. A door carries
     what came from outside, and an entrance longer than a few fields is a thing
     with a name: a command, a query, a DTO.
+
+    `takes` is the suffix of what the entrance takes: `Query` in
+    `use_cases/queries` means every argument of the door is a `...Query`. The
+    split into commands and queries holds only while each side is handed its
+    own kind of input.
     """
 
     method: str | None = None
@@ -84,12 +89,15 @@ class Operation(CheckSettings):
         default=None,
         gt=0,
     )
+    takes: str | None = None
 
 
 class Directory(CheckSettings):
     """What the project keeps in this directory.
 
     `only` — the kinds that belong here, and nothing else sits beside them.
+    Written out empty, `only = []`, it means constants and nothing else;
+    left unset, it restricts nothing.
     `home` — the kinds that belong ONLY here: a port declared at the other end
     of the tree is a port the reader will not find.
     `area` — the part of the tree within which home and name mean anything at
@@ -99,6 +107,10 @@ class Directory(CheckSettings):
     `suffix` — what the class this directory exists for is called; it too
     lives only here.
     `required` — a module must declare such a class, first and alone.
+    `named` — every class of the `only` kinds here ends with `suffix`, as many
+    per module as the idea needs: `domain/value_objects` keeps `PriceValue`
+    and `CurrencyValue` side by side, and a bare `Price` beside them is the
+    one the reader will not recognise.
     `operation` — the shape of an operation, if operations are kept here.
     `orm` — what the directory is to an ORM model: its home or where it is built.
     `base` — the base class by which a model is recognised in the models' home.
@@ -109,9 +121,15 @@ class Directory(CheckSettings):
     area: str | None = None
     suffix: str | None = None
     required: bool = False
+    named: bool = False
     operation: Operation | None = None
     orm: Orm | None = None
     base: str | None = None
+
+    @property
+    def restricted(self) -> bool:
+        """Whether `only` was written: an empty list written out allows constants alone."""
+        return bool(self.only) or "only" in self.model_fields_set
 
     @model_validator(mode="after")
     def _named(self) -> Self:
@@ -120,6 +138,9 @@ class Directory(CheckSettings):
             return self
         if self.required:
             message = "`required` without `suffix`: it is unclear which class must be there"
+            raise ValueError(message)
+        if self.named:
+            message = "`named` without `suffix`: it is unclear what the classes are called"
             raise ValueError(message)
         if self.operation is not None:
             message = (
@@ -185,7 +206,7 @@ def innermost(
     matched = [
         (depth, len(address), address, directory)
         for address, directory in among
-        if (depth := where.within(directory=address)) is not None
+        if (depth := where.reach(address=address)) is not None
     ]
     if not matched:
         return None

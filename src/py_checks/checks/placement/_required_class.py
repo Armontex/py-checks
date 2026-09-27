@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from py_checks.checks._kind import Kind, declarations
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from py_checks.checks._kind import Declaration
+    from py_checks.checks._layout import Directory
     from py_checks.config import CheckSettings
     from py_checks.core import ParsedFile
 
@@ -42,12 +44,18 @@ class RequiredClass:
     Constants, aliases and enums are allowed above the required class: a name
     is read where it is used, and a value does not become a second subject.
 
+    With `named`, the directory keeps many classes of one kind rather than
+    one per module, and each of them carries the suffix: a `Price` among the
+    `...Value` classes is the one nobody will look for under that name. A
+    class with a leading underscore is the module's machinery and is left
+    alone.
+
     `__init__.py` re-exports rather than declares; an empty module has not
     promised anything yet; a module with a leading underscore (`_base.py`)
     holds its directory's machinery, not one of its classes. The rule leaves
     these three alone.
 
-    Settings: `required` and `suffix` in the shared `[layout]` table.
+    Settings: `required`, `named` and `suffix` in the shared `[layout]` table.
     """
 
     code: ClassVar[str] = CODE
@@ -74,19 +82,30 @@ class RequiredClass:
         found = innermost(
             where=where,
             among=[
-                (address, directory) for address, directory in layout.items() if directory.required
+                (address, directory)
+                for address, directory in layout.items()
+                if directory.required or directory.named
             ],
         )
         if found is None or (suffix := found[1].suffix) is None:
             return
+        address, directory = found
         declared = list(declarations(tree=file.tree))
         if not declared:
             return
-        yield from cls._violations(
-            file=file,
-            declared=declared,
-            suffix=suffix,
-        )
+        if directory.required:
+            yield from cls._violations(
+                file=file,
+                declared=declared,
+                suffix=suffix,
+            )
+        if directory.named:
+            yield from cls._unnamed(
+                file=file,
+                declared=declared,
+                address=address,
+                directory=directory,
+            )
 
     @classmethod
     def _violations(
@@ -129,6 +148,30 @@ class RequiredClass:
                     f"{ahead.name} is declared above the ...{suffix} the module "
                     f"exists for; helpers belong below it"
                 ),
+            )
+
+    @classmethod
+    def _unnamed(
+        cls,
+        *,
+        file: ParsedFile,
+        declared: list[Declaration],
+        address: str,
+        directory: Directory,
+    ) -> Iterator[Violation]:
+        """A class of this directory's kinds that does not carry its suffix."""
+        suffix = directory.suffix or ""
+        for one in declared:
+            if not isinstance(one.node, ast.ClassDef) or one.name.startswith("_"):
+                continue
+            if directory.only and one.kind not in directory.only:
+                continue
+            if one.name.endswith(suffix):
+                continue
+            yield cls._says(
+                file=file,
+                node=one,
+                message=f"{one.name} does not end with {suffix}; in {address} every class does",
             )
 
     @staticmethod

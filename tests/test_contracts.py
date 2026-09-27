@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -135,3 +138,78 @@ def test_the_library_checks_its_own_layers() -> None:
 
     assert "[importlinter:contract:layer-core]" in text
     assert "py_checks.cli" in text
+
+
+PARTS: dict[str, TomlTable] = {
+    "contracts": {
+        "layers": {
+            "domain": ["domain"],
+            "presentation": ["presentation", "domain/enums", "domain/constraints"],
+        },
+    },
+}
+
+
+def parted(root: Path) -> Path:
+    """Модуль с доменом из трёх частей и слоем, которому видны две из них."""
+    layout(
+        root,
+        "src/app/modules/example/domain/enums",
+        "src/app/modules/example/domain/entities",
+        "src/app/modules/example/presentation",
+    )
+    domain = root / "src" / "app" / "modules" / "example" / "domain"
+    (domain / "constraints.py").write_text("MAX_NAME = 200\n")
+    (domain / "enums" / "status.py").write_text("OPEN = 'open'\n")
+    (domain / "entities" / "example.py").write_text("class Example: ...\n")
+    return root
+
+
+def test_a_part_of_a_forbidden_layer_is_let_through(tmp_path: Path) -> None:
+    """`domain/enums` в списке слоя: домен под запретом, его перечисления — нет."""
+    text = render(root=parted(tmp_path), config=Config(checks=PARTS)) or ""
+
+    assert "    app.modules.*.domain\n" in text
+    assert "unmatched_ignore_imports_alerting = none" in text
+    assert "    app.modules.*.presentation.** -> app.modules.*.domain.enums.**\n" in text
+    assert "    app.modules.*.presentation -> app.modules.*.domain.constraints\n" in text
+
+
+def test_a_table_without_parts_has_no_exceptions(tmp_path: Path) -> None:
+    layout(tmp_path, "src/app/domain", "src/app/application", "src/app/infra", "src/app/shared")
+
+    text = render(root=tmp_path, config=Config(checks=SERVICE)) or ""
+
+    assert "ignore_imports" not in text
+
+
+@pytest.mark.parametrize(
+    ("imported", "kept"),
+    [
+        ("from app.modules.example.domain.enums.status import OPEN", True),
+        ("from app.modules.example.domain.constraints import MAX_NAME", True),
+        ("from app.modules.example.domain.entities.example import Example", False),
+    ],
+)
+def test_import_linter_reads_the_exception_as_meant(
+    tmp_path: Path,
+    imported: str,
+    kept: bool,  # noqa: FBT001 — параметр таблицы
+) -> None:
+    """Приёмка #31: сам import-linter, а не только текст файла."""
+    root = parted(tmp_path)
+    (root / "src" / "app" / "modules" / "example" / "presentation" / "view.py").write_text(
+        f"{imported}\n"
+    )
+    (root / ".importlinter").write_text(render(root=root, config=Config(checks=PARTS)) or "")
+
+    finished = subprocess.run(  # noqa: S603 — свой бинарник из окружения тестов
+        [str(Path(sys.executable).parent / "lint-imports")],
+        cwd=root,
+        env=os.environ | {"PYTHONPATH": str(root / "src")},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert (finished.returncode == 0) is kept, finished.stdout

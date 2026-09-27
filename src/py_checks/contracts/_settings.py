@@ -18,7 +18,9 @@ class Contracts(CheckSettings):
 
     `layers` — a layer and what it may import. Anything missing from the table
     has no restrictions: the library does not know what the layers are called
-    in this project and does not guess on its behalf.
+    in this project and does not guess on its behalf. An entry with a slash
+    names part of another layer: `domain/enums` lets the layer import the
+    domain's enums while the rest of `domain` stays forbidden.
 
     `composition-root` — layers that may import anything: they tie the rest
     together, and that is the whole of their work. They are listed separately
