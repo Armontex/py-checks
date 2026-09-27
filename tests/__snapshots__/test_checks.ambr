@@ -193,6 +193,7 @@
 # name: test_check_output_matches_the_snapshot[required_class]
   list([
     'bad/config/kafka.py:4:1: required-class: Topics is declared above the ...Settings the module exists for; helpers belong below it',
+    'bad/domain/value_objects/money.py:12:1: required-class: Price does not end with Value; in domain/value_objects every class does',
     'bad/repositories/order.py:4:1: required-class: _rows is declared above the ...Repository the module exists for; helpers belong below it',
     'bad/use_cases/bets.py:8:1: required-class: the module holds PlaceBetUseCase, CancelBetUseCase; one ...UseCase per module, and the module is named after it',
     'bad/use_cases/pricing.py:4:1: required-class: the module declares PricingHelper, but a module in this directory declares a ...UseCase class',

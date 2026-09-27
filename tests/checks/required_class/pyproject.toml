@@ -12,3 +12,9 @@ required = true
 [tool.py-checks.layout.config]
 suffix = "Settings"
 required = true
+
+# Классов одного вида в модуле сколько угодно, но каждый носит суффикс.
+[tool.py-checks.layout."domain/value_objects"]
+only = ["dataclass"]
+suffix = "Value"
+named = true

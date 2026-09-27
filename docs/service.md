@@ -698,6 +698,7 @@ operation = { method = "execute", max-arguments = 3 }
 | `area` | `class-placement` | the part of the tree where the claim applies at all |
 | `suffix` | `class-placement`, `required-class`, `operation-shape` | the name of the class this directory exists for |
 | `required` | `required-class` | a module here must declare such a class, first and alone |
+| `named` | `required-class` | every class of the `only` kinds here carries the suffix, as many per module as needed |
 | `operation` | `operation-shape` | the shape of the operation kept here |
 | `orm` | `model-boundary` | which end of the model's boundary this is: `"declared"` or `"built"` |
 | `base` | `model-boundary` | the base class the models here are known by |
@@ -777,7 +778,7 @@ in `errors/` or in `exceptions.py`.
 
 #### `required-class` — a module did not declare the class its directory exists for
 
-Reads `required` beside `suffix`.
+Reads `required` and `named` beside `suffix`.
 
 **Why.** A file in `use_cases` exists for a use case; a file in `repositories`
 exists for a repository. The class comes first and comes alone: the file name
@@ -798,6 +799,22 @@ only form of that relief; there is no list of bare names.
 When several blocks match, the innermost wins, and at equal depth the longer
 address: `application/services` requires a class while `domain/services`
 requires nothing.
+
+`named` is for a directory that keeps many classes of one kind rather than one
+per module. `domain/value_objects` holds the values of one idea together, so
+`required` does not fit — and without it the suffix works one way only:
+`class-placement` finds a `PriceValue` outside the directory, but nothing
+finds a bare `Price` inside it. With `named`, every class of the `only` kinds
+ends with the suffix; a class with a leading underscore is the module's
+machinery and is left alone. `named` does not follow from `required`: that
+one lets helpers stand below the class the module exists for.
+
+```toml
+[layout."domain/value_objects"]
+only = ["dataclass"]
+suffix = "Value"
+named = true
+```
 
 **The mark.** `# placement-ok: required-class: <reason>`.
 
