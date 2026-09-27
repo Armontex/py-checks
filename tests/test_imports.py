@@ -75,3 +75,18 @@ def test_an_address_still_names_a_module() -> None:
 
     assert where is not None
     assert where.anywhere(zones=["shared/money"])
+
+
+def test_a_module_address_reaches_that_module_and_nothing_else() -> None:
+    """`domain/constraints.py` — один файл, где бы ни лежал его `domain`."""
+
+    def reach(path: str) -> int | None:
+        where = place(file=parsed(f"/repo/src/app/{path}", Path("/repo/src")))
+        assert where is not None
+        return where.reach(address="domain/constraints.py")
+
+    assert reach("modules/orders/domain/constraints.py") is not None
+    assert reach("domain/constraints.py") is not None
+    assert reach("domain/constraints/__init__.py") is None
+    assert reach("domain/constraints/limits.py") is None
+    assert reach("domain/entities.py") is None

@@ -90,6 +90,8 @@ class Directory(CheckSettings):
     """What the project keeps in this directory.
 
     `only` — the kinds that belong here, and nothing else sits beside them.
+    Written out empty, `only = []`, it means constants and nothing else;
+    left unset, it restricts nothing.
     `home` — the kinds that belong ONLY here: a port declared at the other end
     of the tree is a port the reader will not find.
     `area` — the part of the tree within which home and name mean anything at
@@ -112,6 +114,11 @@ class Directory(CheckSettings):
     operation: Operation | None = None
     orm: Orm | None = None
     base: str | None = None
+
+    @property
+    def restricted(self) -> bool:
+        """Whether `only` was written: an empty list written out allows constants alone."""
+        return bool(self.only) or "only" in self.model_fields_set
 
     @model_validator(mode="after")
     def _named(self) -> Self:
@@ -185,7 +192,7 @@ def innermost(
     matched = [
         (depth, len(address), address, directory)
         for address, directory in among
-        if (depth := where.within(directory=address)) is not None
+        if (depth := where.reach(address=address)) is not None
     ]
     if not matched:
         return None

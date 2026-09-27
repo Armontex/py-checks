@@ -37,6 +37,10 @@ class ClassModules:
     two different animals. A directory the layout says nothing about is not
     the rule's business.
 
+    A block may address one module rather than a directory:
+    `[layout."domain/constraints.py"]`. Written with `only = []`, it says the
+    module holds constants and nothing else — no function, class or alias.
+
     Settings: `only` in the shared `[layout]` table.
     """
 
@@ -63,21 +67,27 @@ class ClassModules:
             return
         found = innermost(
             where=where,
-            among=[(address, directory) for address, directory in layout.items() if directory.only],
+            among=[
+                (address, directory)
+                for address, directory in layout.items()
+                if directory.restricted
+            ],
         )
         if found is None:
             return
         address, directory = found
+        allowed = ", ".join(sorted(one.said for one in directory.only)) or "constants"
         for declared in declarations(tree=file.tree):
-            # No kind to see, nothing to judge: a class with a base from another module.
-            if declared.kind is None or declared.kind in directory.only:
+            if declared.kind in directory.only:
                 continue
+            # No kind to see, nothing to judge: a class with a base from another
+            # module. Unless nothing but constants is allowed: then any class is wrong.
+            if declared.kind is None and directory.only:
+                continue
+            said = "class" if declared.kind is None else declared.kind.said
             yield Violation.from_node(
                 node=declared.node,
                 path=file.path,
                 code=CODE,
-                message=(
-                    f"{declared.name}: {declared.kind.said}; {address} holds only "
-                    f"{', '.join(sorted(one.said for one in directory.only))}"
-                ),
+                message=f"{declared.name}: {said}; {address} holds only {allowed}",
             )

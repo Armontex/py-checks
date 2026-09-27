@@ -15,3 +15,7 @@ only = ["dataclass", "alias"]
 
 [tool.py-checks.layout.errors]
 only = ["error"]
+
+# Один модуль, а не директория, и в нём только константы.
+[tool.py-checks.layout."domain/constraints.py"]
+only = []
