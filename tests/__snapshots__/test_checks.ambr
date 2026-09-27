@@ -18,6 +18,9 @@
     'bad/dto/orders.py:7:1: class-modules: Status: enum; dto holds only alias, dataclass',
     'bad/dto/orders.py:16:1: class-modules: OrderMissing: exception; dto holds only alias, dataclass',
     'bad/errors/orders.py:8:1: class-modules: refused: function; errors holds only exception',
+    'bad/modules/orders/domain/constraints.py:7:1: class-modules: Row: alias; domain/constraints.py holds only constants',
+    'bad/modules/orders/domain/constraints.py:10:1: class-modules: clamp: function; domain/constraints.py holds only constants',
+    'bad/modules/orders/domain/constraints.py:14:1: class-modules: Limits: class; domain/constraints.py holds only constants',
     'bad/ports/bets.py:14:1: class-modules: SecondWriter: class; ports holds only alias, port',
     'bad/use_cases/resolve.py:4:1: class-modules: rounded: function; use_cases holds only class',
   ])

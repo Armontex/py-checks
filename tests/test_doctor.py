@@ -182,6 +182,27 @@ def test_a_zone_that_is_only_a_module_is_reported(project: Path) -> None:
     assert "application/*" not in result.output
 
 
+def test_a_module_address_is_found_as_a_module(project: Path) -> None:
+    """`domain/constraints.py` — модуль: его находит файл, а не директория."""
+    domain = project / "src" / "app" / "modules" / "orders" / "domain"
+    domain.mkdir(parents=True)
+    (domain / "constraints.py").write_text("")
+    (domain / "entities").mkdir()
+    settings(
+        project=project,
+        written=(
+            'src = "src"\n\n[layout."domain/constraints.py"]\nonly = []\n\n'
+            '[layout."domain/entities.py"]\nonly = []\n'
+        ),
+    )
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert result.exit_code == 1
+    assert "'domain/constraints.py' not found" not in result.output
+    assert "'domain/entities.py' not found" in result.output
+
+
 def test_a_key_that_is_not_an_address_is_left_alone(project: Path) -> None:
     """Ключ обычной секции — имя типа, а не путь: его на диске искать нечего."""
     settings(

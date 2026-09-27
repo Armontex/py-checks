@@ -693,7 +693,7 @@ operation = { method = "execute", max-arguments = 3 }
 
 | Key | Read by | Says |
 |---|---|---|
-| `only` | `class-modules` | the kinds allowed in this directory, and nothing else sits beside them |
+| `only` | `class-modules` | the kinds allowed in this directory, and nothing else sits beside them; `only = []` written out — constants only |
 | `home` | `class-placement` | the kinds whose only home this is |
 | `area` | `class-placement` | the part of the tree where the claim applies at all |
 | `suffix` | `class-placement`, `required-class`, `operation-shape` | the name of the class this directory exists for |
@@ -707,6 +707,17 @@ consecutive pieces of a path: `application/use_cases` is found inside
 `modules/<name>/` as well, and a `*` matches any one piece
 (`modules/*/domain`). A directory the layout says nothing about is nobody's
 business.
+
+A heading ending in `.py` addresses one module rather than a directory:
+`[layout."domain/constraints.py"]` is that file in every module's `domain`,
+and `doctor` looks for it as a file. With `only = []` written out, such a
+module holds constants and nothing else — a function, a class or an alias in
+it is reported. Left unset, `only` restricts nothing, as before.
+
+```toml
+[layout."domain/constraints.py"]
+only = []
+```
 
 **A home claimed is a home enumerated.** The moment a kind gets a `home`, it
 lives *only* in the blocks that claim it — so every legitimate home is on the

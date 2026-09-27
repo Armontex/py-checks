@@ -25,6 +25,9 @@ INIT: Final = "__init__"
 
 SEPARATOR: Final = "/"
 
+# A layout address that ends like this names a module rather than a directory.
+MODULE: Final = ".py"
+
 # A package and at least one step inside it: a file lying right in the source
 # root is in no package, and there is nothing to say about its place.
 INSIDE: Final = 2
@@ -90,6 +93,23 @@ class Place:
             )
             is not None
         )
+
+    def reach(self, *, address: str) -> int | None:
+        """How deep a layout address reaches into this file, or `None`.
+
+        A directory address is matched by `within`. An address ending in `.py`
+        names a module: its pieces end at this very file, wherever the path
+        before them lies, and a package's `__init__.py` is not that module.
+        """
+        if not address.endswith(MODULE):
+            return self.within(directory=address)
+        if self.directories == self.parts:
+            return None
+        end = depth(
+            parts=self.parts,
+            path=address.removesuffix(MODULE),
+        )
+        return end if end == len(self.parts) else None
 
     def within(self, *, directory: str) -> int | None:
         """Where the deepest occurrence of these directories ends, or `None`.

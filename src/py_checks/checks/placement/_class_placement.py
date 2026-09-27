@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, ClassVar, Final
 
 from py_checks.checks._kind import declarations
 from py_checks.checks._layout import SECTION, Layout, claimants
-from py_checks.checks._location import place
+from py_checks.checks._location import MODULE, place
 from py_checks.checks.placement._marker import MARKER
 from py_checks.core import Scope, Violation, settings_as
 
@@ -67,7 +67,8 @@ class ClassPlacement:
                 layout=layout,
                 where=where,
             )
-            if not homes or any(where.holds(path=home.address) for home in homes):
+            home_here = any(where.holds(path=home.address.removesuffix(MODULE)) for home in homes)
+            if not homes or home_here:
                 continue
             yield Violation.from_node(
                 node=declared.node,
