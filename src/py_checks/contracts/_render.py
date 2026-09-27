@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final
 
 from py_checks.config import prefix
-from py_checks.contracts._constants import MIGRATIONS, MODULES, SECTION, VERSIONS
+from py_checks.contracts._constants import MIGRATIONS, MODULES, PART, SECTION, VERSIONS
 from py_checks.contracts._layout import expressions, migrations, modules, package
 from py_checks.contracts._settings import contracts
 
@@ -95,6 +95,7 @@ def _contracts(
                 package=package,
                 layer=layer,
                 forbidden=known - frozenset(table[layer]),
+                parts=[one for one in table[layer] if PART in one],
             )
         )
     ]
@@ -121,8 +122,14 @@ def _layer(
     package: str,
     layer: str,
     forbidden: Iterable[str],
+    parts: Iterable[str],
 ) -> str | None:
-    """The contract "this layer may not import that"."""
+    """The contract "this layer may not import that".
+
+    A part of a forbidden layer the table lets in (`domain/enums`) stays in the
+    forbidden layer — listing the rest would leave `domain/__init__` open — and
+    is let through by `ignore_imports`; an exception nobody uses is no error.
+    """
     sources = expressions(
         root=root,
         src=config.src,
@@ -141,19 +148,60 @@ def _layer(
     ]
     if not sources or not targets:
         return None
+    ignored = _let_through(
+        root=root,
+        config=config,
+        package=package,
+        sources=sources,
+        parts=[part for part in parts if part.split(PART)[0] in forbidden],
+    )
+    scalars = {
+        "name": f"{layer} imports only what it may",
+        "type": "forbidden",
+        # Direct imports only. There is no indirect chain to check here:
+        # `presentation` calls `application`, and `application` knows
+        # `domain` — by the table that is exactly the intended work, and
+        # forbidding indirect links would forbid it too.
+        "allow_indirect_imports": "True",
+    }
+    lists = {"source_modules": list(sources), "forbidden_modules": targets}
+    if ignored:
+        scalars["unmatched_ignore_imports_alerting"] = "none"
+        lists["ignore_imports"] = ignored
     return _block(
         head=f"[importlinter:contract:layer-{layer}]",
-        scalars={
-            "name": f"{layer} imports only what it may",
-            "type": "forbidden",
-            # Direct imports only. There is no indirect chain to check here:
-            # `presentation` calls `application`, and `application` knows
-            # `domain` — by the table that is exactly the intended work, and
-            # forbidding indirect links would forbid it too.
-            "allow_indirect_imports": "True",
-        },
-        lists={"source_modules": list(sources), "forbidden_modules": targets},
+        scalars=scalars,
+        lists=lists,
     )
+
+
+def _let_through(
+    *,
+    root: Path,
+    config: Config,
+    package: str,
+    sources: Iterable[str],
+    parts: Iterable[str],
+) -> list[str]:
+    """The imports from the layer into the parts it may see, module and descendants alike."""
+    targets = [
+        f"{expression}.{rest.replace(PART, '.')}"
+        for part in parts
+        for layer, _, rest in [part.partition(PART)]
+        for expression in expressions(
+            root=root,
+            src=config.src,
+            package=package,
+            layer=layer,
+        )
+    ]
+    return [
+        f"{importer} -> {imported}"
+        for source in sources
+        for importer in (source, f"{source}.**")
+        for target in targets
+        for imported in (target, f"{target}.**")
+    ]
 
 
 def _independence(

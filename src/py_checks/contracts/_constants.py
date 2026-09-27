@@ -16,3 +16,6 @@ MIGRATIONS: Final = "migrations"
 VERSIONS: Final = "versions"
 
 SECTION: Final = "contracts"
+
+# A table entry with this in it names part of a layer: `domain/enums`.
+PART: Final = "/"
