@@ -99,6 +99,8 @@
     "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' does not declare ack_policy=",
     "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' does not declare no_reply=",
     "bad/presentation/consumers/bets.py:20:18: edge-declarations: SUBSCRIBER 'bets.settled' does not declare auto_offset_reset=",
+    "bad/presentation/consumers/requests.py:10:2: edge-declarations: SUBSCRIBER 'neighbour.example-request.v1' does not declare ack_policy=",
+    "bad/presentation/consumers/requests.py:10:2: edge-declarations: SUBSCRIBER 'neighbour.example-request.v1' does not declare auto_offset_reset=",
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[frozen_dataclasses]

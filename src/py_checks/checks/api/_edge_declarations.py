@@ -47,14 +47,14 @@ class Shape:
     # spelling.
     methods: tuple[str, ...]
 
-    # Only as a decorator. For a route this is a must: its `methods` are `get`,
-    # `post`, `delete`, the same names an HTTP client goes by, and a rule
-    # reading every `.post(...)` would find a route in the first adapter that
-    # talks to a neighbouring service. A subscription cannot be mistaken for
-    # anything like that, and it is written both as a decorator and as a call:
-    # it is kept in a variable and applied to the handler separately, because
-    # its client is taken before the start.
-    decorated: bool
+    # Recognised only as a decorator. For a route this is a must: its `methods`
+    # are `get`, `post`, `delete`, the same names an HTTP client goes by, and a
+    # rule reading every `.post(...)` would find a route in the first adapter
+    # that talks to a neighbouring service. A subscription cannot be mistaken
+    # for anything like that, so `False` takes it in both forms: as a decorator,
+    # `@router.subscriber(...)`, and as a call kept in a variable and applied to
+    # the handler separately, because its client is taken before the start.
+    decorator_only: bool
 
     # The word a message uses for the first argument.
     subject: str
@@ -73,7 +73,7 @@ class Shape:
 KNOWN: Final[dict[str, Shape]] = {
     Framework.FASTAPI: Shape(
         methods=("get", "post", "put", "patch", "delete", "head", "options", "trace"),
-        decorated=True,
+        decorator_only=True,
         subject="path",
         named="path",
         body="response_model",
@@ -86,7 +86,7 @@ KNOWN: Final[dict[str, Shape]] = {
     ),
     Framework.FASTSTREAM: Shape(
         methods=("subscriber",),
-        decorated=False,
+        decorator_only=False,
         subject="topic",
         named=None,
     ),
@@ -198,7 +198,7 @@ class EdgeDeclarations:
             if found is None:
                 continue
             shape, edge = found
-            if shape.decorated and node not in decorators:
+            if shape.decorator_only and node not in decorators:
                 continue
             yield from cls._judged(
                 call=node,
