@@ -47,14 +47,14 @@ class Shape:
     # spelling.
     methods: tuple[str, ...]
 
-    # Only as a decorator. For a route this is a must: its `methods` are `get`,
-    # `post`, `delete`, the same names an HTTP client goes by, and a rule
-    # reading every `.post(...)` would find a route in the first adapter that
-    # talks to a neighbouring service. A subscription cannot be mistaken for
-    # anything like that, and it is written both as a decorator and as a call:
-    # it is kept in a variable and applied to the handler separately, because
-    # its client is taken before the start.
-    decorated: bool
+    # Recognised only as a decorator. For a route this is a must: its `methods`
+    # are `get`, `post`, `delete`, the same names an HTTP client goes by, and a
+    # rule reading every `.post(...)` would find a route in the first adapter
+    # that talks to a neighbouring service. A subscription cannot be mistaken
+    # for anything like that, so `False` takes it in both forms: as a decorator,
+    # `@router.subscriber(...)`, and as a call kept in a variable and applied to
+    # the handler separately, because its client is taken before the start.
+    decorator_only: bool
 
     # The word a message uses for the first argument.
     subject: str
@@ -73,7 +73,7 @@ class Shape:
 KNOWN: Final[dict[str, Shape]] = {
     Framework.FASTAPI: Shape(
         methods=("get", "post", "put", "patch", "delete", "head", "options", "trace"),
-        decorated=True,
+        decorator_only=True,
         subject="path",
         named="path",
         body="response_model",
@@ -86,7 +86,7 @@ KNOWN: Final[dict[str, Shape]] = {
     ),
     Framework.FASTSTREAM: Shape(
         methods=("subscriber",),
-        decorated=False,
+        decorator_only=False,
         subject="topic",
         named=None,
     ),
@@ -167,6 +167,13 @@ class EdgeDeclarations:
     An entrance taken out of the schema (`include_in_schema=False`) the rule
     leaves alone: the schema is what it protects, and such a route is not in it.
 
+    A keyword decided once for a whole router or broker counts for every
+    entrance on it: `router = KafkaRouter(parser=...)` declares the parser of
+    each `router.subscriber(...)`. Only when the object is built in the same
+    module, by a call the file shows; built elsewhere, it has nothing to read,
+    and the entrance answers for itself. A name assigned twice counts only
+    what both constructors passed.
+
     Settings: one block per framework, with `required` in it.
     """
 
@@ -188,6 +195,7 @@ class EdgeDeclarations:
             code=CODE,
         ).frameworks
         decorators = cls._decorators(tree=file.tree)
+        built = cls._built(tree=file.tree)
         for node in ast.walk(file.tree):
             if not isinstance(node, ast.Call):
                 continue
@@ -198,13 +206,17 @@ class EdgeDeclarations:
             if found is None:
                 continue
             shape, edge = found
-            if shape.decorated and node not in decorators:
+            if shape.decorator_only and node not in decorators:
                 continue
             yield from cls._judged(
                 call=node,
                 file=file,
                 shape=shape,
                 edge=edge,
+                inherited=cls._inherited(
+                    call=node,
+                    built=built,
+                ),
             )
 
     @staticmethod
@@ -217,6 +229,39 @@ class EdgeDeclarations:
             for decorator in node.decorator_list
             if isinstance(decorator, ast.Call)
         }
+
+    @staticmethod
+    def _built(*, tree: ast.Module) -> dict[str, frozenset[str]]:
+        """The keywords each name was built with in this module: `router = KafkaRouter(...)`.
+
+        A name assigned more than once keeps only what every constructor
+        passed: which of them the entrance hangs on, the file does not say.
+        """
+        found: dict[str, frozenset[str]] = {}
+        for node in ast.walk(tree):
+            match node:
+                case (
+                    ast.Assign(targets=[ast.Name(id=name)], value=ast.Call() as call)
+                    | ast.AnnAssign(target=ast.Name(id=name), value=ast.Call() as call)
+                ):
+                    passed = frozenset(keyword.arg for keyword in call.keywords if keyword.arg)
+                    found[name] = found[name] & passed if name in found else passed
+                case _:
+                    continue
+        return found
+
+    @staticmethod
+    def _inherited(
+        *,
+        call: ast.Call,
+        built: dict[str, frozenset[str]],
+    ) -> frozenset[str]:
+        """What the router or broker the entrance hangs on already declared."""
+        match call.func:
+            case ast.Attribute(value=ast.Name(id=name)):
+                return built.get(name, frozenset())
+            case _:
+                return frozenset()
 
     @staticmethod
     def _matched(
@@ -241,6 +286,7 @@ class EdgeDeclarations:
         file: ParsedFile,
         shape: Shape,
         edge: Edge,
+        inherited: frozenset[str],
     ) -> Iterator[Violation]:
         if cls._unpublished(
             call=call,
@@ -251,7 +297,7 @@ class EdgeDeclarations:
             call=call,
             shape=shape,
         )
-        declared = {keyword.arg for keyword in call.keywords}
+        declared = {keyword.arg for keyword in call.keywords} | inherited
         yield from cls._first(
             call=call,
             file=file,

@@ -1546,7 +1546,9 @@ That is also what keeps the rule honest about names. A route is matched only
 as a decorator, because `get`, `post` and `delete` are the same names an HTTP
 client goes by and reading every `.post(...)` in the tree would find a route in
 the first adapter that talks to a neighbour. A subscription is matched
-anywhere, because `subscriber` is not a word anything else here is called.
+anywhere — as `@router.subscriber(...)` over a handler and as a call kept in a
+variable alike — because `subscriber` is not a word anything else here is
+called.
 
 A block named after a framework the rule does not know is refused by name, with
 the ones it knows listed.
@@ -1578,6 +1580,24 @@ lifted by a mark, while one that stayed silent is a contract nobody will miss.
 A route with `include_in_schema=False` the rule leaves alone: the schema is
 what it protects, and such a route is not in it. That is exactly `/docs` and
 its neighbours — they describe the schema rather than stand in it.
+
+A keyword decided once for a whole router or broker counts for every entrance
+on it. A service that sets its parser on the router, so that no subscriber can
+forget it, does not have to repeat it on each one or drop `parser` from
+`required`:
+
+```python
+router = KafkaRouter(parser=readable_headers)
+
+
+@router.subscriber("bets.settled", group_id="shop.settled", ack_policy=AckPolicy.MANUAL)
+async def bet_settled(body: bytes) -> None: ...
+```
+
+Only an object built in the same module counts: a broker imported from
+elsewhere has no constructor the file shows, and its entrances answer for
+themselves. A name assigned twice counts only what both constructors passed.
+The same holds for `APIRouter(dependencies=...)` under a route.
 
 A consumer is the other entrance in the same layer, and it has neither a
 status nor a response model. What it declares instead is what happens to a
