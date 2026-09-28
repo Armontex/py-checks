@@ -1561,6 +1561,7 @@ HTTP, и правило, читающее любой `.post(...)` в дерев�
 ```python
 router = KafkaRouter(parser=readable_headers)
 
+
 @router.subscriber("bets.settled", group_id="shop.settled", ack_policy=AckPolicy.MANUAL)
 async def bet_settled(body: bytes) -> None: ...
 ```

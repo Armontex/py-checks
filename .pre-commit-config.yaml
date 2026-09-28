@@ -47,17 +47,23 @@ repos:
       - id: check-symlinks
       - id: destroyed-symlinks
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.22
-    hooks:
-      - id: ruff-check
-        args: [--fix]
-        types_or: [python, pyi]
-      - id: ruff-format
-        types_or: [python, pyi]
-
   - repo: local
     hooks:
+      # ruff — из `uv.lock`, а не из ruff-pre-commit: закреплённый там релиз
+      # отстал от проектного, и хук с CI судили по-разному — старый не
+      # форматирует markdown, а `ruff format --check .` в CI проверяет и блоки
+      # python в документации.
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --force-exclude
+        language: system
+        types_or: [python, pyi, markdown]
+
       # Локальный, а не опубликованный хук: тот ставит свой commitizen в
       # отдельном окружении, и версия, проверяющая сообщение, разъезжается с
       # версией из `uv.lock` — а `cz.toml` читал бы релиз, который никто не
