@@ -155,6 +155,10 @@
     'bad/infra/database/models/bet.py:29:44: model-columns: Float дрейфует; состояние точно, используй Numeric',
     'bad/infra/database/models/bet.py:30:41: model-columns: голый Enum — нативный тип Postgres; используй stored_enum()',
     'bad/infra/database/models/bet.py:31:49: model-columns: DateTime without timezone=True stores a naive timestamp; say timezone=True',
+    "bad/infra/database/models/player.py:10:38: model-columns: relationship() without lazy= loads without the query saying so; say lazy='raise' and load it at the query",
+    "bad/infra/database/models/player.py:11:37: model-columns: relationship() with lazy='selectin' loads without the query saying so; say lazy='raise' and load it at the query",
+    "bad/infra/database/models/player.py:12:37: model-columns: relationship() with lazy='select' loads without the query saying so; say lazy='raise' and load it at the query",
+    "bad/infra/database/models/player.py:13:37: model-columns: relationship() with lazy=LOADER loads without the query saying so; say lazy='raise' and load it at the query",
   ])
 # ---
 # name: test_check_output_matches_the_snapshot[module_length]

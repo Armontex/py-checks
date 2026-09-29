@@ -21,6 +21,8 @@ CODE: Final = "model-columns"
 MAPPED: Final = "Mapped"
 AWARE: Final = "timezone"
 NULLABLE: Final = "nullable"
+RELATIONSHIP: Final = "relationship"
+LAZY: Final = "lazy"
 
 
 class ModelColumnsSettings(ZonedSettings):
@@ -31,12 +33,13 @@ class ModelColumnsSettings(ZonedSettings):
     skip: tuple[str, ...] = ()
     aware: tuple[str, ...] = ()
     nullable: bool = True
+    lazy: tuple[str, ...] = ()
 
 
 class ModelColumns:
     """Fails if a column is built out of the wrong material.
 
-    Five rules on one table of settings.
+    Six rules on one table of settings.
 
     `instead` is the material that has no place in a column, and what to write
     instead. A bare `Enum` is a native Postgres type: every new member needs an
@@ -66,8 +69,15 @@ class ModelColumns:
     diverge, and then the annotation lies: pyright reasons by it, the database
     holds the keyword, and one of the two is wrong on every row.
 
+    `lazy` lists the loaders a `relationship()` may name. Under asyncio an
+    implicit load cannot run: touching an unloaded relationship raises
+    `MissingGreenlet` far from the query, and where it happens to work it is
+    one query per row. `lazy="raise"` makes the query say what it loads, with
+    `selectinload` or `joinedload`. A value the file does not show is reported
+    too: a loader nobody can read is not one anybody chose.
+
     Settings: `zones`, `factories`, `instead`, `wrappers`, `defaults`, `skip`,
-    `aware`, `nullable`.
+    `aware`, `nullable`, `lazy`.
     """
 
     code: ClassVar[str] = CODE
@@ -134,6 +144,12 @@ class ModelColumns:
                     f"{written} without timezone=True stores a naive timestamp; say timezone=True"
                 ),
             )
+        if written == RELATIONSHIP and limits.lazy:
+            yield from cls._loaded(
+                file=file,
+                node=node,
+                allowed=limits.lazy,
+            )
         if written not in limits.factories:
             return
         for keyword in node.keywords:
@@ -146,6 +162,28 @@ class ModelColumns:
                         f"pass the value in the statement"
                     ),
                 )
+
+    @classmethod
+    def _loaded(
+        cls,
+        *,
+        file: ParsedFile,
+        node: ast.Call,
+        allowed: tuple[str, ...],
+    ) -> Iterator[Violation]:
+        """A relationship that loads behind the query's back."""
+        written = next((keyword.value for keyword in node.keywords if keyword.arg == LAZY), None)
+        if isinstance(written, ast.Constant) and written.value in allowed:
+            return
+        said = "without lazy=" if written is None else f"with lazy={ast.unparse(written)}"
+        yield cls._says(
+            file=file,
+            node=node,
+            message=(
+                f"relationship() {said} loads without the query saying so; "
+                f"say lazy={allowed[0]!r} and load it at the query"
+            ),
+        )
 
     @classmethod
     def _annotation(

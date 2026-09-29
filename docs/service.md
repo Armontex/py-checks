@@ -1198,6 +1198,7 @@ defaults = [
 ]
 skip = ["str", "int", "float", "Decimal", "dict", "Any"]
 aware = ["DateTime"]
+lazy = ["raise", "raise_on_sql"]
 
 [tool.py-checks.model-columns.instead]
 Enum = "a bare Enum is a native Postgres type; use stored_enum()"
@@ -1228,6 +1229,15 @@ A `DateTime` without `timezone=True` stores a naive stamp: the writer's wall
 clock, unsigned, compared as though the signature did not matter. The
 annotation and `nullable=` must agree: SQLAlchemy lets them diverge, and then
 pyright reasons by one while the database holds the other.
+
+`lazy` lists the loaders a `relationship()` may name; empty, the check is off.
+Under SQLAlchemy's asyncio extension an implicit load cannot run: touching an
+unloaded relationship raises `MissingGreenlet` far from the query that should
+have loaded it, and where it happens to be loaded it is one query per row. With
+`lazy="raise"` the query says what it loads — `selectinload`, `joinedload` —
+which is SQLAlchemy's own advice for `AsyncSession`. A missing `lazy=`, any
+other loader and a value the file does not show are reported alike; a
+relationship that deliberately loads another way says so with the mark.
 
 `UUID`, `datetime`, `date` and `bool` are deliberately absent from `skip`:
 they are exhaustive in themselves, and there is no subset of `bool`.
