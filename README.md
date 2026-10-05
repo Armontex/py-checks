@@ -121,10 +121,10 @@ Twenty-eight rules in nine groups:
 | `api` | what an entrance declares about itself |
 | `errors` | the code a refusal carries |
 | `calls` | a function whose call sites can be listed |
-| `hygiene` | a ceiling on a dependency |
+| `hygiene` | a ceiling on a dependency, a translation that kept up |
 
 <details>
-<summary>All twenty-eight</summary>
+<summary>All thirty</summary>
 
 | Code | What fails | Scope |
 |---|---|:-:|
@@ -157,6 +157,7 @@ Twenty-eight rules in nine groups:
 | `refusals` | a no nobody can branch on | file |
 | `confined-functions` | a named function was called from somewhere it may not be | file |
 | `dependency-bounds` | a dependency may move to a version nobody has ever run | project |
+| `translations` | a translated document is missing or no longer matches its source | project |
 
 </details>
 
@@ -183,7 +184,7 @@ text("SELECT 1")  # db-ok: raw-sql: a liveness probe, there is no ORM form of it
 
 The canonical form is `# check-ok: <code>: <reason>`, and it lifts exactly one
 rule. Every group has a short word of its own (`# db-ok`, `# type-ok`,
-`# signature-ok`, …): a person remembers the group, not twenty-eight codes.
+`# signature-ok`, …): a person remembers the group, not thirty codes.
 
 A line may carry several marks — a signature written in a column gathers them
 on its last line:
@@ -331,6 +332,7 @@ obeys `ignore`, and is lifted by a mark.
 | `py-checks sync [--check]` | build the import contracts and `.env.example` |
 | `py-checks doctor` | check the config itself: typos, dead addresses, rules that say nothing |
 | `py-checks mutation diff\|full\|record` | the mutation gate over `mutmut`; needs `python-checks[mutation]` |
+| `py-checks translations stamp <path>…` | stamp a translation with its source's fingerprint, after translating |
 
 ## Development
 

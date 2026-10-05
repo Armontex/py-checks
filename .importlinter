@@ -42,6 +42,7 @@ forbidden_modules =
     py_checks.environment
     py_checks.mutation
     py_checks.sync
+    py_checks.translations
 
 [importlinter:contract:layer-contracts]
 name = contracts imports only what it may
@@ -56,6 +57,7 @@ forbidden_modules =
     py_checks.environment
     py_checks.mutation
     py_checks.sync
+    py_checks.translations
 
 [importlinter:contract:layer-core]
 name = core imports only what it may
@@ -70,6 +72,7 @@ forbidden_modules =
     py_checks.environment
     py_checks.mutation
     py_checks.sync
+    py_checks.translations
 
 [importlinter:contract:layer-environment]
 name = environment imports only what it may
@@ -84,6 +87,7 @@ forbidden_modules =
     py_checks.core
     py_checks.mutation
     py_checks.sync
+    py_checks.translations
 
 [importlinter:contract:layer-mutation]
 name = mutation imports only what it may
@@ -98,6 +102,7 @@ forbidden_modules =
     py_checks.core
     py_checks.environment
     py_checks.sync
+    py_checks.translations
 
 [importlinter:contract:layer-sync]
 name = sync imports only what it may
@@ -110,3 +115,19 @@ forbidden_modules =
     py_checks.cli
     py_checks.core
     py_checks.mutation
+    py_checks.translations
+
+[importlinter:contract:layer-translations]
+name = translations imports only what it may
+type = forbidden
+allow_indirect_imports = True
+source_modules =
+    py_checks.translations
+forbidden_modules =
+    py_checks.checks
+    py_checks.cli
+    py_checks.contracts
+    py_checks.core
+    py_checks.environment
+    py_checks.mutation
+    py_checks.sync

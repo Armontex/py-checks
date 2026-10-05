@@ -1,0 +1,3 @@
+[tool.py-checks.translations]
+langs = ["ru"]
+files = ["*.md", "!CHANGELOG.md", "!.github/**"]

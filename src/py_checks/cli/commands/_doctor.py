@@ -16,6 +16,8 @@ from py_checks.contracts import SECTION as CONTRACTS
 from py_checks.core import ANY, EXIT_OK, EXIT_VIOLATION, SEPARATOR, available, depth, section_of
 from py_checks.environment import SECTION as ENV_EXAMPLE
 from py_checks.mutation import SECTION as MUTATION
+from py_checks.translations import SECTION as TRANSLATIONS
+from py_checks.translations import TranslationError, TranslationsSettings, dead, tracked
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -51,12 +53,17 @@ class Complaint:
 
 def doctor() -> None:
     """Check the settings themselves: typos, dead addresses, silent rules."""
-    config = load(root=find_root(start=Path.cwd()))
+    root = find_root(start=Path.cwd())
+    config = load(root=root)
     found = [
         *_unknown(config=config),
         *_ignored(config=config),
         *_silent(config=config),
         *_nowhere(config=config),
+        *_idle(
+            config=config,
+            root=root,
+        ),
     ]
     # A long name is not broken mid-word: the reader will copy it.
     console = Console(soft_wrap=True)
@@ -264,6 +271,35 @@ def _answers(
     if zone:
         return directory or address.split(SEPARATOR)[-1] == ANY
     return True
+
+
+def _idle(
+    *,
+    config: Config,
+    root: Path,
+) -> Iterator[Complaint]:
+    """A translation pattern that changes nothing: without it, the same files are selected.
+
+    It catches a pattern that selects nothing and a `!` that excludes nothing —
+    `!.github/` under a `*.md` takes the directory out, not the files in it.
+    """
+    table = config.checks.get(TRANSLATIONS)
+    if table is None:
+        return
+    try:
+        files = TranslationsSettings.model_validate(table).files
+        paths = tracked(root=root)
+    except ValueError, TranslationError:
+        return
+    named = prefix(source=config.origin)
+    for pattern in dead(
+        paths=paths,
+        files=files,
+    ):
+        yield Complaint(
+            said="pattern that changes nothing",
+            about=f"[{named}{TRANSLATIONS}] — {pattern!r} selects or excludes no file",
+        )
 
 
 def _addressed(*, config: Config) -> Iterator[tuple[str, str, bool]]:

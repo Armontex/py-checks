@@ -248,3 +248,16 @@
     'migrations/versions:1:1: schema-drift: `alembic upgrade head` exited with 1',
   ])
 # ---
+# name: test_project_check_output_matches_the_snapshot[translations__broken]
+  list([
+    'README.md:1:1: translations: README.md has no ru translation: docs/langs/ru/README.md',
+    'docs/langs/ru/docs/guide.md:1:1: translations: docs/guide.md changed since docs/langs/ru/docs/guide.md was translated',
+    'docs/langs/ru/docs/notes.md:1:1: translations: docs/langs/ru/docs/notes.md: the first line is not a fingerprint; after translating, run `py-checks translations stamp docs/langs/ru/docs/notes.md`',
+    'docs/langs/ru/CHANGELOG.md:1:1: translations: docs/langs/ru/CHANGELOG.md translates nothing',
+    'docs/langs/ru/old.md:1:1: translations: docs/langs/ru/old.md translates nothing',
+  ])
+# ---
+# name: test_project_check_output_matches_the_snapshot[translations__ok]
+  list([
+  ])
+# ---
