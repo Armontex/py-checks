@@ -14,6 +14,7 @@ from py_checks.cli.commands._list import register as register_list
 from py_checks.cli.commands._mutation import register as register_mutation
 from py_checks.cli.commands._run import register as register_run
 from py_checks.cli.commands._sync import register as register_sync
+from py_checks.cli.commands._translations import register as register_translations
 
 REGISTRARS: Final[tuple[Registrar, ...]] = (
     register_run,
@@ -22,6 +23,7 @@ REGISTRARS: Final[tuple[Registrar, ...]] = (
     register_sync,
     register_doctor,
     register_mutation,
+    register_translations,
 )
 
 __all__ = ["REGISTRARS", "Registrar"]

@@ -1,6 +1,6 @@
 [project]
 name = "python-checks"
-version = "0.9.0"
+version = "0.10.0"
 description = "Проверки архитектурных соглашений проекта"
 readme = "README.md"
 license = "MIT"
@@ -9,6 +9,9 @@ authors = [{ name = "Armontex", email = "windle1337@gmail.com" }]
 requires-python = ">=3.14"
 dependencies = [
     "libcst>=1.9,<2",
+    # gitignore-шаблоны `[translations].files`: `**`, ведущий `/`, директории и
+    # отрицание — краёв столько, что самописный разбор ошибся бы на части из них.
+    "pathspec>=1.1,<2",
     "pydantic>=2.13.5,<3",
     "pydantic-settings>=2.15.0,<3",
     # Floor low, ceiling at the next major: what is used here is `Console` and
@@ -68,6 +71,7 @@ schema-drift = "py_checks.checks.database:SchemaDrift"
 sealed-imports = "py_checks.checks.imports:SealedImports"
 signature-layout = "py_checks.checks.signatures:SignatureLayout"
 statement-keys = "py_checks.checks.database:StatementKeys"
+translations = "py_checks.checks.hygiene:Translations"
 
 # Дистрибутив зовётся иначе, чем пакет: имя `py-checks` на PyPI занял сосед.
 # Сборщик выводит модуль из имени дистрибутива, поэтому имя пакета названо тут.
