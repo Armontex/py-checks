@@ -34,7 +34,7 @@ Every rule is written to the same shape:
 | [2. Where the settings live](#2-where-the-settings-live) | one file, not two |
 | [3. Who checks what](#3-who-checks-what) | ruff, pyright, import-linter, us |
 | [4. The hooks](#4-the-hooks) | what ships with the library, what the project declares |
-| [5. The rules](#5-the-rules) | all twenty-eight, by group |
+| [5. The rules](#5-the-rules) | all thirty, by group |
 | [6. The generated files](#6-the-generated-files) | contracts and `.env.example` |
 | [7. What is handed to others](#7-what-is-handed-to-others) | ruff, pyright, pytest-alembic, symlinks |
 
@@ -1676,7 +1676,7 @@ not called.
 
 **The mark.** `# call-ok: confined-functions: <reason>`.
 
-### 5.9 hygiene — the manifest
+### 5.9 hygiene — the manifest and the translations
 
 #### `dependency-bounds` — a dependency may move to a version nobody has ever run
 
@@ -1711,6 +1711,70 @@ it is handed the root, and it is called once per run along with the rest —
 `py-checks run`. What it is handed, the rule says itself, in its `scope`.
 
 **The mark.** `# hygiene-ok: dependency-bounds: <reason>`.
+
+#### `translations` — a translated document no longer says what its source says
+
+```toml
+[tool.py-checks.translations]
+langs = ["ru"]
+files = ["*.md", "!CHANGELOG.md", "!.github/**"]
+```
+
+**Why.** A translation goes stale the moment the English changes, and nothing
+tells anyone: its reader reads a document that is no longer true. A document
+nobody translated is the same problem one step earlier. The rule refuses both,
+the way `sync --check` refuses a generated file that has fallen behind.
+
+English is the source, and each language mirrors the repository under
+`docs/langs/<lang>/`, by the same path — the path alone says which file a
+translation belongs to:
+
+```
+AGENTS.md                  -> docs/langs/ru/AGENTS.md
+docs/testing.md            -> docs/langs/ru/docs/testing.md
+```
+
+`files` is gitignore syntax: the last match wins, `!` takes a file back out.
+Candidates are the files git knows and does not ignore, so `.venv/` never
+needs excluding, and `docs/langs/` is never asked for its own translation. A
+symlink is not a document of its own: `CLAUDE.md` pointing at `AGENTS.md` is
+translated once, as `AGENTS.md`. A
+directory is excluded with what is under it — `!.github/**`. `!.github/`
+takes out the directory alone, and a `*.md` above it still matches every file
+inside; `doctor` names such a pattern, and any other that changes nothing.
+
+The first line of a translation is the SHA-256 of its source's bytes as they
+were when it was translated — not a date, which moves with `touch` and a
+rebase, and not a commit, which moves with any change in the repository:
+
+```
+<!-- sha256:… -->
+```
+
+The translator writes the translation, then stamps it:
+
+```bash
+py-checks translations stamp docs/langs/ru/docs/testing.md
+```
+
+`stamp` takes only the translations it is named, never creates one, and is
+not part of `run --fix`: a fix that rewrote the hash would bless a translation
+nobody updated, the one thing the rule exists to stop. A generator that
+renders its documents — a copier template — stamps the ones it owns after
+`copy` and `update`, naming them one by one.
+
+Refused: a selected file with no translation, a translation whose source
+changed since, a translation whose source is gone or no longer selected, and
+a first line that is not a fingerprint. Outside a git repository the rule says
+so instead of guessing what the repository holds.
+
+**Instead of a machine translator in the hook.** Technical vocabulary
+suffers, the documents leave for an outside service, and a commit gains a
+network dependency. Who translates, and with what, is the author's choice; the
+rule only refuses what is missing or stale.
+
+**The mark.** None: a mark is a Python comment, and a translation is not
+Python. A document that needs no translation is taken out of `files`.
 
 ### 5.10 errors — what a module refuses with
 
