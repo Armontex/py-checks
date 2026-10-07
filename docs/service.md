@@ -523,6 +523,12 @@ whose table leaves it with nothing to judge, and an address no directory or
 module answers to. The last one is the slow one: a directory gets renamed, the
 block stays, and the rule goes on looking where nothing is.
 
+A layout block that says where code *goes* rather than where it already is —
+`domain/policies` shipped by a service template before the first policy is
+written — is marked `optional = true`. `doctor` does not ask the tree for it,
+and the rules judge the directory from the first file that lands there. A
+block without the flag stays strict, so a typo in an address is still caught.
+
 It belongs in CI beside `run`, not in the hooks: it reads the whole tree of
 `src` to answer the last question, and it has nothing to say about the file
 that is being committed. It exits `1` when it has complaints.
@@ -702,6 +708,7 @@ operation = { method = "execute", max-arguments = 3 }
 | `operation` | `operation-shape` | the shape of the operation kept here |
 | `orm` | `model-boundary` | which end of the model's boundary this is: `"declared"` or `"built"` |
 | `base` | `model-boundary` | the base class the models here are known by |
+| `optional` | `doctor` | the directory may not exist yet: `doctor` does not look for it, the rules judge it once a file lies there |
 
 The heading is an address, not a directory name, and it is matched as
 consecutive pieces of a path: `application/use_cases` is found inside
@@ -893,6 +900,30 @@ there the ban is on services only.
 has to remember. Named arguments make a call read like the sentence it is,
 and a parameter added in the middle stops being able to break a caller
 silently. The autofix writes the `*`; the formatter lays the signature out.
+
+**The autofix changes the calls too, or nothing.** A `*` alone turns every
+positional call into a type error, and the calls are in other modules, in
+tests, behind `import ... as`. `--fix` finds every place the name is written
+and asks jedi whose it is: ours, someone else's (`dict.get`), or unknown. Ours
+is rewritten — `price(1)` becomes `price(market=1)` — and a method changes
+together with every method of the same name and signature: the port, its
+implementations, their doubles in `tests/`. Anything it cannot follow leaves
+the function as it is and names the reason in the report:
+
+```
+price takes market by position; put a `*` before them; not fixed: src/app/b.py:27 cannot be resolved
+```
+
+Reasons it stops: a call it cannot resolve; the function passed as a value
+(`map(price, …)`, a DI registration); a name handed to `patch` or `setattr` as
+a string; a method swapped by assignment; a double in `tests/` that names its
+parameters its own way; a decorator other than `staticmethod`, `classmethod`,
+`abstractmethod`, `override`; a base class from a library that may call the
+method itself; and `__init__`, which is reached through the class. The search
+runs in the project's `.venv` when there is one, so a library's methods are
+told apart from the project's. jedi starts that interpreter, so a `.venv`
+committed to git — one that came with someone else's repository — is not
+used, and neither is one outside git, where nobody can vouch for it.
 
 Library callbacks are the exception that needs a name rather than a setting:
 a framework calls `process_bind_param(self, value, dialect)` and the signature

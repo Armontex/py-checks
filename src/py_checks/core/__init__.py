@@ -9,7 +9,7 @@ from py_checks.core._constants import EXIT_OK, EXIT_VIOLATION, GROUP
 from py_checks.core._discovery import python_files
 from py_checks.core._edit import Edit, apply, column
 from py_checks.core._errors import ParseError, UnknownCheckError
-from py_checks.core._fixer import fix
+from py_checks.core._fixer import Patch, Repair, Repairing, fix
 from py_checks.core._format import reformat
 from py_checks.core._markers import MARKER, Marker, complaints, markers, surviving
 from py_checks.core._paths import ANY, SEPARATOR, depth
@@ -33,7 +33,10 @@ __all__ = [
     "Marker",
     "ParseError",
     "ParsedFile",
+    "Patch",
     "ProjectCheck",
+    "Repair",
+    "Repairing",
     "SYNTAX",
     "Scope",
     "SettingsMismatchError",

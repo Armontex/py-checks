@@ -13,25 +13,14 @@ from py_checks.checks.hygiene import Translations
 from py_checks.cli import app
 from py_checks.translations import TranslationError, TranslationsSettings, dead, stamp, stamped
 
+pytestmark = pytest.mark.usefixtures("own_repository")
+
 if TYPE_CHECKING:
     from pathlib import Path
 
 runner = CliRunner()
 
 CONFIG = '[tool.py-checks.translations]\nlangs = ["ru"]\nfiles = {files}\n'
-
-
-@pytest.fixture(autouse=True)
-def own_repository(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Git тестов — свой, а не тот, что позвал хук: его индекс не наш."""
-    local = subprocess.run(
-        ["git", "rev-parse", "--local-env-vars"],  # noqa: S607
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.split()
-    for name in local:
-        monkeypatch.delenv(name, raising=False)
 
 
 def project(root: Path, files: str = '["*.md"]') -> Path:

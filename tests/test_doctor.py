@@ -166,6 +166,22 @@ def test_an_address_without_a_directory_is_reported(project: Path) -> None:
     assert "'application/handlers' not found" in result.output
 
 
+def test_an_optional_block_waits_for_its_directory(project: Path) -> None:
+    """Блок говорит, куда ляжет код, а не где он уже лежит: шаблон сервиса везёт его заранее."""
+    settings(
+        project=project,
+        written=(
+            'src = "src"\n\n[layout."domain/policies"]\nonly = ["function"]\noptional = true\n\n'
+            '[layout."application/handlers"]\nonly = ["class"]\n'
+        ),
+    )
+
+    result = runner.invoke(app, ["doctor"])
+
+    assert "'domain/policies' not found" not in result.output
+    assert "'application/handlers' not found" in result.output
+
+
 def test_a_zone_that_is_only_a_module_is_reported(project: Path) -> None:
     """Правило зону `domain` в `domain.py` не найдёт — значит, и doctor не должен."""
     (project / "src" / "app" / "application").mkdir()

@@ -1,6 +1,6 @@
 [project]
 name = "python-checks"
-version = "0.10.0"
+version = "0.11.0"
 description = "Проверки архитектурных соглашений проекта"
 readme = "README.md"
 license = "MIT"
@@ -8,6 +8,10 @@ license-files = ["LICENSE"]
 authors = [{ name = "Armontex", email = "windle1337@gmail.com" }]
 requires-python = ">=3.14"
 dependencies = [
+    # `--fix` у keyword-only-arguments: чей это вызов — наш, чужой или ничей.
+    # Без вывода типов `self._repo.get(x)` не отличить от `dict.get`, а вызов,
+    # который не разрешился, останавливает правку, а не ломает его.
+    "jedi>=0.19.2,<0.20",
     "libcst>=1.9,<2",
     # gitignore-шаблоны `[translations].files`: `**`, ведущий `/`, директории и
     # отрицание — краёв столько, что самописный разбор ошибся бы на части из них.

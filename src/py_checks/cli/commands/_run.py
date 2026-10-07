@@ -78,7 +78,11 @@ def run(  # check-ok: keyword-only-arguments: typer parses the command's signatu
         root=root,
     )
     if autofix:
-        violations = _fixed(violations=violations)
+        violations = _fixed(
+            violations=violations,
+            root=root,
+            source=root / config.src,
+        )
     raise typer.Exit(
         report(
             violations=violations,
@@ -88,9 +92,18 @@ def run(  # check-ok: keyword-only-arguments: typer parses the command's signatu
     )
 
 
-def _fixed(*, violations: list[Violation]) -> list[Violation]:
+def _fixed(
+    *,
+    violations: list[Violation],
+    root: Path,
+    source: Path,
+) -> list[Violation]:
     """Apply the fixes and return what is left for a person."""
-    changed, left = fix(violations=violations)
+    changed, left = fix(
+        violations=violations,
+        root=root,
+        source=source,
+    )
     reformat(paths=changed)
     return left
 
