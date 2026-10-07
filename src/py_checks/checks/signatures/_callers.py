@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import ast
 import os
+import subprocess
 from collections import defaultdict
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -38,6 +39,10 @@ VENV: Final = ".venv"
 
 
 VIRTUAL_ENV: Final = "VIRTUAL_ENV"
+
+# Only what is committed: an untracked `.venv` without a `.gitignore` is still
+# one's own, made on this machine.
+COMMITTED: Final = ("git", "ls-files", "--cached", "--")
 
 
 CLASSMETHOD: Final = "classmethod"
@@ -162,13 +167,41 @@ def _project(
     its libraries are installed: without the project's `.venv` a library call
     resolves to nothing and stops the fix of every function sharing its name.
     """
-    venv = root / VENV
-    environment = venv if venv.is_dir() else os.environ.get(VIRTUAL_ENV)
+    environment = _environment(root=root)
     return jedi.Project(
         path=root,
-        environment_path=str(environment) if environment else None,
+        environment_path=environment,
         added_sys_path=(str(source),),
     )
+
+
+def _environment(*, root: Path) -> str | None:
+    """The interpreter jedi starts: the project's `.venv`, when git vouches for it.
+
+    jedi runs that interpreter to learn its paths, so the fix runs whatever
+    lies at `.venv/bin/python`. A `.venv` of one's own is not in git's index;
+    one that came with the repository — or with an archive git cannot speak
+    for — is someone else's program, and the fix stays in its own environment:
+    fewer calls resolved, nothing run.
+    """
+    venv = root / VENV
+    if venv.is_dir() and _local(root=root):
+        return str(venv)
+    return os.environ.get(VIRTUAL_ENV) or None
+
+
+def _local(*, root: Path) -> bool:
+    """Whether git confirms nothing under `.venv` is committed; no answer is a no."""
+    try:
+        listed = subprocess.run(  # noqa: S603 — a fixed list of arguments, no shell
+            [*COMMITTED, VENV],
+            cwd=root,
+            capture_output=True,
+            check=True,
+        )
+    except OSError, subprocess.CalledProcessError:
+        return False
+    return not listed.stdout.strip()
 
 
 def _calls(
