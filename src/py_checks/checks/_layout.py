@@ -114,6 +114,9 @@ class Directory(CheckSettings):
     `operation` — the shape of an operation, if operations are kept here.
     `orm` — what the directory is to an ORM model: its home or where it is built.
     `base` — the base class by which a model is recognised in the models' home.
+    `optional` — the directory may not exist yet: the block says where code
+    goes, not where it already is, and `doctor` does not ask the tree for it.
+    The rules judge it as soon as a file turns up there.
     """
 
     only: tuple[Kind, ...] = ()
@@ -125,6 +128,7 @@ class Directory(CheckSettings):
     operation: Operation | None = None
     orm: Orm | None = None
     base: str | None = None
+    optional: bool = False
 
     @property
     def restricted(self) -> bool:

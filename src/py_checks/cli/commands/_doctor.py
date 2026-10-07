@@ -39,6 +39,10 @@ ALIKE: Final = 0.5
 
 SUFFIX: Final = ".py"
 
+# A shared block that says where code goes rather than where it already is:
+# the address is not asked of the tree until something lies there.
+OPTIONAL: Final = "optional"
+
 # The field and the reason: the rest of pydantic's complaint is bookkeeping.
 REASON: Final = 2
 
@@ -305,7 +309,7 @@ def _idle(
 def _addressed(*, config: Config) -> Iterator[tuple[str, str, bool]]:
     """The addresses written in the settings, and whether each is a zone.
 
-    Shared table blocks and zone lists.
+    Shared table blocks, except those marked `optional`, and zone lists.
     Only these two: the other keys are names of packages, types, constructs,
     and they cannot be told from a path without knowing the rule. A zone inside
     an array of tables (`[[confined-calls.rules]]`) is the same zone, hence the
@@ -317,7 +321,9 @@ def _addressed(*, config: Config) -> Iterator[tuple[str, str, bool]]:
             continue
         if section in shared:
             yield from (
-                (section, key, False) for key, value in table.items() if isinstance(value, dict)
+                (section, key, False)
+                for key, value in table.items()
+                if isinstance(value, dict) and value.get(OPTIONAL) is not True
             )
         for value in [table, *(one for one in table.values() if isinstance(one, list))]:
             yield from ((section, one, True) for one in _zones(value=value))

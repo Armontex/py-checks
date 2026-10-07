@@ -13,8 +13,10 @@ only = ["port", "alias"]
 [tool.py-checks.layout.dto]
 only = ["dataclass", "alias"]
 
+# `optional` молчит только в doctor: правило судит директорию, как только она есть.
 [tool.py-checks.layout.errors]
 only = ["error"]
+optional = true
 
 # Один модуль, а не директория, и в нём только константы.
 [tool.py-checks.layout."domain/constraints.py"]

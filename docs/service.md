@@ -523,6 +523,12 @@ whose table leaves it with nothing to judge, and an address no directory or
 module answers to. The last one is the slow one: a directory gets renamed, the
 block stays, and the rule goes on looking where nothing is.
 
+A layout block that says where code *goes* rather than where it already is —
+`domain/policies` shipped by a service template before the first policy is
+written — is marked `optional = true`. `doctor` does not ask the tree for it,
+and the rules judge the directory from the first file that lands there. A
+block without the flag stays strict, so a typo in an address is still caught.
+
 It belongs in CI beside `run`, not in the hooks: it reads the whole tree of
 `src` to answer the last question, and it has nothing to say about the file
 that is being committed. It exits `1` when it has complaints.
@@ -702,6 +708,7 @@ operation = { method = "execute", max-arguments = 3 }
 | `operation` | `operation-shape` | the shape of the operation kept here |
 | `orm` | `model-boundary` | which end of the model's boundary this is: `"declared"` or `"built"` |
 | `base` | `model-boundary` | the base class the models here are known by |
+| `optional` | `doctor` | the directory may not exist yet: `doctor` does not look for it, the rules judge it once a file lies there |
 
 The heading is an address, not a directory name, and it is matched as
 consecutive pieces of a path: `application/use_cases` is found inside
