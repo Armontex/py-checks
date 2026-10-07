@@ -1,3 +1,15 @@
+## v0.11.0 (2026-10-07)
+
+### Features
+
+- **keyword-only-arguments**: --fix переписывает позиционные вызовы (#66)
+- **layout**: `optional` — блок ждёт свою директорию, doctor её не ищет (#65)
+
+### Fixes
+
+- **keyword-only-arguments**: --fix не запускает закоммиченный .venv (#67)
+- **keyword-only-arguments**: --fix переносит готовую `*`, а не ставит вторую (#60)
+
 ## v0.10.0 (2026-10-05)
 
 ### Features
