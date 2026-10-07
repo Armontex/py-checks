@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, Final
 
+from py_checks.checks.signatures._callers import callers
 from py_checks.checks.signatures._functions import (
     Definition,
     definitions,
@@ -16,10 +17,11 @@ from py_checks.core import Edit, Scope, Violation, column
 
 if TYPE_CHECKING:
     import ast
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
+    from pathlib import Path
 
     from py_checks.checks.signatures._functions import Function
-    from py_checks.core import ParsedFile
+    from py_checks.core import ParsedFile, Repair
 
 CODE: Final = "keyword-only-arguments"
 
@@ -99,6 +101,21 @@ class KeywordOnlyArguments:
                 message=f"{name} takes {', '.join(collected)}; list the arguments by name",
                 end_line=end_line,
             )
+
+    def repair(
+        self,
+        *,
+        violations: Sequence[Violation],
+        root: Path,
+        source: Path,
+    ) -> Repair:
+        """`--fix` names the arguments at every call, or changes nothing."""
+        return callers(
+            violations=violations,
+            root=root,
+            source=source,
+            star=self._star,
+        )
 
     @staticmethod
     def _interpreter_dunder(*, name: str) -> bool:

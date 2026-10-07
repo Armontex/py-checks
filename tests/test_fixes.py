@@ -64,7 +64,7 @@ def test_fix_rewrites_the_file_and_keeps_what_it_cannot_fix(tmp_path: Path) -> N
     )
     stubborn = Violation(path=path, line=1, column=1, code="other", message="m")
 
-    changed, left = fix(violations=[fixable, stubborn])
+    changed, left = fix(violations=[fixable, stubborn], root=tmp_path, source=tmp_path)
 
     assert changed == [path]
     assert left == [stubborn]
@@ -91,7 +91,7 @@ def fixed(*, text: str, tmp_path: Path) -> str:
     path.write_text(text, encoding="utf-8")
     file = ParsedFile(path=path, text=text)
     found = list(KeywordOnlyArguments().run(file=file, settings=CheckSettings()))
-    fix(violations=found)
+    fix(violations=found, root=tmp_path, source=tmp_path)
     return path.read_text(encoding="utf-8")
 
 
@@ -133,7 +133,7 @@ def test_fix_that_breaks_syntax_is_not_written(tmp_path: Path) -> None:
         edit=edit(line=1, column=7, text="*, *, "),
     )
 
-    changed, left = fix(violations=[broken])
+    changed, left = fix(violations=[broken], root=tmp_path, source=tmp_path)
 
     assert changed == []
     assert left == [broken]

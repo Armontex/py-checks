@@ -901,6 +901,28 @@ has to remember. Named arguments make a call read like the sentence it is,
 and a parameter added in the middle stops being able to break a caller
 silently. The autofix writes the `*`; the formatter lays the signature out.
 
+**The autofix changes the calls too, or nothing.** A `*` alone turns every
+positional call into a type error, and the calls are in other modules, in
+tests, behind `import ... as`. `--fix` finds every place the name is written
+and asks jedi whose it is: ours, someone else's (`dict.get`), or unknown. Ours
+is rewritten — `price(1)` becomes `price(market=1)` — and a method changes
+together with every method of the same name and signature: the port, its
+implementations, their doubles in `tests/`. Anything it cannot follow leaves
+the function as it is and names the reason in the report:
+
+```
+price takes market by position; put a `*` before them; not fixed: src/app/b.py:27 cannot be resolved
+```
+
+Reasons it stops: a call it cannot resolve; the function passed as a value
+(`map(price, …)`, a DI registration); a name handed to `patch` or `setattr` as
+a string; a method swapped by assignment; a double in `tests/` that names its
+parameters its own way; a decorator other than `staticmethod`, `classmethod`,
+`abstractmethod`, `override`; a base class from a library that may call the
+method itself; and `__init__`, which is reached through the class. The search
+runs in the project's `.venv` when there is one, so a library's methods are
+told apart from the project's.
+
 Library callbacks are the exception that needs a name rather than a setting:
 a framework calls `process_bind_param(self, value, dialect)` and the signature
 is not ours to change. Those lines carry a mark.
