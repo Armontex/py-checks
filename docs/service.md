@@ -923,7 +923,7 @@ method itself; and `__init__`, which is reached through the class. The search
 runs in the project's `.venv` when there is one, so a library's methods are
 told apart from the project's. jedi starts that interpreter, so a `.venv`
 committed to git — one that came with someone else's repository — is not
-used.
+used, and neither is one outside git, where nobody can vouch for it.
 
 Library callbacks are the exception that needs a name rather than a setting:
 a framework calls `process_bind_param(self, value, dialect)` and the signature

@@ -206,6 +206,14 @@ def test_a_method_a_foreign_base_may_call_is_left(
     assert "Names derives from NodeVisitor" in output
 
 
+def test_a_venv_git_cannot_vouch_for_is_not_started(tmp_path: Path) -> None:
+    """Проект из архива: git молчит, а `.venv/bin/python` внутри может быть чем угодно."""
+    venv = tmp_path / ".venv"
+    venv.mkdir()
+
+    assert _environment(root=tmp_path) != str(venv)
+
+
 def test_a_committed_venv_is_not_started(tmp_path: Path) -> None:
     """jedi запускает интерпретатор окружения: закоммиченный `.venv` — чужая программа."""
     venv = tmp_path / ".venv"

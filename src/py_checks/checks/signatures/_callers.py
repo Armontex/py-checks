@@ -176,21 +176,22 @@ def _project(
 
 
 def _environment(*, root: Path) -> str | None:
-    """The interpreter jedi starts: the project's `.venv`, unless git tracks it.
+    """The interpreter jedi starts: the project's `.venv`, when git vouches for it.
 
     jedi runs that interpreter to learn its paths, so the fix runs whatever
-    lies at `.venv/bin/python`. A `.venv` of one's own is ignored by git; one
-    that came with the repository is someone else's program, and the fix
-    stays in its own environment — fewer calls resolved, nothing run.
+    lies at `.venv/bin/python`. A `.venv` of one's own is not in git's index;
+    one that came with the repository — or with an archive git cannot speak
+    for — is someone else's program, and the fix stays in its own environment:
+    fewer calls resolved, nothing run.
     """
     venv = root / VENV
-    if venv.is_dir() and not _committed(root=root):
+    if venv.is_dir() and _local(root=root):
         return str(venv)
     return os.environ.get(VIRTUAL_ENV) or None
 
 
-def _committed(*, root: Path) -> bool:
-    """Whether git's index holds anything under `.venv`; outside git nobody can say."""
+def _local(*, root: Path) -> bool:
+    """Whether git confirms nothing under `.venv` is committed; no answer is a no."""
     try:
         listed = subprocess.run(  # noqa: S603 — a fixed list of arguments, no shell
             [*COMMITTED, VENV],
@@ -200,7 +201,7 @@ def _committed(*, root: Path) -> bool:
         )
     except OSError, subprocess.CalledProcessError:
         return False
-    return bool(listed.stdout.strip())
+    return not listed.stdout.strip()
 
 
 def _calls(
