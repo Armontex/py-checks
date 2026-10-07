@@ -1,10 +1,12 @@
 """`--fix` у keyword-only-arguments: подпись меняется вместе со всеми вызовами — или никак."""
 
+import subprocess
 from typing import TYPE_CHECKING
 
 import pytest
 from typer.testing import CliRunner
 
+from py_checks.checks.signatures._callers import _environment  # pyright: ignore[reportPrivateUsage]
 from py_checks.cli import app
 
 if TYPE_CHECKING:
@@ -202,3 +204,17 @@ def test_a_method_a_foreign_base_may_call_is_left(
 
     assert "def visit_Name(self, node):" in read(tmp_path, "src/app/a.py")
     assert "Names derives from NodeVisitor" in output
+
+
+def test_a_committed_venv_is_not_started(tmp_path: Path) -> None:
+    """jedi запускает интерпретатор окружения: закоммиченный `.venv` — чужая программа."""
+    venv = tmp_path / ".venv"
+    (venv / "bin").mkdir(parents=True)
+    (venv / "pyvenv.cfg").write_text("home = /usr/bin\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)  # noqa: S603, S607
+
+    assert _environment(root=tmp_path) == str(venv)
+
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-f", ".venv"], check=True)  # noqa: S603, S607
+
+    assert _environment(root=tmp_path) != str(venv)
