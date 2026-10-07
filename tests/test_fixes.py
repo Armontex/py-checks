@@ -2,6 +2,8 @@ from pathlib import Path
 
 import pytest
 
+from py_checks.checks.signatures._keyword_only import KeywordOnlyArguments
+from py_checks.config import CheckSettings
 from py_checks.core import Edit, ParsedFile, ParseError, Violation, apply, fix
 
 
@@ -81,3 +83,58 @@ def test_cst_module_reports_broken_syntax() -> None:
 
     with pytest.raises(ParseError):
         _ = file.module
+
+
+def fixed(*, text: str, tmp_path: Path) -> str:
+    """Исходник после `--fix` правила keyword-only-arguments."""
+    path = tmp_path / "a.py"
+    path.write_text(text, encoding="utf-8")
+    file = ParsedFile(path=path, text=text)
+    found = list(KeywordOnlyArguments().run(file=file, settings=CheckSettings()))
+    fix(violations=found)
+    return path.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("before", "after"),
+    [
+        ("def f(a, *, b): ...\n", "def f(*, a, b): ...\n"),
+        ("def f(a: int = 1, *, b): ...\n", "def f(*, a: int = 1, b): ...\n"),
+        ("def f(a, /, b, *, c): ...\n", "def f(a, /, *, b, c): ...\n"),
+        ("def f(a, /, b): ...\n", "def f(a, /, *, b): ...\n"),
+        ("class C:\n    def m(self, a, *, b): ...\n", "class C:\n    def m(self, *, a, b): ...\n"),
+        (
+            "def f(\n    a,\n    *,\n    b,\n): ...\n",
+            "def f(\n    *,\n    a,\n    b,\n): ...\n",
+        ),
+    ],
+)
+def test_existing_star_is_moved_not_doubled(before: str, after: str, tmp_path: Path) -> None:
+    """Вторая `*` в подписи — SyntaxError, и следующий хук падал на файле, а не на правиле."""
+    assert fixed(text=before, tmp_path=tmp_path) == after
+
+
+def test_star_args_blocks_the_fix(tmp_path: Path) -> None:
+    """Сделать `a` именованным — значит поменять, что соберёт `*args`."""
+    text = "def f(a, *args, b): ...\n"
+
+    assert fixed(text=text, tmp_path=tmp_path) == text
+
+
+def test_fix_that_breaks_syntax_is_not_written(tmp_path: Path) -> None:
+    path = tmp_path / "a.py"
+    path.write_text("def f(a):\n    pass\n", encoding="utf-8")
+    broken = Violation(
+        path=path,
+        line=1,
+        column=1,
+        code="keyword-only-arguments",
+        message="m",
+        edit=edit(line=1, column=7, text="*, *, "),
+    )
+
+    changed, left = fix(violations=[broken])
+
+    assert changed == []
+    assert left == [broken]
+    assert path.read_text(encoding="utf-8") == "def f(a):\n    pass\n"
