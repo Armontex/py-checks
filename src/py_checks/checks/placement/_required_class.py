@@ -117,9 +117,10 @@ class RequiredClass:
     ) -> Iterator[Violation]:
         required = [one for one in declared if one.name.endswith(suffix)]
         if not required:
-            yield cls._says(
-                file=file,
-                node=declared[0],
+            yield Violation.from_node(
+                node=declared[0].node,
+                path=file.path,
+                code=CODE,
                 message=(
                     f"the module declares {cls._listed(declared=declared)}, "
                     f"but a module in this directory declares a ...{suffix} class"
@@ -127,9 +128,10 @@ class RequiredClass:
             )
             return
         if len(required) > 1:
-            yield cls._says(
-                file=file,
-                node=required[1],
+            yield Violation.from_node(
+                node=required[1].node,
+                path=file.path,
+                code=CODE,
                 message=(
                     f"the module holds {cls._listed(declared=required)}; "
                     f"one ...{suffix} per module, and the module is named after it"
@@ -141,9 +143,10 @@ class RequiredClass:
             suffix=suffix,
         )
         if ahead is not None:
-            yield cls._says(
-                file=file,
-                node=ahead,
+            yield Violation.from_node(
+                node=ahead.node,
+                path=file.path,
+                code=CODE,
                 message=(
                     f"{ahead.name} is declared above the ...{suffix} the module "
                     f"exists for; helpers belong below it"
@@ -168,9 +171,10 @@ class RequiredClass:
                 continue
             if one.name.endswith(suffix):
                 continue
-            yield cls._says(
-                file=file,
-                node=one,
+            yield Violation.from_node(
+                node=one.node,
+                path=file.path,
+                code=CODE,
                 message=f"{one.name} does not end with {suffix}; in {address} every class does",
             )
 
@@ -187,20 +191,6 @@ class RequiredClass:
             if one.kind not in VOCABULARY:
                 return one
         return None
-
-    @staticmethod
-    def _says(
-        *,
-        file: ParsedFile,
-        node: Declaration,
-        message: str,
-    ) -> Violation:
-        return Violation.from_node(
-            node=node.node,
-            path=file.path,
-            code=CODE,
-            message=message,
-        )
 
     @staticmethod
     def _listed(*, declared: list[Declaration]) -> str:
