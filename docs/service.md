@@ -2076,37 +2076,56 @@ tree. The names of what a function calls and its operators stay; local names,
 field names and literals become markers, each name standing for one name on
 the other side. A copy with renamed variables is still a copy.
 
-```yaml
-- repo: https://github.com/kucherenko/jscpd
-  rev: v5.4.2
-  hooks:
-    - id: jscpd
-      args:
-        - --similarity=1
-        - --kind=ast
-        - --format=python
-        - --ignore=**/migrations/**
-        - --baseline=.jscpd-baseline.json
-        - --fail-on-new-clones=0
-        - src
-      pass_filenames: false
+jscpd is a dev dependency and its hooks are local, so the version comes from
+`uv.lock`, as for ruff. Both gates read one `.jscpd.json`:
+
+```bash
+uv add --dev "jscpd>=5.4.2,<6"
 ```
 
-- `--similarity`, not `--ignore-identifiers`. The second works on tokens and
+```json
+{
+  "format": ["python"],
+  "ignore": ["**/migrations/**"],
+  "similarity": 1,
+  "kind": ["ast"],
+  "baseline": ".jscpd-baseline.json",
+  "failOnNewClones": 0,
+  "deadCode": {
+    "categories": ["unused-file", "unused-export", "unused-symbol"],
+    "entry": ["src/app/bootstrap/periodic.py"]
+  }
+}
+```
+
+```yaml
+- repo: local
+  hooks:
+    - id: jscpd-clones
+      name: jscpd (clones)
+      entry: uv run jscpd .
+      language: system
+      pass_filenames: false
+      always_run: true
+```
+
+- `similarity`, not `ignoreIdentifiers`. The second works on tokens and
   renames every name, the called ones included: `round(x)` and `floor(x)`
   become one function. The tree knows what is called and keeps it.
-- `=1` — the same structure. Lower ratios also match shapes that differ by a
+- `1` — the same structure. Lower ratios also match shapes that differ by a
   branch: on four services 0.8 added 12–22% more pairs, mostly of that kind.
-- `--kind=ast` — whole functions and methods only, no fragments of them.
-- `pass_filenames: false` and `src` in the arguments: a copy of an untouched
-  module is a copy too, and jscpd given only the changed files compares them
-  with one another.
+  The floor of the dependency is the version this was tried on: up to 5.4.0 a
+  ratio of 1 turned the search off instead.
+- `kind: ["ast"]` — whole functions and methods only, no fragments of them.
+  Test files jscpd leaves out of this comparison by itself.
+- `.` and `pass_filenames: false`: a copy of an untouched module is a copy
+  too, and jscpd given only the changed files compares them with one another.
 - The baseline. On the four services there were 25 to 250 pairs on the first
   run, so the gate fails on a new pair rather than on the history. The file is
-  written once with `--update-baseline` — until it exists, the gate fails on
-  every run — and rewritten after a deliberate change.
-  `--fail-on-new-clones` takes an optional number and swallows the argument
-  after it, so the number is written out: `=0`.
+  written with `uv run jscpd --update-baseline .` — until it exists, the gate
+  fails on every run — committed, and rewritten after a deliberate change.
+- A key `.jscpd.json` does not know is reported by name: a typo does not turn a
+  gate off quietly.
 
 The noise to know about: constructors that only lay dependencies out into
 fields all look the same, because field names become markers too — more than
@@ -2140,29 +2159,28 @@ Being a walk and not a count of references, it cascades: a helper whose only
 caller is dead is dead too. Test files are entry points, and an export only
 the tests import is reported with that reason.
 
+The settings are the `deadCode` section of the same `.jscpd.json`; the hook
+only switches the mode on:
+
 ```yaml
-- repo: https://github.com/kucherenko/jscpd
-  rev: v5.4.2
+- repo: local
   hooks:
-    - id: jscpd
-      name: jscpd dead code
-      args:
-        - --dead-code
-        - --dead-code-categories=unused-file,unused-export,unused-symbol
-        - --entry=src/app/bootstrap/periodic.py
-        - --exit-code=1
-        - .
+    - id: jscpd-dead-code
+      name: jscpd (dead code)
+      entry: uv run jscpd --dead-code --exit-code=1 .
+      language: system
       pass_filenames: false
+      always_run: true
 ```
 
 - The whole repository, not `src`: the tests and the scripts are what makes
   a module "used only by tests" rather than plain dead.
-- The categories are chosen. `unused-import` stays with ruff `F401`: jscpd
+- `categories` are chosen. `unused-import` stays with ruff `F401`: jscpd
   does not read names inside a string annotation and calls the `Mapping` of
   `cast("Mapping[str, str]", ...)` unused. `unused-member` is off by default and
   stays off: without types, `model_config`, `__tablename__` and enum members
   read by a framework all look unread — 55 to 217 findings per service.
-- `--entry` for what is loaded by a string: an app factory handed to uvicorn
+- `entry` for what is loaded by a string: an app factory handed to uvicorn
   as `"app.bootstrap.periodic:create_periodic"` is no import, and without the
   line the whole process is dead.
 - `--exit-code=1`, with the number: it takes an optional value and swallows
@@ -2172,7 +2190,7 @@ Two things are weaker than in the duplicate gate. There is no baseline for
 dead code — it covers clones only — so the findings are cleaned up before the
 hook is switched on; on the four services there were 7 to 10, most of them
 real. And there is no mark for one finding: what is kept on purpose is named
-by file, with `--entry` (an entry point's exports are not reported) or with
-`deadCode.ignore` in `.jscpd.json`.
+by file, in `deadCode.entry` (an entry point's exports are not reported) or
+in `deadCode.ignore`.
 
 Unused and undeclared dependencies are not jscpd's: that is `deptry`.
