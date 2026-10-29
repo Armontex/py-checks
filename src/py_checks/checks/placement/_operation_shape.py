@@ -223,18 +223,20 @@ class OperationShape:
             if one.kind is Kind.ALIAS or one is subject:
                 continue
             if one.kind is Kind.FUNCTION:
-                yield cls._says(
-                    file=file,
-                    declared=one,
+                yield Violation.from_node(
+                    node=one.node,
+                    path=file.path,
+                    code=CODE,
                     message=(
                         f"{one.name}() stands beside the operation; a helper it needs is "
                         f"a private method, one that two need is shared code"
                     ),
                 )
                 continue
-            yield cls._says(
-                file=file,
-                declared=one,
+            yield Violation.from_node(
+                node=one.node,
+                path=file.path,
+                code=CODE,
                 message=(
                     f"{one.name} stands beside the operation; in {rule.address} a module "
                     f"declares one class and nothing else"
@@ -258,9 +260,10 @@ class OperationShape:
         if names == [rule.method]:
             return
         if not public:
-            yield cls._says(
-                file=file,
-                declared=subject,
+            yield Violation.from_node(
+                node=subject.node,
+                path=file.path,
+                code=CODE,
                 message=(
                     f"{subject.name} has no public method; an operation is asked "
                     f"through one, and it is called {rule.method}()"
@@ -427,17 +430,3 @@ class OperationShape:
                     yield text
                 case _:
                     continue
-
-    @staticmethod
-    def _says(
-        *,
-        file: ParsedFile,
-        declared: Declaration,
-        message: str,
-    ) -> Violation:
-        return Violation.from_node(
-            node=declared.node,
-            path=file.path,
-            code=CODE,
-            message=message,
-        )
