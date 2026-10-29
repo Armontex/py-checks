@@ -221,3 +221,6 @@ __marimo__/
 
 # docs
 docs/current.md
+
+# git worktrees
+.worktrees/
