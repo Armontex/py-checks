@@ -437,6 +437,7 @@ configuration, and the two drift.
 | The call sites of a conversion | rule `confined-functions`: nothing off the shelf |
 | A ceiling on a dependency | rule `dependency-bounds`: nothing off the shelf; `deptry` (unused and undeclared) and `uv lock --check` are useful alongside |
 | The same function written twice | jscpd `--similarity`, with a baseline: a copy with renamed names is still a copy, and the history does not fail the gate |
+| Code nothing reaches | jscpd `--dead-code`: modules, exports and declarations no entry point reaches, a module only the tests import among them; an unused import stays with ruff `F401`, an unused dependency with `deptry` |
 | A complete `.env.example` | built by `py-checks sync`, plus `config-fields` with `alias` |
 | `AGENTS.md` and `CLAUDE.md` in step | a symlink, plus the `check-symlinks` and `destroyed-symlinks` hooks |
 | Surviving mutants | `py-checks mutation` over `mutmut`: the scope is mutmut's, the record is the project's, the three passes are the library's |
@@ -2123,3 +2124,55 @@ class Totals:
 ```
 
 Unlike `check-ok`, the mark asks for no reason — write one after it anyway.
+
+### jscpd — code nothing reaches
+
+A module left over from an abandoned approach, a function that lost its last
+caller: dead code is still read, kept in step and mutated by the mutation
+gate. A module kept alive only by its own tests looks used and covered, and
+nobody removes what nobody notices.
+
+The same jscpd has a second engine for this. It walks the import graph from
+the entry points — `[project.scripts]` and the entry-point tables of the
+manifest, the conventions of some fifty frameworks (Alembic among them),
+`__main__.py`, a `__main__` guard — and reports what the walk never reaches.
+Being a walk and not a count of references, it cascades: a helper whose only
+caller is dead is dead too. Test files are entry points, and an export only
+the tests import is reported with that reason.
+
+```yaml
+- repo: https://github.com/kucherenko/jscpd
+  rev: v5.4.2
+  hooks:
+    - id: jscpd
+      name: jscpd dead code
+      args:
+        - --dead-code
+        - --dead-code-categories=unused-file,unused-export,unused-symbol
+        - --entry=src/app/bootstrap/periodic.py
+        - --exit-code=1
+        - .
+      pass_filenames: false
+```
+
+- The whole repository, not `src`: the tests and the scripts are what makes
+  a module "used only by tests" rather than plain dead.
+- The categories are chosen. `unused-import` stays with ruff `F401`: jscpd
+  does not read names inside a string annotation and calls the `Mapping` of
+  `cast("Mapping[str, str]", ...)` unused. `unused-member` is off by default and
+  stays off: without types, `model_config`, `__tablename__` and enum members
+  read by a framework all look unread — 55 to 217 findings per service.
+- `--entry` for what is loaded by a string: an app factory handed to uvicorn
+  as `"app.bootstrap.periodic:create_periodic"` is no import, and without the
+  line the whole process is dead.
+- `--exit-code=1`, with the number: it takes an optional value and swallows
+  the path after it otherwise.
+
+Two things are weaker than in the duplicate gate. There is no baseline for
+dead code — it covers clones only — so the findings are cleaned up before the
+hook is switched on; on the four services there were 7 to 10, most of them
+real. And there is no mark for one finding: what is kept on purpose is named
+by file, with `--entry` (an entry point's exports are not reported) or with
+`deadCode.ignore` in `.jscpd.json`.
+
+Unused and undeclared dependencies are not jscpd's: that is `deptry`.
