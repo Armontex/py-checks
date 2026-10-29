@@ -436,6 +436,7 @@ configuration, and the two drift.
 | A complete declaration at an entrance | rule `edge-declarations`: FastAPI and FastStream give the words but demand none of them; Schemathesis checks the schema against the code, not the schema for completeness |
 | The call sites of a conversion | rule `confined-functions`: nothing off the shelf |
 | A ceiling on a dependency | rule `dependency-bounds`: nothing off the shelf; `deptry` (unused and undeclared) and `uv lock --check` are useful alongside |
+| The same function written twice | jscpd `--similarity`, with a baseline: a copy with renamed names is still a copy, and the history does not fail the gate |
 | A complete `.env.example` | built by `py-checks sync`, plus `config-fields` with `alias` |
 | `AGENTS.md` and `CLAUDE.md` in step | a symlink, plus the `check-symlinks` and `destroyed-symlinks` hooks |
 | Surviving mutants | `py-checks mutation` over `mutmut`: the scope is mutmut's, the record is the project's, the three passes are the library's |
@@ -2061,3 +2062,64 @@ testing needs the test suite, several minutes and a list of what already
 survives. Its config lives where mutmut looks for it — `[tool.mutmut]` in
 `pyproject.toml`, or `[mutmut]` in `setup.cfg` if the project keeps its tool
 settings in separate files.
+
+### jscpd — the same function written twice
+
+A copy is cheapest to catch the day it appears. Review sees the diff, not the
+module the code was copied from, so a function copied from elsewhere reads as
+new code — and a few months later the two have drifted, and the next fix lands
+in one of them.
+
+jscpd compares the syntax trees of functions and methods across the whole
+tree. The names of what a function calls and its operators stay; local names,
+field names and literals become markers, each name standing for one name on
+the other side. A copy with renamed variables is still a copy.
+
+```yaml
+- repo: https://github.com/kucherenko/jscpd
+  rev: v5.4.2
+  hooks:
+    - id: jscpd
+      args:
+        - --similarity=1
+        - --kind=ast
+        - --format=python
+        - --ignore=**/migrations/**
+        - --baseline=.jscpd-baseline.json
+        - --fail-on-new-clones=0
+        - src
+      pass_filenames: false
+```
+
+- `--similarity`, not `--ignore-identifiers`. The second works on tokens and
+  renames every name, the called ones included: `round(x)` and `floor(x)`
+  become one function. The tree knows what is called and keeps it.
+- `=1` — the same structure. Lower ratios also match shapes that differ by a
+  branch: on four services 0.8 added 12–22% more pairs, mostly of that kind.
+- `--kind=ast` — whole functions and methods only, no fragments of them.
+- `pass_filenames: false` and `src` in the arguments: a copy of an untouched
+  module is a copy too, and jscpd given only the changed files compares them
+  with one another.
+- The baseline. On the four services there were 25 to 250 pairs on the first
+  run, so the gate fails on a new pair rather than on the history. The file is
+  written once with `--update-baseline` — until it exists, the gate fails on
+  every run — and rewritten after a deliberate change.
+  `--fail-on-new-clones` takes an optional number and swallows the argument
+  after it, so the number is written out: `=0`.
+
+The noise to know about: constructors that only lay dependencies out into
+fields all look the same, because field names become markers too — more than
+half of the pairs on the four services. They sit in the baseline; a new one
+is marked:
+
+```python
+class Totals:
+    # jscpd:ignore-start: a constructor laying dependencies out, nothing to share
+    def __init__(self, *, repository: Orders, clock: Clock) -> None:
+        self._repository = repository
+        self._clock = clock
+
+    # jscpd:ignore-end
+```
+
+Unlike `check-ok`, the mark asks for no reason — write one after it anyway.
