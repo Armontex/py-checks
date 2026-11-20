@@ -42,7 +42,11 @@ FAKE = dedent(
     runs = Path("fake.runs")
     done = int(runs.read_text()) if runs.exists() else 0
     with Path("fake.log").open("a") as log:
-        log.write(json.dumps({"argv": sys.argv[1:], "env": os.environ.get("PROFILE")}) + "\\n")
+        log.write(json.dumps({
+            "argv": sys.argv[1:],
+            "env": os.environ.get("PROFILE"),
+            "stats": Path("mutants/mutmut-stats.json").exists(),
+        }) + "\\n")
     if sys.argv[1] == "run":
         runs.write_text(str(done + 1))
         print(state["output"])
@@ -346,6 +350,91 @@ def test_diff_with_nothing_to_compare_against_says_so(tmp_path: Path) -> None:
     branched(root=root)
 
     assert gate_of(root=root).diff(against=None) is None
+
+
+TOTALS = dedent(
+    """\
+    def total(price, count):
+        return _discounted(price) * count
+
+
+    def _discounted(price):
+        return price * 0.9
+    """
+)
+
+# Копия того же модуля в `mutants/`, какой mutmut оставил до рефакторинга:
+# обёртка с прежним именем и мутанты рядом.
+MUTATED = dedent(
+    """\
+    def total(price, count):
+        return _mutmut_trampoline(x_total__mutmut_orig, price, count)
+
+
+    def x_total__mutmut_orig(price, count):
+        return price * 0.9 * count
+
+
+    def x_total__mutmut_1(price, count):
+        return price * 1.9 * count
+    """
+)
+
+
+def warm(*, root: Path, mutated: str) -> None:
+    """Ветка переписала `limits.py` в TOTALS; `mutants/` остался от прошлого прогона."""
+    branched(root=root)
+    (root / "src" / "app" / "logic" / "limits.py").write_text(TOTALS, encoding="utf-8")
+    git(root=root, args="commit -q -am refactor")
+    copy = root / "mutants" / "src" / "app" / "logic" / "limits.py"
+    copy.parent.mkdir(parents=True)
+    copy.write_text(mutated, encoding="utf-8")
+    (root / "mutants" / "mutmut-stats.json").write_text("{}", encoding="utf-8")
+
+
+def test_diff_collects_the_test_map_again_for_a_function_it_does_not_know(
+    tmp_path: Path,
+) -> None:
+    """mutmut дособирает карту только для новых тестов. Старый тест, который
+    теперь доходит до выделенной функции, в её строку не попадёт, и все её
+    мутанты «выживут»."""
+    root = project(root=tmp_path, reports=["app.logic.limits.x_total__mutmut_1: killed"])
+    warm(root=root, mutated=MUTATED)
+
+    diffed = gate_of(root=root).diff(against="develop")
+
+    assert diffed is not None
+    assert diffed.stale == 1
+    assert calls(root=root)[0]["stats"] is False
+
+
+def test_diff_keeps_the_test_map_when_no_function_is_new(tmp_path: Path) -> None:
+    root = project(root=tmp_path, reports=["app.logic.limits.x_total__mutmut_1: killed"])
+    known = MUTATED + "\n\ndef _discounted(price):\n    return price * 0.9\n"
+    warm(root=root, mutated=known)
+
+    diffed = gate_of(root=root).diff(against="develop")
+
+    assert diffed is not None
+    assert diffed.stale == 0
+    assert calls(root=root)[0]["stats"] is True
+
+
+def test_diff_says_why_it_collects_the_map_again(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = project(root=tmp_path, reports=["app.logic.limits.x_total__mutmut_1: killed"])
+    warm(root=root, mutated=MUTATED)
+    baseline(root=root, counted={"app.logic.limits": 0})
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["mutation", "diff", "--against", "develop"])
+
+    assert result.exit_code == 0, result.output
+    assert (
+        "stats map is stale for 1 function(s) in changed modules, collecting again" in result.output
+    )
 
 
 # --- record ------------------------------------------------------------------

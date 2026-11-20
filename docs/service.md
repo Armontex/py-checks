@@ -617,6 +617,17 @@ outside them fails there and nowhere else. A `not checked` is a refusal too:
 a stopped run exits `0`. A change with nothing to mutate — a module of
 constants — passes with `run 0` and says so: `ok: nothing to mutate`.
 
+**Why the test map is collected again.** mutmut keeps in
+`mutants/mutmut-stats.json` which test reaches which function, and on a warm
+cache it adds only tests it has never seen. A test that already existed and
+now reaches a function a refactor extracted never gets into that function's
+entry, and every mutant of it survives. Before a run `diff` compares the
+functions of the changed modules with mutmut's copy in `mutants/` — the source
+as of the run that last updated the map — and if one is missing, it deletes
+the map so that mutmut collects it in full, and says so: `stats map is stale
+for 1 function(s) in changed modules, collecting again`. A change that adds no
+function keeps the warm map.
+
 **Instead of `tools/check_mutation_gate.py`.** Three services carried it, in
 three versions of 514, 600 and 700 lines, and the fix for `not checked` had
 reached two of them.

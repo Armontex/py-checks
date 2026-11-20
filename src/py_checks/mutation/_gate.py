@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from py_checks.mutation._baseline import recorded, write
+from py_checks.mutation._cache import forget, stale
 from py_checks.mutation._mutmut import Mutmut, by_module, module_of, survivors, tallied
 from py_checks.mutation._process import Shell
 from py_checks.mutation._scope import against_ref, changed, scope
@@ -49,10 +50,15 @@ class Verdict:
 
 @dataclass(frozen=True, slots=True)
 class Diffed:
-    """The verdict on a branch and what it was compared against."""
+    """The verdict on a branch and what it was compared against.
+
+    `stale` — functions of the changed modules mutmut's test map did not know,
+    for which the map was collected again before the run.
+    """
 
     against: str
     verdict: Verdict
+    stale: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,7 +106,7 @@ class Gate:
         )
         if target is None:
             return None
-        modules = changed(
+        files = changed(
             shell=self.mutmut.shell,
             against=target,
             area=scope(
@@ -108,6 +114,13 @@ class Gate:
                 src=self.config.src,
             ),
         )
+        modules = tuple(files)
+        unknown = stale(
+            root=self.root,
+            paths=files.values(),
+        )
+        if unknown:
+            forget(root=self.root)
         return Diffed(
             against=target,
             verdict=_changed(
@@ -115,6 +128,7 @@ class Gate:
                 modules=modules,
                 before=recorded(path=self.baseline),
             ),
+            stale=unknown,
         )
 
     def record(self) -> dict[str, int]:

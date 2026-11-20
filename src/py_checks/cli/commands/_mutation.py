@@ -62,6 +62,13 @@ def diff(  # check-ok: keyword-only-arguments: typer parses the command's signat
         full(children=children)
         return
     verdict = diffed.verdict
+    if diffed.stale:
+        _say(
+            text=(
+                f"stats map is stale for {diffed.stale} function(s) in changed modules, "
+                f"collecting again"
+            )
+        )
     if not verdict.counted:
         _say(text=f"ok: nothing mutable changed against {diffed.against}")
         raise typer.Exit(EXIT_OK)
