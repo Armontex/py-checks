@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, Final
 
+from py_checks.checks._kind import signature_end
 from py_checks.checks.signatures._callers import callers
 from py_checks.checks.signatures._functions import (
     Definition,
     definitions,
     receiver,
-    signature_end,
 )
 from py_checks.checks.signatures._marker import MARKER
 from py_checks.config import CheckSettings
@@ -78,7 +78,10 @@ class KeywordOnlyArguments:
         file: ParsedFile,
     ) -> Iterator[Violation]:
         node, name = definition.node, definition.name
-        end_line = signature_end(node=node)
+        end_line = signature_end(
+            node=node,
+            lines=file.lines,
+        )
         if positional := cls._positional(definition=definition):
             yield Violation.from_node(
                 node=node,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 
-from py_checks.checks._kind import Kind, declarations
+from py_checks.checks._kind import Kind, declarations, signature_end
 
 
 def kinds(source: str) -> dict[str, Kind]:
@@ -103,3 +103,17 @@ def test_functions_are_a_kind_of_their_own() -> None:
     source = "def helper(*, stake: int) -> int: ...\nasync def fetch() -> None: ...\n"
 
     assert kinds(source) == {"helper": Kind.FUNCTION, "fetch": Kind.FUNCTION}
+
+
+def test_the_signature_ends_where_an_inline_body_starts() -> None:
+    """`) -> None: ...` — подпись кончается на строке заглушки, а не строкой выше."""
+    source = "def f(\n    a,\n) -> None: ...\n\n\ndef g(\n    a,\n) -> None:\n    return None\n"
+    tree = ast.parse(source)
+    inline, block = (node for node in tree.body if isinstance(node, ast.FunctionDef))
+
+    lines = source.splitlines()
+    closing = [number for number, line in enumerate(lines, start=1) if line.startswith(")")]
+
+    assert [signature_end(node=inline, lines=lines), signature_end(node=block, lines=lines)] == (
+        closing
+    )

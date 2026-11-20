@@ -6,7 +6,7 @@ import ast
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Final
 
-from py_checks.checks._kind import Kind, declarations
+from py_checks.checks._kind import Kind, declarations, signature_end
 from py_checks.checks._layout import SECTION, Layout, innermost
 from py_checks.checks._location import place
 from py_checks.checks.placement._marker import MARKER
@@ -306,7 +306,10 @@ class OperationShape:
                     f"{rule.max_arguments}; pass a command, a query or a DTO"
                 ),
                 # The mark is accepted on any line of the signature.
-                end_line=max(method.body[0].lineno - 1, method.lineno),
+                end_line=signature_end(
+                    node=method,
+                    lines=file.lines,
+                ),
             )
 
     @classmethod

@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Final
 from py_checks.checks._names import name, names
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
 
 ABSTRACT: Final[frozenset[str]] = frozenset({"Protocol", "ABC"})
 ABSTRACT_METACLASS: Final = "ABCMeta"
@@ -209,3 +209,20 @@ def _alias(*, node: ast.AnnAssign | ast.Assign) -> bool:
             return True
         case _:
             return False
+
+
+def signature_end(
+    *,
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+    lines: Sequence[str],
+) -> int:
+    """The last line of the signature: the mark goes there when the signature is in a column.
+
+    The body usually starts on the line after the `:`. A stub may share that
+    line — ruff writes `) -> None: ...` — and then it is the signature's end.
+    """
+    first = node.body[0]
+    # `col_offset` counts utf-8 bytes, so the line is cut as bytes.
+    if lines[first.lineno - 1].encode("utf-8")[: first.col_offset].strip():
+        return first.lineno
+    return max(first.lineno - 1, node.lineno)
