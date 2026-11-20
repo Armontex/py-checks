@@ -30,3 +30,5 @@ class BetModel:
     status: Mapped[str] = mapped_column(Enum("won", "lost"))
     placed_at: Mapped[datetime] = mapped_column(DateTime(), server_default="now()")
     market: Mapped[str | None] = mapped_column(nullable=False)
+    closed_at: Mapped[datetime] = mapped_column(DateTime(timezone=False))
+    shipped_at: Mapped[datetime] = mapped_column(DateTime(timezone=not False))

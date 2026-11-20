@@ -263,7 +263,10 @@ class ModelColumns:
         node: ast.Call,
         named: str,
     ) -> bool:
+        """Whether the keyword is the literal `True`: nothing short of it says what is stored."""
         return any(
-            keyword.arg == named and keyword.value != ast.Constant(value=False)
+            keyword.arg == named
+            and isinstance(keyword.value, ast.Constant)
+            and keyword.value.value is True
             for keyword in node.keywords
         )
