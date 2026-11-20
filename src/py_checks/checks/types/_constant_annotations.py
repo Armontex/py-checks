@@ -6,7 +6,7 @@ import ast
 import re
 from typing import TYPE_CHECKING, ClassVar, Final
 
-from py_checks.checks._kind import ENUMS
+from py_checks.checks._kind import enums
 from py_checks.checks.types._marker import MARKER
 from py_checks.config import CheckSettings
 from py_checks.core import Scope, Violation, settings_as
@@ -72,8 +72,9 @@ class ConstantAnnotations:
             body=file.tree.body,
             wanted=limits.module,
         )
+        members = enums(tree=file.tree)
         for node in ast.walk(file.tree):
-            if isinstance(node, ast.ClassDef) and not cls._enum(node=node):
+            if isinstance(node, ast.ClassDef) and node.name not in members:
                 yield from cls._constants(
                     file=file,
                     body=node.body,
@@ -119,11 +120,3 @@ class ConstantAnnotations:
                 return name in (FINAL, CLASS_VAR)
             case _:
                 return False
-
-    @staticmethod
-    def _enum(*, node: ast.ClassDef) -> bool:
-        bases = {
-            base.attr if isinstance(base, ast.Attribute) else getattr(base, "id", "")
-            for base in node.bases
-        }
-        return bool(bases & ENUMS)

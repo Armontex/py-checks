@@ -129,6 +129,25 @@ def declarations(*, tree: ast.Module) -> Iterator[Declaration]:
                 continue
 
 
+def enums(*, tree: ast.Module) -> frozenset[str]:
+    """The module's classes that are enums: on an `Enum` base, or on one of these.
+
+    `class OrderStatus(WireStatus)` is an enum when `WireStatus(StrEnum)` is
+    declared in the same file — a shared `_missing_` or `__str__` on a base
+    enum. A base imported from another module cannot be read from here.
+    """
+    classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
+    found: set[str] = set()
+    grown = True
+    while grown:
+        grown = False
+        for node in classes:
+            if node.name not in found and frozenset(names(nodes=node.bases)) & (ENUMS | found):
+                found.add(node.name)
+                grown = True
+    return frozenset(found)
+
+
 def _class(*, node: ast.ClassDef) -> Kind | None:
     """The class's kind; `None` if one file does not show it.
 
