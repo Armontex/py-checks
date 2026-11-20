@@ -73,18 +73,20 @@ class AnnotationShapes:
                 arguments=arguments,
                 keys=limits.keys,
             ):
-                yield cls._says(
-                    file=file,
+                yield Violation.from_node(
                     node=node,
+                    path=file.path,
+                    code=CODE,
                     message=(
                         f"{ast.unparse(node)} reads as a set of named fields; "
                         f"a TypedDict or a dataclass will say which ones"
                     ),
                 )
             if written == TUPLE and limits.tuples and cls._fixed(arguments=arguments):
-                yield cls._says(
-                    file=file,
+                yield Violation.from_node(
                     node=node,
+                    path=file.path,
+                    code=CODE,
                     message=(
                         f"{ast.unparse(node)} names its fields by position; a dataclass gives "
                         f"them names, or a NamedTuple if it has to stay a tuple"
@@ -111,17 +113,3 @@ class AnnotationShapes:
     def _arguments(*, node: ast.Subscript) -> list[ast.expr]:
         inside = node.slice
         return list(inside.elts) if isinstance(inside, ast.Tuple) else [inside]
-
-    @staticmethod
-    def _says(
-        *,
-        file: ParsedFile,
-        node: ast.Subscript,
-        message: str,
-    ) -> Violation:
-        return Violation.from_node(
-            node=node,
-            path=file.path,
-            code=CODE,
-            message=message,
-        )

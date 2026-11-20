@@ -1,0 +1,18 @@
+{
+  "format": [
+    "python"
+  ],
+  "similarity": 1,
+  "kind": [
+    "ast"
+  ],
+  "baseline": ".jscpd-baseline.json",
+  "deadCode": {
+    "categories": [
+      "unused-file",
+      "unused-export",
+      "unused-symbol"
+    ]
+  },
+  "failOnNewClones": 0
+}

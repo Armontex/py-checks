@@ -436,6 +436,8 @@ configuration, and the two drift.
 | A complete declaration at an entrance | rule `edge-declarations`: FastAPI and FastStream give the words but demand none of them; Schemathesis checks the schema against the code, not the schema for completeness |
 | The call sites of a conversion | rule `confined-functions`: nothing off the shelf |
 | A ceiling on a dependency | rule `dependency-bounds`: nothing off the shelf; `deptry` (unused and undeclared) and `uv lock --check` are useful alongside |
+| The same function written twice | jscpd `--similarity`, with a baseline: a copy with renamed names is still a copy, and the history does not fail the gate |
+| Code nothing reaches | jscpd `--dead-code`: modules, exports and declarations no entry point reaches, a module only the tests import among them; an unused import stays with ruff `F401`, an unused dependency with `deptry` |
 | A complete `.env.example` | built by `py-checks sync`, plus `config-fields` with `alias` |
 | `AGENTS.md` and `CLAUDE.md` in step | a symlink, plus the `check-symlinks` and `destroyed-symlinks` hooks |
 | Surviving mutants | `py-checks mutation` over `mutmut`: the scope is mutmut's, the record is the project's, the three passes are the library's |
@@ -2061,3 +2063,134 @@ testing needs the test suite, several minutes and a list of what already
 survives. Its config lives where mutmut looks for it — `[tool.mutmut]` in
 `pyproject.toml`, or `[mutmut]` in `setup.cfg` if the project keeps its tool
 settings in separate files.
+
+### jscpd — the same function written twice
+
+A copy is cheapest to catch the day it appears. Review sees the diff, not the
+module the code was copied from, so a function copied from elsewhere reads as
+new code — and a few months later the two have drifted, and the next fix lands
+in one of them.
+
+jscpd compares the syntax trees of functions and methods across the whole
+tree. The names of what a function calls and its operators stay; local names,
+field names and literals become markers, each name standing for one name on
+the other side. A copy with renamed variables is still a copy.
+
+jscpd is a dev dependency and its hooks are local, so the version comes from
+`uv.lock`, as for ruff. Both gates read one `.jscpd.json`:
+
+```bash
+uv add --dev "jscpd>=5.4.2,<6"
+```
+
+```json
+{
+  "format": ["python"],
+  "ignore": ["**/migrations/**"],
+  "similarity": 1,
+  "kind": ["ast"],
+  "baseline": ".jscpd-baseline.json",
+  "failOnNewClones": 0,
+  "deadCode": {
+    "categories": ["unused-file", "unused-export", "unused-symbol"],
+    "entry": ["src/app/bootstrap/periodic.py"]
+  }
+}
+```
+
+```yaml
+- repo: local
+  hooks:
+    - id: jscpd-clones
+      name: jscpd (clones)
+      entry: uv run jscpd .
+      language: system
+      pass_filenames: false
+      always_run: true
+```
+
+- `similarity`, not `ignoreIdentifiers`. The second works on tokens and
+  renames every name, the called ones included: `round(x)` and `floor(x)`
+  become one function. The tree knows what is called and keeps it.
+- `1` — the same structure. Lower ratios also match shapes that differ by a
+  branch: on four services 0.8 added 12–22% more pairs, mostly of that kind.
+  The floor of the dependency is the version this was tried on: up to 5.4.0 a
+  ratio of 1 turned the search off instead.
+- `kind: ["ast"]` — whole functions and methods only, no fragments of them.
+  Test files jscpd leaves out of this comparison by itself.
+- `.` and `pass_filenames: false`: a copy of an untouched module is a copy
+  too, and jscpd given only the changed files compares them with one another.
+- The baseline. On the four services there were 25 to 250 pairs on the first
+  run, so the gate fails on a new pair rather than on the history. The file is
+  written with `uv run jscpd --update-baseline .` — until it exists, the gate
+  fails on every run — committed, and rewritten after a deliberate change.
+- A key `.jscpd.json` does not know is reported by name: a typo does not turn a
+  gate off quietly.
+
+The noise to know about: constructors that only lay dependencies out into
+fields all look the same, because field names become markers too — more than
+half of the pairs on the four services. They sit in the baseline; a new one
+is marked:
+
+```python
+class Totals:
+    # jscpd:ignore-start: a constructor laying dependencies out, nothing to share
+    def __init__(self, *, repository: Orders, clock: Clock) -> None:
+        self._repository = repository
+        self._clock = clock
+
+    # jscpd:ignore-end
+```
+
+Unlike `check-ok`, the mark asks for no reason — write one after it anyway.
+
+### jscpd — code nothing reaches
+
+A module left over from an abandoned approach, a function that lost its last
+caller: dead code is still read, kept in step and mutated by the mutation
+gate. A module kept alive only by its own tests looks used and covered, and
+nobody removes what nobody notices.
+
+The same jscpd has a second engine for this. It walks the import graph from
+the entry points — `[project.scripts]` and the entry-point tables of the
+manifest, the conventions of some fifty frameworks (Alembic among them),
+`__main__.py`, a `__main__` guard — and reports what the walk never reaches.
+Being a walk and not a count of references, it cascades: a helper whose only
+caller is dead is dead too. Test files are entry points, and an export only
+the tests import is reported with that reason.
+
+The settings are the `deadCode` section of the same `.jscpd.json`; the hook
+only switches the mode on:
+
+```yaml
+- repo: local
+  hooks:
+    - id: jscpd-dead-code
+      name: jscpd (dead code)
+      entry: uv run jscpd --dead-code --exit-code=1 .
+      language: system
+      pass_filenames: false
+      always_run: true
+```
+
+- The whole repository, not `src`: the tests and the scripts are what makes
+  a module "used only by tests" rather than plain dead.
+- `categories` are chosen. `unused-import` stays with ruff `F401`: jscpd
+  does not read names inside a string annotation and calls the `Mapping` of
+  `cast("Mapping[str, str]", ...)` unused. `unused-member` is off by default and
+  stays off: without types, `model_config`, `__tablename__` and enum members
+  read by a framework all look unread — 55 to 217 findings per service.
+- `entry` for what is loaded by a string: an app factory handed to uvicorn
+  as `"app.bootstrap.periodic:create_periodic"` is no import, and without the
+  line the whole process is dead.
+- `--exit-code=1`, with the number: it takes an optional value and swallows
+  the path after it otherwise.
+
+Two things are weaker than in the duplicate gate. There is no baseline for
+dead code — it covers clones only — so the findings are cleaned up before the
+hook is switched on; on the four services there were 7 to 10, most of them
+real. And there is no mark for one finding: what is kept on purpose is named
+by file, in `deadCode.entry` (an entry point's exports are not reported) or
+in `deadCode.ignore`.
+
+Unused and undeclared dependencies are not jscpd's: that is `deptry`.

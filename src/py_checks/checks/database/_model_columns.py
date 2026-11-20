@@ -128,18 +128,20 @@ class ModelColumns:
         """The material, and whatever the column fills itself in with."""
         written = name(node=node.func)
         if written in limits.instead and limits.wrappers.get(written) != file.path.stem:
-            yield cls._says(
-                file=file,
+            yield Violation.from_node(
                 node=node,
+                path=file.path,
+                code=CODE,
                 message=limits.instead[written],
             )
         if written in limits.aware and not cls._said(
             node=node,
             named=AWARE,
         ):
-            yield cls._says(
-                file=file,
+            yield Violation.from_node(
                 node=node,
+                path=file.path,
+                code=CODE,
                 message=(
                     f"{written} without timezone=True stores a naive timestamp; say timezone=True"
                 ),
@@ -154,9 +156,10 @@ class ModelColumns:
             return
         for keyword in node.keywords:
             if keyword.arg in limits.defaults:
-                yield cls._says(
-                    file=file,
+                yield Violation.from_node(
                     node=node,
+                    path=file.path,
+                    code=CODE,
                     message=(
                         f"{keyword.arg}= fills the column in for a writer who did not write it; "
                         f"pass the value in the statement"
@@ -176,9 +179,10 @@ class ModelColumns:
         if isinstance(written, ast.Constant) and written.value in allowed:
             return
         said = "without lazy=" if written is None else f"with lazy={ast.unparse(written)}"
-        yield cls._says(
-            file=file,
+        yield Violation.from_node(
             node=node,
+            path=file.path,
+            code=CODE,
             message=(
                 f"relationship() {said} loads without the query saying so; "
                 f"say lazy={allowed[0]!r} and load it at the query"
@@ -262,18 +266,4 @@ class ModelColumns:
         return any(
             keyword.arg == named and keyword.value != ast.Constant(value=False)
             for keyword in node.keywords
-        )
-
-    @staticmethod
-    def _says(
-        *,
-        file: ParsedFile,
-        node: ast.Call,
-        message: str,
-    ) -> Violation:
-        return Violation.from_node(
-            node=node,
-            path=file.path,
-            code=CODE,
-            message=message,
         )
