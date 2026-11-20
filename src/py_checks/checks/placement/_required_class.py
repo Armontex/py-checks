@@ -47,8 +47,9 @@ class RequiredClass:
     With `named`, the directory keeps many classes of one kind rather than
     one per module, and each of them carries the suffix: a `Price` among the
     `...Value` classes is the one nobody will look for under that name. A
-    class with a leading underscore is the module's machinery and is left
-    alone.
+    class built on a base from another module carries it too: one file does
+    not show its kind, but it is in the directory. A class with a leading
+    underscore is the module's machinery and is left alone.
 
     `__init__.py` re-exports rather than declares; an empty module has not
     promised anything yet; a module with a leading underscore (`_base.py`)
@@ -167,7 +168,9 @@ class RequiredClass:
         for one in declared:
             if not isinstance(one.node, ast.ClassDef) or one.name.startswith("_"):
                 continue
-            if directory.only and one.kind not in directory.only:
+            # A kind no file shows — a base from another module — is still this
+            # directory's class: only a kind known to be foreign is let off.
+            if directory.only and one.kind is not None and one.kind not in directory.only:
                 continue
             if one.name.endswith(suffix):
                 continue
