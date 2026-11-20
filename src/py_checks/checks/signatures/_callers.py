@@ -356,20 +356,62 @@ def _rewritten(
     return None, [
         Patch(
             path=site.path,
-            edit=Edit(
-                line=argument.lineno,
-                column=(
-                    at := column(
-                        line=lines[argument.lineno - 1],
-                        offset=argument.col_offset,
-                    )
-                ),
-                end_line=argument.lineno,
-                end_column=at,
-                text=f"{parameter}=",
-            ),
+            edit=edit,
         )
         for argument, parameter in zip(moved, target.names, strict=False)
+        for edit in _named(
+            call=call,
+            argument=argument,
+            parameter=parameter,
+            lines=lines,
+        )
+    ]
+
+
+def _named(
+    *,
+    call: ast.Call,
+    argument: ast.expr,
+    parameter: str,
+    lines: Sequence[str],
+) -> list[Edit]:
+    """`name=` before the argument; a bare generator also gets parentheses of its own.
+
+    `f(x for x in y)`: the generator's parentheses are the call's, and the tree
+    starts it at the call's `(`. The name goes inside them, and a `)` after
+    the call closes it again: `f(name=(x for x in y))`.
+    """
+    end = argument.end_lineno or argument.lineno
+    bare = isinstance(argument, ast.GeneratorExp) and (end, argument.end_col_offset) == (
+        call.end_lineno,
+        call.end_col_offset,
+    )
+    at = column(
+        line=lines[argument.lineno - 1],
+        offset=argument.col_offset,
+    ) + int(bare)
+    named = Edit(
+        line=argument.lineno,
+        column=at,
+        end_line=argument.lineno,
+        end_column=at,
+        text=f"{parameter}=" + "(" * bare,
+    )
+    if not bare:
+        return [named]
+    closing = column(
+        line=lines[end - 1],
+        offset=argument.end_col_offset or 0,
+    )
+    return [
+        named,
+        Edit(
+            line=end,
+            column=closing,
+            end_line=end,
+            end_column=closing,
+            text=")",
+        ),
     ]
 
 
