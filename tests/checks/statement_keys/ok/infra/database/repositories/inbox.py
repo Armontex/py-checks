@@ -37,3 +37,12 @@ class InboxRepository:
     async def each(self, *, names: tuple[str, ...]) -> None:
         for name in names:  # db-ok: statement-keys: три константы, множества нет
             await self._session.execute(name)
+
+    async def grouped(self, *, statement: Statement) -> list[object]:
+        # Выражение после `in` вычисляется один раз, до первой итерации.
+        rows: list[object] = []
+        for row in await self._session.execute(statement):
+            rows.append(row)
+        else:  # и `else` — один раз, когда цикл кончился
+            await self._session.execute(statement)
+        return rows
