@@ -605,9 +605,17 @@ source, so a mutant that a test written today kills stays on record as alive:
 nothing about its file changed. `diff` names the modules it judges and `full`
 names the survivors the cache believes in, and naming is what makes mutmut run
 them again. Two verdicts count, `survived` and `no tests`; the second is the
-stronger, since a module with no test at all would otherwise score zero. A
-`not checked` is a refusal: mutmut exits `1` when its test collection fails,
-and by the exit code alone that run looks like one that left survivors.
+stronger, since a module with no test at all would otherwise score zero.
+
+**Why a run that checked nothing is a refusal.** mutmut that reached the end
+exits `0`, survivors or not; `1` is its own stop — stats not collected, the
+clean run of the tests failed — or a crash, and its cache still holds the
+previous run's verdicts. The gate refuses such a run and quotes mutmut,
+the first collection error on the first line: the tests run in `mutants/`, a
+copy holding only `source_paths` and `also_copy`, and a test that reads a file
+outside them fails there and nowhere else. A `not checked` is a refusal too:
+a stopped run exits `0`. A change with nothing to mutate — a module of
+constants — passes with `run 0` and says so: `ok: nothing to mutate`.
 
 **Instead of `tools/check_mutation_gate.py`.** Three services carried it, in
 three versions of 514, 600 and 700 lines, and the fix for `not checked` had

@@ -69,6 +69,9 @@ def diff(  # check-ok: keyword-only-arguments: typer parses the command's signat
         tally=verdict.tally,
         where=" in changed modules",
     )
+    if not verdict.tally.tried:
+        _say(text=f"ok: nothing to mutate in {len(verdict.counted)} changed module(s)")
+        raise typer.Exit(EXIT_OK)
     _judged(verdict=verdict)
     _say(
         text=(

@@ -57,7 +57,7 @@ def project(
     *,
     root: Path,
     reports: list[str],
-    exit_code: int = 1,
+    exit_code: int = 0,
     section: str = "",
     output: str = "",
 ) -> Path:
@@ -245,12 +245,38 @@ def test_a_run_that_died_is_refused_not_read_as_zero(tmp_path: Path) -> None:
 
 
 def test_mutants_never_tried_are_refused(tmp_path: Path) -> None:
-    """Сбор тестов упал, а mutmut всё равно вышел с единицей: по коду выхода
-    это не отличить от прогона с выжившими, по строке `not checked` — да."""
+    """Прогон кончился чисто, но мутантов не попробовал — его прервали: по коду
+    выхода это не отличить от прогона, который всё проверил, по строке
+    `not checked` — да."""
     root = project(root=tmp_path, reports=["app.logic.limits.a: not checked"] * 2)
 
-    with pytest.raises(GateError, match="did not try 1"):
+    with pytest.raises(GateError, match="0 of 1 mutants run"):
         gate_of(root=root).full()
+
+
+def test_a_run_that_exits_with_one_is_refused_with_the_first_collection_error(
+    tmp_path: Path,
+) -> None:
+    """Выжившие не меняют кода выхода mutmut: единица — это его `exit(1)` или
+    упавший Python. Кэш при этом держит вердикты прошлого прогона, и прочитать
+    их значило бы назвать `ok` то, что ничего не проверило."""
+    root = project(
+        root=tmp_path,
+        reports=["app.logic.limits.a: killed"],
+        exit_code=1,
+        output=(
+            "ERROR tests/unit/test_topics.py - FileNotFoundError: deploy/chart/values.yaml\n"
+            "ERROR tests/unit/test_other.py - FileNotFoundError: scripts/topics.sh\n"
+            "Failed to run clean test"
+        ),
+    )
+
+    with pytest.raises(GateError) as refused:
+        gate_of(root=root).full()
+
+    message = str(refused.value)
+    assert "the tests fail in mutants/" in message
+    assert "tests/unit/test_topics.py - FileNotFoundError" in message.splitlines()[0]
 
 
 def test_a_run_whose_stats_failed_names_mutmuts_own_error(tmp_path: Path) -> None:
@@ -259,6 +285,7 @@ def test_a_run_whose_stats_failed_names_mutmuts_own_error(tmp_path: Path) -> Non
     root = project(
         root=tmp_path,
         reports=["app.logic.limits.a: not checked"],
+        exit_code=1,
         output=(
             "AttributeError: 'Function' object has no attribute '_nodeid'\n"
             "failed to collect stats. runner returned 1"
@@ -445,6 +472,28 @@ def test_diff_where_nothing_mutated_changed_says_so(
 
     assert result.exit_code == 0, result.output
     assert "nothing mutable changed" in result.output
+
+
+def test_diff_whose_modules_hold_nothing_to_mutate_says_so(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Модуль из одних констант мутантов не даёт: mutmut на имя, под которое
+    ничего не подошло, падает с единицей — это не поломка, а пустой ответ."""
+    root = project(
+        root=tmp_path,
+        reports=[""],
+        exit_code=1,
+        output="AssertionError: Filtered for specific mutants, but nothing matches",
+    )
+    branched(root=root)
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["mutation", "diff", "--against", "develop"])
+
+    assert result.exit_code == 0, result.output
+    assert "mutants in changed modules: run 0" in result.output
+    assert "ok: nothing to mutate in 1 changed module(s)" in result.output
 
 
 def test_full_counts_what_was_tried_killed_and_left(

@@ -14,19 +14,22 @@ if TYPE_CHECKING:
 
     from py_checks.mutation._process import Shell
 
-# `mutmut run` exits with one exactly when something survived: here that is an
-# ordinary outcome, not a tool failure. Anything above it is a failure, and it
-# must not read as a clean run.
-ALIVE_EXIT: Final = 1
+# `mutmut run` that got to the end exits with zero, survivors or not. One is
+# its `exit(1)` — stats not collected, the clean run of the tests failed — or a
+# crash of Python itself; the cache then still holds the previous run's
+# verdicts, and reading them would call a run that checked nothing a pass.
+# Except one message: names that match no mutant, which is a module with
+# nothing to mutate, not a broken tool.
+NOTHING_MATCHES: Final = "Filtered for specific mutants, but nothing matches"
 
 # Two verdicts, not one: `survived` is a mutant every test walked past,
 # `no tests` is a mutant no test reached. The second is the stronger: a module
 # without a single test would otherwise score zero survivors.
 ALIVE: Final = re.compile(r"^\s*(?P<mutant>\S+): (?:survived|no tests)$", re.MULTILINE)
 
-# A mutant the run never tried. When test collection fails, mutmut still exits
-# with one, and by the exit code such a run cannot be told from a run with
-# survivors; by this line it can.
+# A mutant the run never tried: a run that was stopped exits with zero, and
+# by the exit code it cannot be told from a run that checked everything; by
+# this line it can.
 UNCHECKED: Final = re.compile(r"^\s*(?P<mutant>\S+): not checked$", re.MULTILINE)
 
 # Every line of the report: a mutant and its verdict.
@@ -44,6 +47,11 @@ MUTANT_OF_MODULE: Final = "{module}.*"
 # What mutmut prints when its own map of tests to functions broke: the tests
 # may have collected and passed, and it is mutmut's plugin that failed.
 STATS_FAILED: Final = "failed to collect stats"
+
+# pytest's summary line for an error outside a test — a failed collection the
+# first among them: `ERROR tests/test_x.py - FileNotFoundError: ...` — or for a
+# test that failed: `FAILED tests/test_x.py::test_y - assert 20 == 21`.
+COLLECTION_ERROR: Final = re.compile(r"^(?:ERROR|FAILED) (?P<error>.+)$", re.MULTILINE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,9 +104,18 @@ class Mutmut:
             modules=modules,
         )
         if untried:
+            tried = tallied(
+                report=report,
+                modules=modules,
+            ).tried
+            head = (
+                f"mutmut did not try {len(untried)} mutant(s), the first is {untried[0]}"
+                if tried
+                else f"0 of {len(untried)} mutants run"
+            )
             raise GateError(
-                self._untried(
-                    untried=untried,
+                self._refusal(
+                    head=head,
                     finished=finished,
                 )
             )
@@ -107,29 +124,40 @@ class Mutmut:
     def _run(self, *, named: tuple[str, ...]) -> CompletedProcess[str]:
         children = ("--max-children", str(self.children)) if self.children else ()
         finished = self.shell.finished(command=(*self.command, "run", *children, *named))
-        if finished.returncode > ALIVE_EXIT:
-            raise GateError(said(finished=finished))
+        output = finished.stdout + finished.stderr
+        if finished.returncode and NOTHING_MATCHES not in output:
+            raise GateError(
+                self._refusal(
+                    head="mutmut stopped before a verdict",
+                    finished=finished,
+                )
+            )
         return finished
 
     def _results(self) -> str:
         return self.shell.answered(command=(*self.command, "results", "--all", "true"))
 
     @staticmethod
-    def _untried(
+    def _refusal(
         *,
-        untried: list[str],
+        head: str,
         finished: CompletedProcess[str],
     ) -> str:
-        """Why the run left mutants untried, in mutmut's words after the gate's."""
-        cause = (
-            "mutmut failed to collect stats, its map of which test reaches which function"
-            if STATS_FAILED in finished.stdout + finished.stderr
-            else "most likely the tests failed to collect in its copy of the project"
-        )
-        return (
-            f"mutmut did not try {len(untried)} mutant(s), the first is {untried[0]}; {cause}\n"
-            f"{said(finished=finished)}"
-        )
+        """Why the run reached no verdict: the gate's reading first, mutmut's words after.
+
+        The first collection error is named on its own: the tests run in
+        mutants/, a copy that holds only `source_paths` and `also_copy`, and a
+        test that reads a file outside them fails there and nowhere else.
+        """
+        output = finished.stdout + finished.stderr
+        error = COLLECTION_ERROR.search(output)
+        if error:
+            cause = f"the tests fail in mutants/: {error['error']}"
+        elif STATS_FAILED in output:
+            cause = "mutmut failed to collect stats, its map of which test reaches which function"
+        else:
+            cause = "most likely the tests failed to collect in its copy of the project"
+        return f"{head}; {cause}\n{said(finished=finished)}"
 
 
 def survivors(*, report: str) -> list[str]:
