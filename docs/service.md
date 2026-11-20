@@ -604,12 +604,45 @@ cover of somebody else's work.
 
 **Why the survivors are run again.** mutmut's cache is keyed on the mutated
 source, so a mutant that a test written today kills stays on record as alive:
-nothing about its file changed. `diff` names the modules it judges and `full`
-names the survivors the cache believes in, and naming is what makes mutmut run
-them again. Two verdicts count, `survived` and `no tests`; the second is the
-stronger, since a module with no test at all would otherwise score zero. A
-`not checked` is a refusal: mutmut exits `1` when its test collection fails,
-and by the exit code alone that run looks like one that left survivors.
+nothing about its file changed. `full` names the survivors the cache believes
+in, and naming is what makes mutmut run them again. Two verdicts count, `survived` and `no tests`; the second is the
+stronger, since a module with no test at all would otherwise score zero.
+
+**Why a run that checked nothing is a refusal.** mutmut that reached the end
+exits `0`, survivors or not; `1` is its own stop — stats not collected, the
+clean run of the tests failed — or a crash, and its cache still holds the
+previous run's verdicts. The gate refuses such a run and quotes mutmut,
+the first collection error on the first line: the tests run in `mutants/`, a
+copy holding only `source_paths` and `also_copy`, and a test that reads a file
+outside them fails there and nowhere else. A `not checked` is a refusal too:
+a stopped run exits `0`. A change with nothing to mutate — a module of
+constants — passes with `run 0` and says so: `ok: nothing to mutate`.
+
+**Why `diff` does not run every mutant of a changed module.** A long-lived
+branch names hundreds of modules, and running all of their mutants again is
+most of the codebase. A cached verdict stands as long as what it rested on
+stands: the function's own source, the module's code outside functions, and
+the tests mutmut's map says reach it, by id and by the content of their files.
+The gate keeps one hash of that per function in `mutants/py-checks-verdicts.json`
+and names to mutmut only the functions whose hash moved — changed, new, gone,
+or reached by a changed test. Once any test file under the tests' directories
+changes, the survivors of the changed modules run again too: a new test lands
+in mutmut's map only after a run collects it. Mutants the cache holds untried
+are run by name. A run with nothing changed reads the cache and takes seconds.
+`diff --rerun` runs every mutant of the changed modules, as does a cold
+`mutants/`; a changed `conftest.py` or test helper is not seen in a killed
+verdict, and `--rerun` is the way past it.
+
+**Why the test map is collected again.** mutmut keeps in
+`mutants/mutmut-stats.json` which test reaches which function, and on a warm
+cache it adds only tests it has never seen. A test that already existed and
+now reaches a function a refactor extracted never gets into that function's
+entry, and every mutant of it survives. Before a run `diff` compares the
+functions of the changed modules with mutmut's copy in `mutants/` — the source
+as of the run that last updated the map — and if one is missing, it deletes
+the map so that mutmut collects it in full, and says so: `stats map is stale
+for 1 function(s) in changed modules, collecting again`. A change that adds no
+function keeps the warm map.
 
 **Instead of `tools/check_mutation_gate.py`.** Three services carried it, in
 three versions of 514, 600 and 700 lines, and the fix for `not checked` had
