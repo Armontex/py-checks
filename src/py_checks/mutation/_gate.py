@@ -3,17 +3,34 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 from typing import TYPE_CHECKING
 
 from py_checks.mutation._baseline import recorded, write
-from py_checks.mutation._cache import forget, stale
-from py_checks.mutation._mutmut import Mutmut, by_module, module_of, survivors, tallied
+from py_checks.mutation._cache import (
+    collected,
+    digests,
+    forget,
+    outdated,
+    remember,
+    remembered,
+    stale,
+    suite,
+)
+from py_checks.mutation._mutmut import (
+    Mutmut,
+    by_module,
+    module_of,
+    survivors,
+    tallied,
+    unchecked,
+)
 from py_checks.mutation._process import Shell
 from py_checks.mutation._scope import against_ref, changed, scope
 from py_checks.mutation._settings import mutation
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from pathlib import Path, PurePosixPath
 
     from py_checks.config import Config
     from py_checks.mutation._mutmut import Tally
@@ -92,13 +109,23 @@ class Gate:
             tally=tallied(report=report),
         )
 
-    def diff(self, *, against: str | None) -> Diffed | None:
+    def diff(
+        self,
+        *,
+        against: str | None,
+        rerun: bool = False,
+    ) -> Diffed | None:
         """Only the modules the branch touched — what a push runs.
 
         Per module, not in total, because a change has no total to be compared
         with: a change in one file must not leave IN THAT FILE more survivors
         than are recorded. `None` — nothing to compare against, and the caller
         decides for itself whether to run everything.
+
+        Of those modules, only the mutants whose verdict no longer stands are
+        run: of a function that changed, or one a changed test reaches. The
+        rest keep the cached verdict. `rerun`, a cold cache or a test map
+        collected again run every mutant of the modules.
         """
         target = against or against_ref(
             shell=self.mutmut.shell,
@@ -124,12 +151,61 @@ class Gate:
         return Diffed(
             against=target,
             verdict=_changed(
-                report=self.mutmut.report(modules=modules) if modules else "",
+                report=self._report(
+                    files=files,
+                    everything=rerun or not collected(root=self.root),
+                )
+                if modules
+                else "",
                 modules=modules,
                 before=recorded(path=self.baseline),
             ),
             stale=unknown,
         )
+
+    def _report(
+        self,
+        *,
+        files: dict[str, PurePosixPath],
+        everything: bool,
+    ) -> str:
+        """The report on the changed modules, run only as far as the cache is out of date.
+
+        A second pass takes what the first left untried — mutmut drops
+        verdicts of its own when its settings change — and, once a test file
+        changed, the survivors: a test written to kill one reaches it in the
+        map only after a run collected it.
+        """
+        modules = tuple(files)
+        before = remembered(root=self.root)
+        report = (
+            self.mutmut.report(modules=modules)
+            if everything
+            else self.mutmut.report(
+                modules=modules,
+                named=outdated(
+                    now=digests(
+                        root=self.root,
+                        files=files,
+                    ),
+                    before=before.functions,
+                ),
+                again=partial(
+                    _again,
+                    modules=modules,
+                    survivors_too=suite(root=self.root) != before.suite,
+                ),
+            )
+        )
+        remember(
+            root=self.root,
+            found=digests(
+                root=self.root,
+                files=files,
+            ),
+            tests=suite(root=self.root),
+        )
+        return report
 
     def record(self) -> dict[str, int]:
         """A full run, and its result per module written to the record file."""
@@ -164,6 +240,23 @@ def _changed(
             modules=modules,
         ),
     )
+
+
+def _again(
+    *,
+    report: str,
+    modules: tuple[str, ...],
+    survivors_too: bool,
+) -> list[str]:
+    """What the first pass left untried, and the survivors once a test changed."""
+    alive = survivors(report=report) if survivors_too else []
+    return [
+        *(mutant for mutant in alive if module_of(mutant=mutant) in modules),
+        *unchecked(
+            report=report,
+            modules=modules,
+        ),
+    ]
 
 
 def gate(

@@ -34,6 +34,14 @@ Against = Annotated[
     ),
 ]
 
+Rerun = Annotated[
+    bool,
+    typer.Option(
+        "--rerun",
+        help="run every mutant of the changed modules again, cached verdict or not",
+    ),
+]
+
 mutation = typer.Typer(
     no_args_is_help=True,
     help="The mutation gate: a push leaves no line whose breakage no test would notice.",
@@ -50,11 +58,15 @@ errors = Console(
 def diff(  # check-ok: keyword-only-arguments: typer parses the command's signature
     children: Children = None,
     against: Against = None,
+    rerun: Rerun = False,
 ) -> None:
     """Only the modules the branch touched — what a push runs."""
     project = _project(children=children)
     try:
-        diffed = project.diff(against=against)
+        diffed = project.diff(
+            against=against,
+            rerun=rerun,
+        )
     except GateError as error:
         _refuse(message=str(error))
     if diffed is None:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, Protocol
 
 from py_checks.mutation._errors import GateError
 from py_checks.mutation._process import said
@@ -54,6 +54,12 @@ STATS_FAILED: Final = "failed to collect stats"
 COLLECTION_ERROR: Final = re.compile(r"^(?:ERROR|FAILED) (?P<error>.+)$", re.MULTILINE)
 
 
+class Again(Protocol):
+    """What to run by name once more, read from the report of the first pass."""
+
+    def __call__(self, *, report: str) -> list[str]: ...
+
+
 @dataclass(frozen=True, slots=True)
 class Tally:
     """How many mutants the run tried and how that ended.
@@ -80,22 +86,32 @@ class Mutmut:
     command: tuple[str, ...]
     children: int | None
 
-    def report(self, *, modules: tuple[str, ...] = ()) -> str:
+    def report(
+        self,
+        *,
+        modules: tuple[str, ...] = (),
+        named: tuple[str, ...] | None = None,
+        again: Again | None = None,
+    ) -> str:
         """The report after a run: of the named modules or of everything mutated.
 
-        The named modules are run again even when the cache holds their
-        verdict — that is what naming them is for: the cache is keyed on the
-        source, and a test that was weakened leaves standing every verdict it
-        earned before.
+        `named` — the mutants to run: by default every one of the modules, or
+        everything when no module is named; an empty tuple runs nothing and
+        reads the cache. `again` — what to run by name once more after reading
+        the report.
 
-        A run of everything reruns the survivors for the same reason read the
-        other way round: a test written today kills a mutant in a file nobody
-        touched, and the cache would go on counting it alive.
+        A run of everything reruns the survivors: the cache is keyed on the
+        source, and a test written today kills a mutant in a file nobody
+        touched, while the cache would go on counting it alive.
         """
-        named = tuple(MUTANT_OF_MODULE.format(module=module) for module in modules)
-        finished = self._run(named=named)
+        if named is None:
+            named = tuple(MUTANT_OF_MODULE.format(module=module) for module in modules)
+        finished = self._run(named=named) if named or not modules else None
         report = self._results()
-        alive = [] if modules else survivors(report=report)
+        if again is None:
+            alive = [] if modules else survivors(report=report)
+        else:
+            alive = again(report=report)
         if alive:
             finished = self._run(named=tuple(alive))
             report = self._results()
@@ -141,7 +157,7 @@ class Mutmut:
     def _refusal(
         *,
         head: str,
-        finished: CompletedProcess[str],
+        finished: CompletedProcess[str] | None,
     ) -> str:
         """Why the run reached no verdict: the gate's reading first, mutmut's words after.
 
@@ -149,6 +165,8 @@ class Mutmut:
         mutants/, a copy that holds only `source_paths` and `also_copy`, and a
         test that reads a file outside them fails there and nowhere else.
         """
+        if finished is None:
+            return f"{head}; the cache holds them so, and nothing was run"
         output = finished.stdout + finished.stderr
         error = COLLECTION_ERROR.search(output)
         if error:
