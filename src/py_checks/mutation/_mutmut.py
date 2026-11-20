@@ -10,6 +10,8 @@ from py_checks.mutation._errors import GateError
 from py_checks.mutation._process import said
 
 if TYPE_CHECKING:
+    from subprocess import CompletedProcess
+
     from py_checks.mutation._process import Shell
 
 # `mutmut run` exits with one exactly when something survived: here that is an
@@ -38,6 +40,10 @@ SURVIVED: Final[frozenset[str]] = frozenset({"survived", "no tests"})
 UNTRIED: Final[frozenset[str]] = frozenset({"not checked", "skipped"})
 
 MUTANT_OF_MODULE: Final = "{module}.*"
+
+# What mutmut prints when its own map of tests to functions broke: the tests
+# may have collected and passed, and it is mutmut's plugin that failed.
+STATS_FAILED: Final = "failed to collect stats"
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,35 +85,51 @@ class Mutmut:
         touched, and the cache would go on counting it alive.
         """
         named = tuple(MUTANT_OF_MODULE.format(module=module) for module in modules)
-        self._run(named=named)
+        finished = self._run(named=named)
         report = self._results()
-        if not modules:
-            report = self._again(alive=survivors(report=report))
+        alive = [] if modules else survivors(report=report)
+        if alive:
+            finished = self._run(named=tuple(alive))
+            report = self._results()
         untried = unchecked(
             report=report,
             modules=modules,
         )
         if untried:
             raise GateError(
-                f"mutmut did not try {len(untried)} mutant(s), the first is {untried[0]}; "
-                f"most likely the tests failed to collect in its copy of the project"
+                self._untried(
+                    untried=untried,
+                    finished=finished,
+                )
             )
         return report
 
-    def _run(self, *, named: tuple[str, ...]) -> None:
+    def _run(self, *, named: tuple[str, ...]) -> CompletedProcess[str]:
         children = ("--max-children", str(self.children)) if self.children else ()
         finished = self.shell.finished(command=(*self.command, "run", *children, *named))
         if finished.returncode > ALIVE_EXIT:
             raise GateError(said(finished=finished))
+        return finished
 
     def _results(self) -> str:
         return self.shell.answered(command=(*self.command, "results", "--all", "true"))
 
-    def _again(self, *, alive: list[str]) -> str:
-        """The survivors, run by name, and the report after that."""
-        if alive:
-            self._run(named=tuple(alive))
-        return self._results()
+    @staticmethod
+    def _untried(
+        *,
+        untried: list[str],
+        finished: CompletedProcess[str],
+    ) -> str:
+        """Why the run left mutants untried, in mutmut's words after the gate's."""
+        cause = (
+            "mutmut failed to collect stats, its map of which test reaches which function"
+            if STATS_FAILED in finished.stdout + finished.stderr
+            else "most likely the tests failed to collect in its copy of the project"
+        )
+        return (
+            f"mutmut did not try {len(untried)} mutant(s), the first is {untried[0]}; {cause}\n"
+            f"{said(finished=finished)}"
+        )
 
 
 def survivors(*, report: str) -> list[str]:

@@ -5,12 +5,16 @@ from __future__ import annotations
 import os
 import subprocess  # noqa: S404 — calling mutmut is what the gate does
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from py_checks.mutation._errors import GateError
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+# How much of a tool's output a refusal quotes: the error is at the end, and
+# mutmut prints a progress line per mutant before it.
+LAST_LINES: Final = 20
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +43,8 @@ class Shell:
 
 
 def said(*, finished: subprocess.CompletedProcess[str]) -> str:
-    """What the tool said, so that a refusal names its reason."""
-    words = finished.stderr.strip() or finished.stdout.strip()
+    """What the tool said, so that a refusal names its reason: the last lines of
+    both streams, since mutmut prints its own errors to stdout."""
+    lines = f"{finished.stdout.strip()}\n{finished.stderr.strip()}".strip().splitlines()
+    words = "\n".join(lines[-LAST_LINES:])
     return f"`{' '.join(finished.args)}` exited with code {finished.returncode}\n{words}"

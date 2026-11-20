@@ -45,6 +45,7 @@ FAKE = dedent(
         log.write(json.dumps({"argv": sys.argv[1:], "env": os.environ.get("PROFILE")}) + "\\n")
     if sys.argv[1] == "run":
         runs.write_text(str(done + 1))
+        print(state["output"])
         sys.exit(state["exit"])
     reports = state["reports"]
     print(reports[min(done, len(reports)) - 1])
@@ -58,10 +59,11 @@ def project(
     reports: list[str],
     exit_code: int = 1,
     section: str = "",
+    output: str = "",
 ) -> Path:
     (root / "fake_mutmut.py").write_text(FAKE, encoding="utf-8")
     (root / "fake.json").write_text(
-        json.dumps({"exit": exit_code, "reports": reports}),
+        json.dumps({"exit": exit_code, "reports": reports, "output": output}),
         encoding="utf-8",
     )
     command = json.dumps([sys.executable, str(root / "fake_mutmut.py")])
@@ -249,6 +251,27 @@ def test_mutants_never_tried_are_refused(tmp_path: Path) -> None:
 
     with pytest.raises(GateError, match="did not try 1"):
         gate_of(root=root).full()
+
+
+def test_a_run_whose_stats_failed_names_mutmuts_own_error(tmp_path: Path) -> None:
+    """Тесты собрались и прошли, упал плагин самого mutmut: догадка про сбор
+    тестов увела бы не туда, а его собственные слова — туда."""
+    root = project(
+        root=tmp_path,
+        reports=["app.logic.limits.a: not checked"],
+        output=(
+            "AttributeError: 'Function' object has no attribute '_nodeid'\n"
+            "failed to collect stats. runner returned 1"
+        ),
+    )
+
+    with pytest.raises(GateError) as refused:
+        gate_of(root=root).full()
+
+    message = str(refused.value)
+    assert "failed to collect stats" in message
+    assert "has no attribute '_nodeid'" in message
+    assert "tests failed to collect" not in message
 
 
 def test_settings_reach_mutmut(tmp_path: Path) -> None:
