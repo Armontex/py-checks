@@ -151,6 +151,29 @@ repos:
         pass_filenames: false
         always_run: true
 
+      # Одна функция, написанная дважды. Дерево целиком: копия нетронутого
+      # модуля — тоже копия, а jscpd, которому дали только изменённые файлы,
+      # сравнивает их между собой. Что старое и уже принято — в
+      # `.jscpd-baseline.json`, падает только новая пара; настройки — в
+      # `.jscpd.json`.
+      - id: jscpd-clones
+        name: jscpd (дубли)
+        description: ни одна функция не написана второй раз под другими именами
+        entry: uv run jscpd .
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      # Код, до которого не доходит ни одна точка входа. `--exit-code=1` с
+      # числом: значение у опции необязательное, и без него она съедает путь.
+      - id: jscpd-dead-code
+        name: jscpd (мёртвый код)
+        description: до каждого модуля и каждого экспорта доходит точка входа
+        entry: uv run jscpd --dead-code --exit-code=1 .
+        language: system
+        pass_filenames: false
+        always_run: true
+
       # Замок отстаёт от манифеста молча: зависимость правят в одном файле, а
       # ставится то, что записано в другом.
       - id: uv-lock

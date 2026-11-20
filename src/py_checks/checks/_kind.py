@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Final
 from py_checks.checks._names import name, names
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
 
 ABSTRACT: Final[frozenset[str]] = frozenset({"Protocol", "ABC"})
 ABSTRACT_METACLASS: Final = "ABCMeta"
@@ -118,6 +118,12 @@ def declarations(*, tree: ast.Module) -> Iterator[Declaration]:
                     kind=Kind.FUNCTION,
                     node=node,
                 )
+            case ast.TypeAlias(name=ast.Name(id=name)):
+                yield Declaration(
+                    name=name,
+                    kind=Kind.ALIAS,
+                    node=node,
+                )
             case ast.AnnAssign(target=ast.Name(id=name)) | ast.Assign(targets=[ast.Name(id=name)]):
                 if _alias(node=node):
                     yield Declaration(
@@ -127,6 +133,25 @@ def declarations(*, tree: ast.Module) -> Iterator[Declaration]:
                     )
             case _:
                 continue
+
+
+def enums(*, tree: ast.Module) -> frozenset[str]:
+    """The module's classes that are enums: on an `Enum` base, or on one of these.
+
+    `class OrderStatus(WireStatus)` is an enum when `WireStatus(StrEnum)` is
+    declared in the same file — a shared `_missing_` or `__str__` on a base
+    enum. A base imported from another module cannot be read from here.
+    """
+    classes = [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
+    found: set[str] = set()
+    grown = True
+    while grown:
+        grown = False
+        for node in classes:
+            if node.name not in found and frozenset(names(nodes=node.bases)) & (ENUMS | found):
+                found.add(node.name)
+                grown = True
+    return frozenset(found)
 
 
 def _class(*, node: ast.ClassDef) -> Kind | None:
@@ -184,3 +209,20 @@ def _alias(*, node: ast.AnnAssign | ast.Assign) -> bool:
             return True
         case _:
             return False
+
+
+def signature_end(
+    *,
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+    lines: Sequence[str],
+) -> int:
+    """The last line of the signature: the mark goes there when the signature is in a column.
+
+    The body usually starts on the line after the `:`. A stub may share that
+    line — ruff writes `) -> None: ...` — and then it is the signature's end.
+    """
+    first = node.body[0]
+    # `col_offset` counts utf-8 bytes, so the line is cut as bytes.
+    if lines[first.lineno - 1].encode("utf-8")[: first.col_offset].strip():
+        return first.lineno
+    return max(first.lineno - 1, node.lineno)

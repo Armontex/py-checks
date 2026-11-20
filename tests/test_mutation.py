@@ -42,9 +42,14 @@ FAKE = dedent(
     runs = Path("fake.runs")
     done = int(runs.read_text()) if runs.exists() else 0
     with Path("fake.log").open("a") as log:
-        log.write(json.dumps({"argv": sys.argv[1:], "env": os.environ.get("PROFILE")}) + "\\n")
+        log.write(json.dumps({
+            "argv": sys.argv[1:],
+            "env": os.environ.get("PROFILE"),
+            "stats": Path("mutants/mutmut-stats.json").exists(),
+        }) + "\\n")
     if sys.argv[1] == "run":
         runs.write_text(str(done + 1))
+        print(state["output"])
         sys.exit(state["exit"])
     reports = state["reports"]
     print(reports[min(done, len(reports)) - 1])
@@ -56,12 +61,13 @@ def project(
     *,
     root: Path,
     reports: list[str],
-    exit_code: int = 1,
+    exit_code: int = 0,
     section: str = "",
+    output: str = "",
 ) -> Path:
     (root / "fake_mutmut.py").write_text(FAKE, encoding="utf-8")
     (root / "fake.json").write_text(
-        json.dumps({"exit": exit_code, "reports": reports}),
+        json.dumps({"exit": exit_code, "reports": reports, "output": output}),
         encoding="utf-8",
     )
     command = json.dumps([sys.executable, str(root / "fake_mutmut.py")])
@@ -243,12 +249,60 @@ def test_a_run_that_died_is_refused_not_read_as_zero(tmp_path: Path) -> None:
 
 
 def test_mutants_never_tried_are_refused(tmp_path: Path) -> None:
-    """Сбор тестов упал, а mutmut всё равно вышел с единицей: по коду выхода
-    это не отличить от прогона с выжившими, по строке `not checked` — да."""
+    """Прогон кончился чисто, но мутантов не попробовал — его прервали: по коду
+    выхода это не отличить от прогона, который всё проверил, по строке
+    `not checked` — да."""
     root = project(root=tmp_path, reports=["app.logic.limits.a: not checked"] * 2)
 
-    with pytest.raises(GateError, match="did not try 1"):
+    with pytest.raises(GateError, match="0 of 1 mutants run"):
         gate_of(root=root).full()
+
+
+def test_a_run_that_exits_with_one_is_refused_with_the_first_collection_error(
+    tmp_path: Path,
+) -> None:
+    """Выжившие не меняют кода выхода mutmut: единица — это его `exit(1)` или
+    упавший Python. Кэш при этом держит вердикты прошлого прогона, и прочитать
+    их значило бы назвать `ok` то, что ничего не проверило."""
+    root = project(
+        root=tmp_path,
+        reports=["app.logic.limits.a: killed"],
+        exit_code=1,
+        output=(
+            "ERROR tests/unit/test_topics.py - FileNotFoundError: deploy/chart/values.yaml\n"
+            "ERROR tests/unit/test_other.py - FileNotFoundError: scripts/topics.sh\n"
+            "Failed to run clean test"
+        ),
+    )
+
+    with pytest.raises(GateError) as refused:
+        gate_of(root=root).full()
+
+    message = str(refused.value)
+    assert "the tests fail in mutants/" in message
+    assert "tests/unit/test_topics.py - FileNotFoundError" in message.splitlines()[0]
+
+
+def test_a_run_whose_stats_failed_names_mutmuts_own_error(tmp_path: Path) -> None:
+    """Тесты собрались и прошли, упал плагин самого mutmut: догадка про сбор
+    тестов увела бы не туда, а его собственные слова — туда."""
+    root = project(
+        root=tmp_path,
+        reports=["app.logic.limits.a: not checked"],
+        exit_code=1,
+        output=(
+            "AttributeError: 'Function' object has no attribute '_nodeid'\n"
+            "failed to collect stats. runner returned 1"
+        ),
+    )
+
+    with pytest.raises(GateError) as refused:
+        gate_of(root=root).full()
+
+    message = str(refused.value)
+    assert "failed to collect stats" in message
+    assert "has no attribute '_nodeid'" in message
+    assert "tests failed to collect" not in message
 
 
 def test_settings_reach_mutmut(tmp_path: Path) -> None:
@@ -296,6 +350,198 @@ def test_diff_with_nothing_to_compare_against_says_so(tmp_path: Path) -> None:
     branched(root=root)
 
     assert gate_of(root=root).diff(against=None) is None
+
+
+TOTALS = dedent(
+    """\
+    def total(price, count):
+        return _discounted(price) * count
+
+
+    def _discounted(price):
+        return price * 0.9
+    """
+)
+
+# Копия того же модуля в `mutants/`, какой mutmut оставил до рефакторинга:
+# обёртка с прежним именем и мутанты рядом.
+MUTATED = dedent(
+    """\
+    def total(price, count):
+        return _mutmut_trampoline(x_total__mutmut_orig, price, count)
+
+
+    def x_total__mutmut_orig(price, count):
+        return price * 0.9 * count
+
+
+    def x_total__mutmut_1(price, count):
+        return price * 1.9 * count
+    """
+)
+
+
+def warm(*, root: Path, mutated: str, stats: str = "{}") -> None:
+    """Ветка переписала `limits.py` в TOTALS; `mutants/` остался от прошлого прогона."""
+    branched(root=root)
+    (root / "src" / "app" / "logic" / "limits.py").write_text(TOTALS, encoding="utf-8")
+    git(root=root, args="commit -q -am refactor")
+    copy = root / "mutants" / "src" / "app" / "logic" / "limits.py"
+    copy.parent.mkdir(parents=True)
+    copy.write_text(mutated, encoding="utf-8")
+    (root / "mutants" / "mutmut-stats.json").write_text(stats, encoding="utf-8")
+
+
+def test_diff_collects_the_test_map_again_for_a_function_it_does_not_know(
+    tmp_path: Path,
+) -> None:
+    """mutmut дособирает карту только для новых тестов. Старый тест, который
+    теперь доходит до выделенной функции, в её строку не попадёт, и все её
+    мутанты «выживут»."""
+    root = project(root=tmp_path, reports=["app.logic.limits.x_total__mutmut_1: killed"])
+    warm(root=root, mutated=MUTATED)
+
+    diffed = gate_of(root=root).diff(against="develop")
+
+    assert diffed is not None
+    assert diffed.stale == 1
+    assert calls(root=root)[0]["stats"] is False
+
+
+def test_diff_keeps_the_test_map_when_no_function_is_new(tmp_path: Path) -> None:
+    root = project(root=tmp_path, reports=["app.logic.limits.x_total__mutmut_1: killed"])
+    known = MUTATED + "\n\ndef _discounted(price):\n    return price * 0.9\n"
+    warm(root=root, mutated=known)
+
+    diffed = gate_of(root=root).diff(against="develop")
+
+    assert diffed is not None
+    assert diffed.stale == 0
+    assert calls(root=root)[0]["stats"] is True
+
+
+def test_diff_says_why_it_collects_the_map_again(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = project(root=tmp_path, reports=["app.logic.limits.x_total__mutmut_1: killed"])
+    warm(root=root, mutated=MUTATED)
+    baseline(root=root, counted={"app.logic.limits": 0})
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["mutation", "diff", "--against", "develop"])
+
+    assert result.exit_code == 0, result.output
+    assert (
+        "stats map is stale for 1 function(s) in changed modules, collecting again" in result.output
+    )
+
+
+KNOWN = MUTATED + "\n\ndef _discounted(price):\n    return price * 0.9\n"
+
+# Карта mutmut: `total` достаёт тест из `tests/test_totals.py`, `_discounted` —
+# никто, её мутанты кончаются вердиктом `no tests`.
+STATS = json.dumps(
+    {
+        "tests_by_mangled_function_name": {
+            "app.logic.limits.x_total": ["tests/test_totals.py::test_total"]
+        },
+        "duration_by_test": {"tests/test_totals.py::test_total": 0.1},
+    }
+)
+
+
+def runs_of(*, root: Path) -> list[list[str]]:
+    return [call["argv"] for call in calls(root=root) if call["argv"][0] == "run"]  # type: ignore[index, misc]
+
+
+def twice(*, root: Path, change: Path | None = None, rerun: bool = False) -> list[list[str]]:
+    """Два прогона `diff` подряд, между ними — правка файла; прогоны mutmut второго."""
+    tests = root / "tests" / "test_totals.py"
+    tests.parent.mkdir(exist_ok=True)
+    tests.write_text("def test_total():\n    assert True\n", encoding="utf-8")
+    gate_of(root=root).diff(against="develop")
+    first = len(runs_of(root=root))
+    if change is not None:
+        before = change.read_text(encoding="utf-8") if change.exists() else ""
+        change.write_text(f"{before}\ndef test_more():\n    assert True\n", encoding="utf-8")
+    gate_of(root=root).diff(against="develop", rerun=rerun)
+    return runs_of(root=root)[first:]
+
+
+TOTAL = "app.logic.limits.x_total__mutmut_1"
+DISCOUNTED = "app.logic.limits.x__discounted__mutmut_1"
+
+
+def reported(*, root: Path) -> Path:
+    root = project(root=root, reports=[f"{TOTAL}: killed\n{DISCOUNTED}: killed"])
+    warm(root=root, mutated=KNOWN, stats=STATS)
+    return root
+
+
+def test_diff_with_nothing_changed_reuses_every_cached_verdict(tmp_path: Path) -> None:
+    root = reported(root=tmp_path)
+
+    assert twice(root=root) == []
+
+
+def test_diff_reruns_only_the_function_that_changed(tmp_path: Path) -> None:
+    root = reported(root=tmp_path)
+    source = root / "src" / "app" / "logic" / "limits.py"
+    gate_of(root=root).diff(against="develop")
+    source.write_text(TOTALS.replace("0.9", "0.8"), encoding="utf-8")
+
+    gate_of(root=root).diff(against="develop")
+
+    assert runs_of(root=root)[-1] == [
+        "run",
+        "app.logic.limits.x__discounted__mutmut_*",
+        "app.logic.limits.x__discounted__mutmut_1",
+    ]
+
+
+def test_diff_reruns_what_a_changed_test_covers(tmp_path: Path) -> None:
+    root = reported(root=tmp_path)
+
+    rerun = twice(root=root, change=root / "tests" / "test_totals.py")
+
+    assert rerun == [["run", "app.logic.limits.x_total__mutmut_*", TOTAL]]
+
+
+def test_diff_reruns_the_survivors_once_a_new_test_appears(tmp_path: Path) -> None:
+    """Новый тест попадает в карту только после прогона, который его соберёт:
+    по карте он `_discounted` не достаёт, а убить её мутанта может."""
+    root = project(root=tmp_path, reports=[f"{TOTAL}: killed\n{DISCOUNTED}: no tests"])
+    warm(root=root, mutated=KNOWN, stats=STATS)
+
+    rerun = twice(root=root, change=root / "tests" / "test_discounted.py")
+
+    assert rerun == [["run", DISCOUNTED]]
+
+
+def test_diff_reruns_every_mutant_when_asked(tmp_path: Path) -> None:
+    root = reported(root=tmp_path)
+
+    assert twice(root=root, rerun=True) == [["run", "app.logic.limits.*"]]
+
+
+def test_diff_tries_again_what_the_cache_left_untried(tmp_path: Path) -> None:
+    """mutmut сам сбрасывает вердикты, когда меняются его настройки: имя
+    функции, которую гейт счёл неизменной, их бы не вернуло."""
+    root = reported(root=tmp_path)
+    gate_of(root=root).diff(against="develop")
+    state = json.loads((root / "fake.json").read_text(encoding="utf-8"))
+    state["reports"] = [
+        f"{TOTAL}: not checked\n{DISCOUNTED}: killed",
+        f"{TOTAL}: killed\n{DISCOUNTED}: killed",
+    ]
+    (root / "fake.json").write_text(json.dumps(state), encoding="utf-8")
+
+    diffed = gate_of(root=root).diff(against="develop")
+
+    assert diffed is not None
+    assert runs_of(root=root)[-1] == ["run", TOTAL]
+    assert diffed.verdict.counted == {"app.logic.limits": 0}
 
 
 # --- record ------------------------------------------------------------------
@@ -424,6 +670,28 @@ def test_diff_where_nothing_mutated_changed_says_so(
     assert "nothing mutable changed" in result.output
 
 
+def test_diff_whose_modules_hold_nothing_to_mutate_says_so(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Модуль из одних констант мутантов не даёт: mutmut на имя, под которое
+    ничего не подошло, падает с единицей — это не поломка, а пустой ответ."""
+    root = project(
+        root=tmp_path,
+        reports=[""],
+        exit_code=1,
+        output="AssertionError: Filtered for specific mutants, but nothing matches",
+    )
+    branched(root=root)
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["mutation", "diff", "--against", "develop"])
+
+    assert result.exit_code == 0, result.output
+    assert "mutants in changed modules: run 0" in result.output
+    assert "ok: nothing to mutate in 1 changed module(s)" in result.output
+
+
 def test_full_counts_what_was_tried_killed_and_left(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -446,6 +714,20 @@ def test_full_counts_what_was_tried_killed_and_left(
 
     assert result.exit_code == 0, result.output
     assert "mutants: run 6, killed 3, left 2, other 1" in result.output
+
+
+def test_diff_reruns_everything_from_the_command_line(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = reported(root=tmp_path)
+    gate_of(root=root).diff(against="develop")
+    monkeypatch.chdir(root)
+
+    result = runner.invoke(app, ["mutation", "diff", "--against", "develop", "--rerun"])
+
+    assert result.exit_code == 0, result.output
+    assert runs_of(root=root)[-1] == ["run", "app.logic.limits.*"]
 
 
 def test_diff_counts_only_the_modules_it_judged(

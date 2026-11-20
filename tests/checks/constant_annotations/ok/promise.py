@@ -20,3 +20,16 @@ class PositiveDecimal:
 
     def __init__(self, *, value: Decimal) -> None:
         self.value = value
+
+
+class WireStatus(StrEnum):
+    """Общий `_missing_` для перечислений, построенных на этой базе."""
+
+    @classmethod
+    def _missing_(cls, value: object) -> WireStatus | None:
+        return cls.__members__.get(str(value).upper())
+
+
+class OrderStatus(WireStatus):
+    OPEN = "open"
+    CLOSED = "closed"

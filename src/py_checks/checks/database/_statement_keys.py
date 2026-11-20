@@ -125,8 +125,14 @@ class StatementKeys:
         node: ast.For | ast.AsyncFor | ast.While,
         limits: StatementKeysSettings,
     ) -> Iterator[Violation]:
-        """A trip to the database on every iteration."""
-        for child in ast.walk(node):
+        """A trip to the database on every iteration.
+
+        Only what runs on every iteration counts: the body, and a `while`'s
+        test. A `for`'s iterable is evaluated once, before the first one, and
+        its `else` once, after the last.
+        """
+        repeated = [*node.body, *([node.test] if isinstance(node, ast.While) else [])]
+        for child in (inner for part in repeated for inner in ast.walk(part)):
             if not isinstance(child, ast.Call) or name(node=child.func) not in limits.loops:
                 continue
             yield Violation.from_node(

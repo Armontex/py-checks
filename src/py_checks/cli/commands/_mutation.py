@@ -34,6 +34,14 @@ Against = Annotated[
     ),
 ]
 
+Rerun = Annotated[
+    bool,
+    typer.Option(
+        "--rerun",
+        help="run every mutant of the changed modules again, cached verdict or not",
+    ),
+]
+
 mutation = typer.Typer(
     no_args_is_help=True,
     help="The mutation gate: a push leaves no line whose breakage no test would notice.",
@@ -50,11 +58,15 @@ errors = Console(
 def diff(  # check-ok: keyword-only-arguments: typer parses the command's signature
     children: Children = None,
     against: Against = None,
+    rerun: Rerun = False,
 ) -> None:
     """Only the modules the branch touched — what a push runs."""
     project = _project(children=children)
     try:
-        diffed = project.diff(against=against)
+        diffed = project.diff(
+            against=against,
+            rerun=rerun,
+        )
     except GateError as error:
         _refuse(message=str(error))
     if diffed is None:
@@ -62,6 +74,13 @@ def diff(  # check-ok: keyword-only-arguments: typer parses the command's signat
         full(children=children)
         return
     verdict = diffed.verdict
+    if diffed.stale:
+        _say(
+            text=(
+                f"stats map is stale for {diffed.stale} function(s) in changed modules, "
+                f"collecting again"
+            )
+        )
     if not verdict.counted:
         _say(text=f"ok: nothing mutable changed against {diffed.against}")
         raise typer.Exit(EXIT_OK)
@@ -69,6 +88,9 @@ def diff(  # check-ok: keyword-only-arguments: typer parses the command's signat
         tally=verdict.tally,
         where=" in changed modules",
     )
+    if not verdict.tally.tried:
+        _say(text=f"ok: nothing to mutate in {len(verdict.counted)} changed module(s)")
+        raise typer.Exit(EXIT_OK)
     _judged(verdict=verdict)
     _say(
         text=(

@@ -117,8 +117,8 @@ def changed(
     shell: Shell,
     against: str,
     area: Scope,
-) -> tuple[str, ...]:
-    """The mutated modules the branch touched — in a single git call.
+) -> dict[str, PurePosixPath]:
+    """The mutated modules the branch touched and their files — in a single git call.
 
     `A...B` is the common ancestor: a branch is judged by its own changes, not
     by everything develop has taken in since the branch left it.
@@ -126,12 +126,9 @@ def changed(
     listed = shell.answered(
         command=("git", "diff", "--name-only", "--diff-filter=d", f"{against}...HEAD"),
     )
-    modules = {
-        module
-        for line in listed.splitlines()
-        if (module := area.module_of(path=PurePosixPath(line.strip()))) is not None
-    }
-    return tuple(sorted(modules))
+    paths = (PurePosixPath(line.strip()) for line in listed.splitlines())
+    modules = {module: path for path in paths if (module := area.module_of(path=path)) is not None}
+    return dict(sorted(modules.items()))
 
 
 def against_ref(

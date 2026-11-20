@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Optional
 
 
 class Mapped[T]:
@@ -30,3 +30,8 @@ class BetModel:
     status: Mapped[str] = mapped_column(Enum("won", "lost"))
     placed_at: Mapped[datetime] = mapped_column(DateTime(), server_default="now()")
     market: Mapped[str | None] = mapped_column(nullable=False)
+    closed_at: Mapped[datetime] = mapped_column(DateTime(timezone=False))
+    shipped_at: Mapped[datetime] = mapped_column(DateTime(timezone=not False))
+    tags: Mapped[list[str]] = mapped_column()
+    label: Mapped[Optional[str]] = mapped_column()
+    code: Mapped[None | str] = mapped_column(nullable=False)

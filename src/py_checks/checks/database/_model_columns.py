@@ -6,7 +6,7 @@ import ast
 from typing import TYPE_CHECKING, ClassVar, Final
 
 from py_checks.checks._location import ZonedSettings, zoned
-from py_checks.checks._names import name
+from py_checks.checks._names import name, walked
 from py_checks.checks.database._marker import MARKER
 from py_checks.core import Scope, Violation, settings_as
 
@@ -23,6 +23,8 @@ AWARE: Final = "timezone"
 NULLABLE: Final = "nullable"
 RELATIONSHIP: Final = "relationship"
 LAZY: Final = "lazy"
+OPTIONAL: Final = "Optional"
+UNION: Final = "Union"
 
 
 class ModelColumnsSettings(ZonedSettings):
@@ -128,18 +130,20 @@ class ModelColumns:
         """The material, and whatever the column fills itself in with."""
         written = name(node=node.func)
         if written in limits.instead and limits.wrappers.get(written) != file.path.stem:
-            yield cls._says(
-                file=file,
+            yield Violation.from_node(
                 node=node,
+                path=file.path,
+                code=CODE,
                 message=limits.instead[written],
             )
         if written in limits.aware and not cls._said(
             node=node,
             named=AWARE,
         ):
-            yield cls._says(
-                file=file,
+            yield Violation.from_node(
                 node=node,
+                path=file.path,
+                code=CODE,
                 message=(
                     f"{written} without timezone=True stores a naive timestamp; say timezone=True"
                 ),
@@ -154,9 +158,10 @@ class ModelColumns:
             return
         for keyword in node.keywords:
             if keyword.arg in limits.defaults:
-                yield cls._says(
-                    file=file,
+                yield Violation.from_node(
                     node=node,
+                    path=file.path,
+                    code=CODE,
                     message=(
                         f"{keyword.arg}= fills the column in for a writer who did not write it; "
                         f"pass the value in the statement"
@@ -176,9 +181,10 @@ class ModelColumns:
         if isinstance(written, ast.Constant) and written.value in allowed:
             return
         said = "without lazy=" if written is None else f"with lazy={ast.unparse(written)}"
-        yield cls._says(
-            file=file,
+        yield Violation.from_node(
             node=node,
+            path=file.path,
+            code=CODE,
             message=(
                 f"relationship() {said} loads without the query saying so; "
                 f"say lazy={allowed[0]!r} and load it at the query"
@@ -197,8 +203,8 @@ class ModelColumns:
         inner = cls._mapped(node=node.annotation)
         if inner is None:
             return
-        written, optional = inner
-        if written in limits.skip:
+        written = next((one for one in walked(node=inner) if one in limits.skip), None)
+        if written is not None:
             yield Violation.from_node(
                 node=node,
                 path=file.path,
@@ -211,7 +217,7 @@ class ModelColumns:
             node=node.value,
             limits=limits,
         )
-        if said is not None and said != optional:
+        if said is not None and said != cls._optional(node=inner):
             yield Violation.from_node(
                 node=node,
                 path=file.path,
@@ -236,22 +242,29 @@ class ModelColumns:
                 return bool(keyword.value.value)
         return None
 
-    @classmethod
-    def _mapped(cls, *, node: ast.expr) -> tuple[str, bool] | None:
-        """The name inside `Mapped[...]`, and whether it allows `None`."""
+    @staticmethod
+    def _mapped(*, node: ast.expr) -> ast.expr | None:
+        """What is inside `Mapped[...]`."""
         if not isinstance(node, ast.Subscript) or name(node=node.value) != MAPPED:
             return None
-        match node.slice:
-            case ast.Name(id=inside) | ast.Attribute(attr=inside):
-                return inside, False
-            case ast.BinOp(left=ast.Name(id=inside), op=ast.BitOr(), right=right):
-                return inside, cls._none(node=right)
-            case _:
-                return None
+        return node.slice
 
-    @staticmethod
-    def _none(*, node: ast.expr) -> bool:
-        return isinstance(node, ast.Constant) and node.value is None
+    @classmethod
+    def _optional(cls, *, node: ast.expr) -> bool:
+        """Whether the type allows `None`: `X | None`, `None | X`, `Optional[X]`, `Union[...]`."""
+        match node:
+            case ast.Constant(value=None):
+                return True
+            case ast.BinOp(left=left, op=ast.BitOr(), right=right):
+                return cls._optional(node=left) or cls._optional(node=right)
+            case ast.Subscript(value=outer) if name(node=outer) == OPTIONAL:
+                return True
+            case ast.Subscript(value=outer, slice=ast.Tuple(elts=arms)) if (
+                name(node=outer) == UNION
+            ):
+                return any(cls._optional(node=arm) for arm in arms)
+            case _:
+                return False
 
     @staticmethod
     def _said(
@@ -259,21 +272,10 @@ class ModelColumns:
         node: ast.Call,
         named: str,
     ) -> bool:
+        """Whether the keyword is the literal `True`: nothing short of it says what is stored."""
         return any(
-            keyword.arg == named and keyword.value != ast.Constant(value=False)
+            keyword.arg == named
+            and isinstance(keyword.value, ast.Constant)
+            and keyword.value.value is True
             for keyword in node.keywords
-        )
-
-    @staticmethod
-    def _says(
-        *,
-        file: ParsedFile,
-        node: ast.Call,
-        message: str,
-    ) -> Violation:
-        return Violation.from_node(
-            node=node,
-            path=file.path,
-            code=CODE,
-            message=message,
         )
