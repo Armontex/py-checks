@@ -18,3 +18,8 @@ required = true
 only = ["dataclass"]
 suffix = "Value"
 named = true
+
+# Команда одной из двух форм — их объединение, и оно предмет модуля.
+[tool.py-checks.layout.commands]
+suffix = "Command"
+required = true

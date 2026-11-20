@@ -226,3 +226,25 @@ def test_a_committed_venv_is_not_started(tmp_path: Path) -> None:
     subprocess.run(["git", "-C", str(tmp_path), "add", "-f", ".venv"], check=True)  # noqa: S603, S607
 
     assert _environment(root=tmp_path) != str(venv)
+
+
+def test_a_bare_generator_argument_gets_parentheses_of_its_own(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Скобки голого генератора — скобки вызова: имя встаёт внутрь, генератор — в свои скобки."""
+    fixed(
+        root=tmp_path,
+        files={
+            "src/app/a.py": (
+                "def with_unknown(values):\n    return frozenset((*values, 'unknown'))\n\n\n"
+                "KINDS = with_unknown(kind for kind in ('a', 'b'))\n"
+                "MORE = with_unknown((kind for kind in ('c',)))\n"
+            ),
+        },
+        monkeypatch=monkeypatch,
+    )
+
+    assert read(tmp_path, "src/app/a.py").endswith(
+        'KINDS = with_unknown(values=(kind for kind in ("a", "b")))\n'
+        'MORE = with_unknown(values=(kind for kind in ("c",)))\n'
+    )

@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, ClassVar, Final
 
 from pydantic import Field
 
-from py_checks.checks.signatures._functions import definitions, signature_end
+from py_checks.checks._kind import signature_end
+from py_checks.checks.signatures._functions import definitions
 from py_checks.checks.signatures._marker import MARKER
 from py_checks.config import CheckSettings
 from py_checks.core import Scope, Violation, settings_as
@@ -70,7 +71,10 @@ class FunctionLength:
                 # The mark belongs at the end of the signature: it does not
                 # always fit on the `def` line, and a signature laid out in a
                 # column ends far from where the violation points.
-                end_line=signature_end(node=definition.node),
+                end_line=signature_end(
+                    node=definition.node,
+                    lines=file.lines,
+                ),
                 message=(
                     f"{definition.name}: {length} lines, the limit is {limits.max_lines}; "
                     "move part of it into a separate function"

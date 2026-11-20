@@ -86,8 +86,3 @@ def name(*, node: ast.expr) -> str:
             return found
         case _:
             return ""
-
-
-def signature_end(*, node: Function) -> int:
-    """The last line of the signature: the mark goes there when the signature is in a column."""
-    return max(node.body[0].lineno - 1, node.lineno)
