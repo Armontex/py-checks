@@ -118,6 +118,12 @@ def declarations(*, tree: ast.Module) -> Iterator[Declaration]:
                     kind=Kind.FUNCTION,
                     node=node,
                 )
+            case ast.TypeAlias(name=ast.Name(id=name)):
+                yield Declaration(
+                    name=name,
+                    kind=Kind.ALIAS,
+                    node=node,
+                )
             case ast.AnnAssign(target=ast.Name(id=name)) | ast.Assign(targets=[ast.Name(id=name)]):
                 if _alias(node=node):
                     yield Declaration(

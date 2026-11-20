@@ -66,7 +66,8 @@ class Order(Base): ...
     assert kinds(source) == {"Order": Kind.DATACLASS}
 
 
-def test_aliases_are_the_three_ways_of_naming_a_type() -> None:
+def test_aliases_are_the_ways_of_naming_a_type() -> None:
+    """И оператор `type` (PEP 695): ленивый, поэтому может стоять выше своих частей."""
     source = """
 from typing import NewType, TypeAlias
 
@@ -74,6 +75,7 @@ Writer: TypeAlias = object
 Money = NewType("Money", int)
 Rows = dict[str, int]
 Either = int | str
+type Change = Placed | Cancelled
 """
 
     assert kinds(source) == {
@@ -81,6 +83,7 @@ Either = int | str
         "Money": Kind.ALIAS,
         "Rows": Kind.ALIAS,
         "Either": Kind.ALIAS,
+        "Change": Kind.ALIAS,
     }
 
 
